@@ -6,3 +6,5 @@
 ^\.Rproj\.user$
 ^tools$
 ^HANDOFF-continuous\.md$
+^\.superpowers$
+^VIGNETTE-.*\.md$

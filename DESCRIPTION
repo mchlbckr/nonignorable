@@ -1,10 +1,10 @@
 Package: shadowscan
-Title: Shadow-Variable Screens and Sharp Sensitivity Scans for Nonignorable Binary Outcomes
-Version: 0.0.0.9000
+Title: Shadow-Variable Screens and Sharp Sensitivity Scans for Nonignorable Missing Outcomes
+Version: 0.1.0
 Authors@R:
     person("Michael", "Bücker", email = "michael.buecker@fh-muenster.de",
            role = c("aut", "cre", "cph"))
-Description: Two tools for a binary outcome that is missing not at random.
+Description: Two tools for an outcome that is missing not at random.
     'shadow_screen()' asks whether a candidate variable can serve as a shadow
     variable, reporting its relevance for the outcome and its violation of the
     exclusion restriction on a common scale (incremental McFadden R-squared).
@@ -15,14 +15,17 @@ Description: Two tools for a binary outcome that is missing not at random.
     ('shadow_scan()') and for the mean of any outcome with a finite mean
     ('shadow_scan_mean()'), pointwise and aggregated over a portfolio. The two tools
     answer different questions under different assumptions and are not two
-    halves of one procedure.
+    halves of one procedure. 'shadow_scan_ci()' and 'shadow_scan_contrast()'
+    add debiased estimates and confidence sets for the binary scan, for one
+    portfolio and for the difference between two.
 URL: https://github.com/mchlbckr/shadowscan
 BugReports: https://github.com/mchlbckr/shadowscan/issues
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.1.0)
 Imports: graphics, grDevices, stats
-Suggests: quantreg, testthat (>= 3.0.0)
+Suggests: knitr, quantreg, rmarkdown, speff2trial, testthat (>= 3.0.0)
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 Config/roxygen2/version: 8.0.0

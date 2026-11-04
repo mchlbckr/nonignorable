@@ -1,0 +1,219 @@
+---
+title: "Getting started with shadowscan"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with shadowscan}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.5, out.width = "100%", dpi = 96)
+library(shadowscan)
+f2 <- function(v) formatC(v, digits = 2, format = "f")
+f3 <- function(v) formatC(v, digits = 3, format = "f")
+```
+
+## The problem
+
+An outcome $Y$ is observed for some rows and missing for others. Whether a
+row is observed may depend on $Y$ itself. Applications that look risky are
+declined, so their default is never seen. Patients who do badly leave a
+trial, so their final measurement is never taken. A model fitted to the
+observed rows then answers a question about the observed rows. Carrying its
+answer over to the missing rows assumes the data are missing at random (MAR).
+
+shadowscan asks two separate questions about such data.
+
+1. **Is there a shadow variable?** A shadow variable predicts $Y$ but has no
+   effect of its own on whether $Y$ is observed. With one, the missing-data
+   mechanism can be identified. `shadow_screen()` reports, for each
+   candidate, how strongly it predicts the outcome and how strongly it
+   violates that exclusion restriction, on a common scale.
+2. **How far can the answer move?** `shadow_scan()` drops identification and
+   asks how much the conclusion can change if selection on $Y$ has a given
+   strength. That strength is a bound $e^\lambda$ on the ratio of the
+   response propensities of two rows with the same $X$ and different $Y$:
+
+   $$\frac{P(R = 1 \mid X = x, Y = y)}{P(R = 1 \mid X = x, Y = y')} \le e^\lambda .$$
+
+   At $\lambda = 0$ this is MAR. At $e^\lambda = 2$, an applicant who would
+   repay may be up to twice as likely to be accepted as an otherwise identical
+   applicant who would default, or the other way round.
+
+The two tools rest on different assumptions and do not form one procedure.
+The scan does not need a shadow variable, and passing the screen does not
+make the scan unnecessary.
+
+## Simulated data with a known truth
+
+`simulate_shadow()` draws data in which the bad outcome makes a row less
+likely to be observed. `tilt = -1` means the ratio of propensities is $e^1$
+in every row. The data carry their own truth: `eta_obs` is
+$P(Y = 1 \mid X, R = 1)$ and `obs_rate` is $P(R = 1 \mid X)$.
+
+```{r data}
+d <- simulate_shadow(5000, tilt = -1, seed = 1)
+mean(d$observed)
+```
+
+The candidates play known roles. `z_shadow` is a valid shadow variable.
+`z_policy` acts only on selection. `z_score` acts on both, like a credit
+bureau score that predicts default and that the lender also uses to decide.
+
+## Question 1: the screen
+
+```{r screen}
+sc <- shadow_screen(d, outcome = "y", response = "observed",
+                    covariates = c("x1", "x2"),
+                    candidates = c("z_shadow", "z_policy", "z_score"))
+sc
+```
+
+Relevance is the gain in McFadden $R^2$ from adding the candidate to the
+outcome model among observed rows. Exclusion violation is the same gain in
+the selection model. A shadow variable should sit well above the equality
+line in the plot: much more relevance than violation.
+
+```{r screen-plot, fig.height = 5, fig.width = 5, out.width = "70%"}
+plot(sc)
+```
+
+`z_shadow` passes with a ratio of `r f2(sc$ratio[sc$candidate == "z_shadow"])`.
+`z_score` is the most relevant candidate but fails, with a ratio of
+`r f2(sc$ratio[sc$candidate == "z_score"])`. It predicts selection even
+better than it predicts the outcome. That is the typical fate of a bureau
+score in reject inference.
+
+Numeric characteristics enter linearly by default. When selection cuts hard
+at a threshold, as a lender declining every score below a cut-off, use
+`numeric = "classes"`. The applications vignette shows why this matters.
+
+## Question 2: the scan
+
+The scan's target is $\eta(x) = P(Y = 1 \mid X = x)$, averaged over a
+portfolio of rows: here the unobserved ones. In reject inference that is
+the default rate the rejected applicants would show if they were granted.
+The scan needs two vectors at those rows: $\hat\eta_{\mathrm{obs}}(x)$ and
+$\hat r(x)$. Any learner can produce them.
+Here we take the truth, to separate the logic of the scan from estimation.
+
+```{r scan}
+rej <- d[d$observed == 0, ]
+s <- shadow_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35)
+s
+plot(s)
+```
+
+How to read the plot:
+
+- **The point at $e^\lambda = 1$** is what a model on the observed rows
+  asserts under MAR: a rate of `r f3(s$point)` for the unobserved rows.
+- **The filled band** is the sharp identified set. Every rate inside it is
+  consistent with the data and with selection up to that strength, and no
+  rate outside it is.
+- **The dashed band** is the naive band, which shifts every row's log-odds by
+  $\pm\lambda$. The sharp set also uses the worst-case bounds that follow
+  from the observed share of each row. Where $\hat r$ is small, as for these
+  rejected rows, the two nearly coincide. Where it is large, the sharp set
+  is much narrower; the applications vignette shows such a case.
+- **The threshold** is the rate at which the decision changes, here 0.35.
+  The drop line marks the **flip point**, the smallest selection strength at
+  which the other decision is no longer ruled out. Here it lies at
+  $e^\lambda \approx$ `r f2(exp(s$flip[["sharp"]]))`.
+
+The flip point is the number to report: "the conclusion that the unobserved
+rows are better than 0.35 holds unless selection on the outcome makes the
+propensity ratio exceed `r f2(exp(s$flip[["sharp"]]))`."
+
+Because the data are simulated, we know the truth. The simulator stores
+$\eta(x)$ as `eta`, so the true rate of the unobserved rows is
+
+```{r truth}
+mean(rej$eta)
+```
+
+It lies in the set at $e^\lambda = e^1$, the strength we simulated, and
+there on its upper edge. The simulator gives every row the same, extreme
+tilt, so the truth sits where the set ends:
+
+```{r truth-check}
+b <- as.data.frame(s, lambda = 1)
+c(lower = mean(b$lower), upper = mean(b$upper))
+```
+
+## Sampling error
+
+`shadow_scan()` treats its inputs as known. With estimated inputs, use
+`shadow_scan_ci()`. It needs inputs for all rows, fitted out of fold, and the
+observed outcomes. `crossfit_inputs()` produces them for any learner passed
+as a function of a training frame and new rows.
+
+```{r ci}
+f <- ~ x1 + x2 + z_shadow + z_policy + z_score
+inp <- crossfit_inputs(d, "observed",
+  fit_eta = function(train, new) predict(glm(update(f, y ~ .), binomial, train),
+                                         new, type = "response"),
+  fit_r   = function(train, new) predict(glm(update(f, observed ~ .), binomial, train),
+                                         new, type = "response"),
+  seed = 1)
+ci <- shadow_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, threshold = 0.35)
+ci
+plot(ci)
+```
+
+The estimate is debiased. The dotted lines are a 90% confidence set for the
+identified set, pointwise in $\lambda$. A second drop line marks where the
+confidence set reaches the threshold, here at $e^\lambda \approx$
+`r f2(exp(ci$flip[["ci"]]))`. That is the flip point the data can vouch for.
+
+Two lines of the output deserve attention.
+
+- **"r-hat < 0.01"** counts rows with a very small estimated chance of
+  being observed. Observed rows with small $\hat r$ get weight $1/\hat r$,
+  so a few of them can carry much of the variance. The width of the
+  confidence set should be read together with this count.
+- **A warning about inverse weights** means the estimate left $[0, 1]$ by a
+  wide margin, typically because the response model separates some observed
+  rows. Use a smoother or penalised response model, or `trim`.
+
+## Comparing two portfolios
+
+`shadow_scan_contrast()` scans the difference of rates between two
+portfolios chosen by $X$, such as two treatment arms or two branches. Its
+threshold is 0, no difference.
+
+```{r contrast}
+k <- shadow_scan_contrast(inp$eta_obs, inp$r, d$observed, d$y,
+                          target_a = d$x1 > 0, target_b = d$x1 <= 0,
+                          labels = c("x1 > 0", "x1 <= 0"))
+k
+```
+
+## A mean instead of a rate
+
+For an outcome that is not binary, `shadow_scan_mean()` takes, per row, a
+grid of conditional quantiles of $Y$ given $R = 1$ and $X$. `quantile_grid()`
+builds it from a `quantreg::rq` fit, from any function of the levels, or from
+draws.
+
+```{r mean}
+dc <- simulate_shadow(3000, tilt = -1, outcome = "continuous", seed = 1)
+obs <- dc[dc$observed == 1, ]
+mis <- dc[dc$observed == 0, ]
+m <- lm(y ~ x1 + x2 + z_shadow + z_policy + z_score, data = obs)
+q <- quantile_grid(function(tau, newdata)
+  outer(predict(m, newdata), quantile(residuals(m), tau, names = FALSE), "+"),
+  mis, K = 100)
+sm <- shadow_scan_mean(q, mis$obs_rate, threshold = 0.5)
+plot(sm)
+```
+
+## Further reading
+
+`vignette("applications", package = "shadowscan")` applies the tools to two
+real cases side by side. On Lending Club 2014 the coding of the screen
+matters, and the main finding does not survive MAR once sampling error is
+counted. In the ACTG 175 trial a comparison of treatment arms survives
+moderate selection.

@@ -1,0 +1,421 @@
+---
+title: "Two applications: reject inference and trial dropout"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Two applications: reject inference and trial dropout}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.5, out.width = "100%", dpi = 96)
+library(shadowscan)
+f2 <- function(v) formatC(v, digits = 2, format = "f")
+f3 <- function(v) formatC(v, digits = 3, format = "f")
+big <- function(v) format(v, big.mark = ",")
+ratio <- function(s, nm) s$ratio[s$candidate == nm]
+# candidates that pass a screen, as words
+lc_names <- c(fico = "FICO", dti = "DTI", amt = "amount", emp = "employment length",
+              st = "state", pur = "purpose")
+passing <- function(s) {
+  p <- lc_names[s$candidate[s$verdict == "pass"]]
+  if (length(p) == 0) "none" else if (length(p) == 1) p
+  else paste(paste(p[-length(p)], collapse = ", "), "and", p[length(p)])
+}
+# Lending Club: small result objects shipped with the package
+lc <- readRDS(system.file("extdata", "lc2014.rds", package = "shadowscan"))
+m <- lc$meta
+# ACTG 175 is computed live and needs two suggested packages
+ok <- requireNamespace("speff2trial", quietly = TRUE) &&
+  requireNamespace("quantreg", quietly = TRUE)
+# inline values are evaluated lazily, so they are skipped without the data
+iv <- function(x) if (ok) x else "?"
+```
+
+The same question comes up wherever an outcome is missing for a reason that
+may involve the outcome itself. This vignette takes two settings that differ
+in almost every respect:
+
+- **Reject inference.** Lending Club, 2014. A lender never learns whether a
+  rejected applicant would have repaid, and it rejected them because it
+  expected them not to.
+- **Dropout in a clinical trial.** The AIDS Clinical Trials Group Study 175
+  (Hammer et al., 1996). The CD4 count at week 96 is missing for patients
+  who left the trial, plausibly those who did worse. In this literature the
+  shadow variable is usually called a *nonresponse instrument*
+  (Scharfstein, Rotnitzky and Robins, 1999; Zhao, Wang and Shao, 2021; Beppu
+  and Morikawa, 2023).
+
+Each step below is run on both, side by side. `vignette("shadowscan")`
+explains the tools on simulated data.
+
+```{r no-suggests, eval = !ok, echo = FALSE, results = "asis"}
+cat("**The ACTG 175 part needs the packages speff2trial and quantreg, which",
+    "are not installed. Its code is shown but not run.**")
+```
+
+## The data
+
+**Lending Club.** The data have `r big(m$rows_all)` rows, and cross-fitting
+the models takes `r round(m$crossfit_minutes)` minutes. The Lending Club
+part therefore does not compute. It reads small result objects shipped with
+the package. How to recompute them is shown at the end.
+
+Lending Club published both its granted loans and the applications it
+rejected. The two files share a few characteristics: FICO score,
+debt-to-income ratio (DTI), amount, employment length, state and purpose.
+For 2014 there are `r big(m$funded_all)` granted loans with a known outcome
+and `r big(m$rejected_all)` rejections. $Y = 1$ is a default, and $R = 1$
+means the loan was granted.
+
+**ACTG 175** ships with the package speff2trial and is small enough to
+compute here.
+
+```{r actg-data, eval = ok}
+data(ACTG175, package = "speff2trial")
+d <- ACTG175
+d$arms <- factor(d$arms, 0:3, c("ZDV", "ZDV+ddI", "ZDV+Zal", "ddI"))
+d$y <- as.integer(d$cd496 < 200)
+table(arm = d$arms, observed = d$r)
+```
+
+`r iv(nrow(d))` patients with HIV were randomised to four antiretroviral
+regimens. The CD4 count at week 96 is missing for `r iv(sum(d$r == 0))`
+patients (`r iv(round(100 * mean(d$r == 0)))`%). $Y = 1$ is a count below
+200, the clinical threshold for AIDS. One caveat: for
+`r iv(round(100 * mean(d$days[d$r == 0] < 672)))`% of the patients without a
+week-96 count, follow-up ended before week 96. Some of them died, and for
+them the count is not missing but undefined. The analysis follows the
+literature and treats all of them as missing.
+
+## The screen
+
+### Lending Club: the coding matters
+
+`shadow_screen()` takes each of the six characteristics in turn as candidate,
+with the other five as covariates. With numeric characteristics entered
+linearly:
+
+```{r lc-screen-linear}
+lc$screen_linear
+```
+
+Passing: `r passing(lc$screen_linear)`. But Lending Club cut hard. No
+application with a FICO score below `r m$fico_cut` or a DTI of `r m$dti_cut`
+or more was granted.
+A linear term cannot represent such a step, so it understates how strongly
+FICO and DTI drive the decision. Coded as ten classes of equal mass, the
+picture changes:
+
+```{r lc-screen-deciles}
+lc$screen_deciles
+```
+
+Now only `r passing(lc$screen_deciles)` passes. Amount fails, with a ratio of
+`r f2(ratio(lc$screen_deciles, "amt"))`. Amount has a further problem.
+Loan amounts are heaped on round numbers, and many rows sit exactly on a
+decile boundary, so classes cut at quantiles split those atoms arbitrarily.
+`numeric = "classes"` cuts only between distinct values:
+
+```{r lc-screen-classes}
+lc$screen_classes
+plot(lc$screen_classes)
+```
+
+Passing now: `r passing(lc$screen_classes)`. Amount has a ratio of
+`r f2(ratio(lc$screen_classes, "amt"))`, DTI of
+`r f2(ratio(lc$screen_classes, "dti"))`. The lesson is not that amount is a good shadow variable. It is
+that the answer depends on the coding, and that a threshold rule in the
+selection calls for classes.
+
+### ACTG 175: a clear shadow variable and a clear violation
+
+The covariates are baseline characteristics and the CD8 count at baseline.
+The candidates are the CD4 counts at baseline (`cd40`) and at week 20
+(`cd420`), sex, and `offtrt`, an indicator that the patient stopped the
+assigned treatment before week 96.
+
+```{r actg-screen, eval = ok}
+base <- c("age", "wtkg", "hemo", "homo", "drugs", "karnof", "race",
+          "symptom", "str2", "preanti", "arms", "cd80")
+sc <- shadow_screen(d, outcome = "y", response = "r", covariates = base,
+                    candidates = c("cd40", "cd420", "gender", "offtrt"),
+                    numeric = "classes")
+sc
+plot(sc)
+```
+
+```{r actg-screen-numbers, include = FALSE, eval = ok}
+v <- function(nm, col) sc[[col]][sc$candidate == nm]
+```
+
+- **The earlier CD4 counts pass clearly.** The count at week 20 predicts the
+  count at week 96 far better than it predicts dropout, with a ratio of
+  `r iv(f2(v("cd420", "ratio")))`.
+- **Sex is too weak.** Its relevance has a $\chi^2/\mathrm{df}$ of
+  `r iv(f2(v("gender", "relevance_chisq_df")))`. It has been used as an
+  instrument in this literature, but on these data it carries almost no
+  information about the outcome.
+- **Stopping treatment violates the exclusion restriction.** It is strongly
+  relevant, but its ratio is `r iv(f2(v("offtrt", "ratio")))`: it predicts
+  dropout more strongly still. It plays the part a bureau score plays in
+  reject inference.
+
+## The scan
+
+### Lending Club: is the rejected portfolio riskier?
+
+A lender asks whether its rejected applicants really are riskier than the
+ones it granted. The decision threshold is therefore the default rate of the
+granted loans, `r f3(m$threshold)`. It is itself an estimate and is treated
+as fixed here. Rows with a FICO below `r m$fico_cut` or a DTI of
+`r m$dti_cut` or more were never granted. There $r(x) = 0$, the data say nothing, and
+these rows leave the analysis. That leaves the overlap region, `r m$overlap`,
+with `r big(m$funded_overlap)` granted and `r big(m$rejected_overlap)`
+rejected applications. Both models are logistic with natural splines for the
+numeric characteristics, cross-fitted with `r m$folds` folds.
+
+```{r lc-scan}
+lc$scan_ci
+plot(lc$scan_ci, ylab = "Default rate of the rejected")
+```
+
+```{r lc-numbers, include = FALSE}
+s <- lc$scan_ci; lcv <- s$curve
+fl <- exp(s$flip)
+fp <- exp(lc$scan_plugin$flip[["sharp"]])
+ft <- exp(lc$scan_ci_trim$flip)
+```
+
+Under MAR the rejected would default at a rate of `r f3(s$point)`. That is
+above the threshold, but not by much. The estimated set reaches the
+threshold at a propensity ratio of `r f2(fl[["sharp"]])`. That end of the set
+is reached when applicants who would default were more likely to be granted
+than otherwise identical applicants who would repay, as can happen when the
+score misses what a loan officer sees. They need to be only about
+`r round(100 * (fl[["sharp"]] - 1))`% more likely.
+
+The confidence set is wider still. At $\lambda = 0$ it is
+[`r f3(lcv$ci_lower[1])`, `r f3(lcv$ci_upper[1])`], which already contains
+the threshold. Even under MAR the data cannot rule out that the rejected are
+as good as the granted. This is with `r big(m$rows_overlap)` rows. Three
+lines of the output explain why.
+
+- **The rows with small $\hat r$.** `r big(s$tail[["target"]])` of the
+  rejected rows have $\hat r < 0.01$. What the data say about them rests on
+  the `r big(s$tail[["observed"]])` granted rows of the same kind, each
+  weighted by $1/\hat r$.
+- **The standard error.** The default `se_type = "max"` takes the larger of
+  two standard errors at each endpoint. Here the empirical one is larger, by
+  a factor of `r f2(lc$se$empirical[1] / lc$se$conditional[1])` at
+  $\lambda = 0$. The conditional one is computed from the fitted models and
+  misses their misspecification. The empirical one sees it, but it can be
+  unstable where $\hat r$ is small. Taking the larger guards against both.
+- **The plug-in.** Without debiasing, the scan on the same cross-fitted
+  inputs flips at `r f2(fp)`.
+
+Removing the rejected rows with $\hat r < 0.01$ changes the question to the
+better-covered part of the rejected portfolio. For it the estimate flips at
+`r f2(ft[["sharp"]])` and the confidence set at `r f2(ft[["ci"]])`:
+
+```{r lc-trim}
+lc$scan_ci_trim
+```
+
+### ACTG 175: every patient had a fair chance of being observed
+
+Both models are logistic on the baseline covariates and the two earlier CD4
+counts, cross-fitted with five folds. The rate of interest is the share with
+CD4 below 200 among all patients.
+
+```{r actg-inputs, eval = ok}
+rhs <- paste(c(base, "cd40", "cd420"), collapse = " + ")
+fe <- as.formula(paste("y ~", rhs))
+fr <- as.formula(paste("r ~", rhs))
+inp <- crossfit_inputs(d, "r",
+  fit_eta = function(train, new)
+    predict(glm(fe, binomial, data = train[train$r == 1, ]), new, type = "response"),
+  fit_r = function(train, new)
+    predict(glm(fr, binomial, data = train), new, type = "response"),
+  folds = 5, seed = 175)
+yb <- ifelse(d$r == 1, d$y, NA)
+summary(inp$r)
+all <- shadow_scan_ci(inp$eta_obs, inp$r, d$r, yb, target = "all")
+all
+plot(all, ylab = "Share with CD4 < 200, all patients")
+```
+
+```{r actg-numbers, include = FALSE, eval = ok}
+acv <- all$curve; last <- nrow(acv)
+```
+
+The estimated chance of a week-96 count ranges from `r iv(f2(min(inp$r)))`
+to `r iv(f2(max(inp$r)))`. This is the opposite of Lending Club, and it has
+two consequences.
+
+- **The sharp set is much narrower than the naive band.** At a propensity
+  ratio of `r iv(f2(exp(acv$lambda[last])))` the naive band spans
+  [`r iv(f3(acv$naive_lower[last]))`, `r iv(f3(acv$naive_upper[last]))`],
+  the sharp set only [`r iv(f3(acv$lower[last]))`,
+  `r iv(f3(acv$upper[last]))`]. Because every patient had a good chance of
+  being observed, the observed share bounds what the missing ones can be.
+  On Lending Club, where most rejected applicants had almost no chance of
+  being granted, the two bands nearly coincide.
+- **Sampling error is moderate.**
+  `r iv(if (all$tail[["target"]] == 0) "No row has" else paste(all$tail[["target"]], "rows have"))`
+  $\hat r < 0.01$, and the confidence set is only a little wider than the
+  estimate.
+
+## Comparing two groups
+
+A trial is run for a comparison: is zidovudine alone worse than the
+alternatives? `shadow_scan_contrast()` scans the difference in the share
+with CD4 below 200 between two arms. It reports the selection strength from
+which "no difference" can no longer be ruled out.
+
+```{r actg-contrast, eval = ok}
+others <- c("ZDV+ddI", "ZDV+Zal", "ddI")
+k <- lapply(others, function(b)
+  shadow_scan_contrast(inp$eta_obs, inp$r, d$r, yb,
+                       target_a = d$arms == "ZDV", target_b = d$arms == b,
+                       lambda = seq(0, 2, length.out = 201),
+                       labels = c("ZDV", b)))
+names(k) <- others
+k[["ZDV+ddI"]]
+plot(k[["ZDV+ddI"]])
+data.frame(
+  comparison = paste("ZDV -", others),
+  mar = sapply(k, function(x) x$point),
+  flip_estimate = sapply(k, function(x) exp(x$flip[["sharp"]])),
+  flip_confidence = sapply(k, function(x) exp(x$flip[["ci"]])),
+  row.names = NULL)
+```
+
+```{r actg-contrast-numbers, include = FALSE, eval = ok}
+kd <- k[["ZDV+ddI"]]
+```
+
+Under MAR, the share below 200 is `r iv(round(100 * kd$point, 1))`
+percentage points higher on zidovudine alone than on zidovudine with
+didanosine. That finding holds as long as the propensity ratio stays below
+`r iv(f2(exp(kd$flip[["sharp"]])))`. With sampling error it holds up to
+`r iv(f2(exp(kd$flip[["ci"]])))`.
+
+The end of the set that reaches zero is the least favourable case for the
+finding. On zidovudine alone, patients who would end below 200 are that much
+*more* likely to have their count taken, which makes the arm look worse than
+it is. With didanosine added, they are that much *less* likely, which makes
+that arm look better. Selection would have to run in opposite directions in
+the two arms, and with that strength, to undo the comparison.
+
+The same function compares any two groups chosen by $X$: two branches of a
+lender, or two years of applications.
+
+## The mean of a continuous outcome
+
+For the CD4 count itself rather than the share below 200,
+`shadow_scan_mean()` scans the mean among the missing patients. It needs
+conditional quantiles of the count among the observed, which
+`quantile_grid()` obtains from a linear quantile regression.
+
+```{r actg-mean, eval = ok}
+obs <- d[d$r == 1, ]
+mis <- d[d$r == 0, ]
+fq <- quantreg::rq(as.formula(paste("cd496 ~", rhs)), tau = 0.5, data = obs)
+q <- quantile_grid(fq, mis, K = 100)
+c(crossing = attr(q, "crossing"), shift = attr(q, "shift"))
+sm <- shadow_scan_mean(pmax(q, 0), inp$r[d$r == 0])
+sm
+plot(sm, ylab = "Mean CD4 count at week 96, missing patients")
+```
+
+`r iv(if (attr(q, "crossing") == 1) "Every row has" else "Almost every row has")`
+crossing quantiles somewhere among the 100 levels. That is the sampling noise
+of a quantile regression fitted level by level. The shift says how much
+sorting moved the quantiles: a median of
+`r iv(round(100 * attr(q, "shift"), 1))`% of each row's range, which is
+harmless. Counts cannot be negative, so the grid is cut at zero.
+
+## The two side by side
+
+```{r side-by-side, eval = ok, echo = FALSE}
+knitr::kable(data.frame(
+  ` ` = c("Rows", "Observed", "Smallest r-hat, observed rows",
+          "Rows of interest with r-hat < 0.01",
+          "Finding", "Distance from the threshold at lambda = 0",
+          "Flip of the estimate", "Flip of the confidence set"),
+  `Lending Club 2014` = c(big(m$rows_overlap), big(m$funded_overlap),
+                          formatC(s$tail[["min_r_observed"]], digits = 2),
+                          big(s$tail[["target"]]),
+                          "rejected riskier than granted",
+                          f3(s$point - m$threshold),
+                          f2(fl[["sharp"]]), f2(fl[["ci"]])),
+  `ACTG 175` = c(big(nrow(d)), big(sum(d$r)), f2(min(inp$r[d$r == 1])),
+                 big(all$tail[["target"]]),
+                 "ZDV worse than ZDV+ddI", f3(kd$point - kd$threshold),
+                 f2(exp(kd$flip[["sharp"]])), f2(exp(kd$flip[["ci"]]))),
+  check.names = FALSE), align = "lrr")
+```
+
+Lending Club has about `r iv(round(m$rows_overlap / nrow(d), -1))` times as many rows, yet its finding is the
+fragile one. Two things decide this, and neither is the number of rows.
+
+- **How far the finding is from the threshold.** Under MAR the rejected
+  lie `r f3(s$point - m$threshold)` above the threshold. The arms differ by
+  `r iv(f3(kd$point))`. A small margin is crossed by weak selection. This
+  drives the flip of the estimate.
+- **How the selection treated the rows.** A lender that rejects most
+  applicants is bound to leave rows that the data barely reach. Their
+  weights $1/\hat r$ inflate the standard error, so on Lending Club the
+  confidence set reaches the threshold already at MAR. A trial in which
+  every patient had a fair chance of being measured does not have that
+  problem.
+
+## Recomputing the Lending Club objects
+
+The source is the Kaggle dataset "All Lending Club loan data"
+(wordsforthewise/lending-club, CC0 1.0), files
+`accepted_2007_to_2018Q4.csv.gz` and `rejected_2007_to_2018Q4.csv.gz`. The
+rejected file is restricted to 2014, and its `Risk_Score` column is used as
+FICO. The code below outlines the computation. It is not run here.
+
+```{r lc-recipe, eval = FALSE}
+library(splines)
+# d: one row per 2014 application, granted (R = 1, Y known) or rejected
+# (R = 0), with fico, dti, amt, emp, st, pur.
+vars <- c("fico", "dti", "amt", "emp", "st", "pur")
+screen <- do.call(rbind, lapply(vars, function(z)
+  as.data.frame(unclass(shadow_screen(d, "Y", "R", setdiff(vars, z), z,
+                                      numeric = "classes")))))
+ov <- d[d$fico >= 662 & d$dti < 40, ]
+f <- ~ ns(fico, 4) + ns(dti, 4) + ns(log(amt), 4) + emp + st + pur
+fit <- function(lhs) function(train, new)
+  predict(glm(update(f, as.formula(paste(lhs, "~ ."))), binomial, data = train),
+          new, type = "response")
+inp <- crossfit_inputs(ov, "R", fit_eta = fit("Y"), fit_r = fit("R"),
+                       folds = 5, seed = 2014)
+ci <- shadow_scan_ci(inp$eta_obs, inp$r, ov$R, ov$Y,
+                     lambda = seq(0, 2, length.out = 81), threshold = 0.1845)
+```
+
+The objects were built on `r m$built` with shadowscan `r m$package_version`.
+
+## References
+
+Beppu, K. and Morikawa, K. (2023). Verifiable identification condition for
+nonignorable nonresponse data with categorical instrumental variables.
+arXiv:2304.02270.
+
+Hammer, S. M. et al. (1996). A trial comparing nucleoside monotherapy with
+combination therapy in HIV-infected adults with CD4 cell counts from 200 to
+500 per cubic millimeter. *New England Journal of Medicine*, 335,
+1081–1090.
+
+Scharfstein, D. O., Rotnitzky, A. and Robins, J. M. (1999). Adjusting for
+nonignorable drop-out using semiparametric nonresponse models. *Journal of
+the American Statistical Association*, 94, 1096–1120.
+
+Zhao, P., Wang, L. and Shao, J. (2021). Sufficient dimension reduction and
+instrument search for data with nonignorable nonresponse. *Bernoulli*, 27,
+930–945.

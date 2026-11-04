@@ -7,3 +7,6 @@ shadowscan.Rcheck/
 Rplots.pdf
 DESIGN.md
 HANDOFF*.md
+VIGNETTE-DESIGN.md
+VIGNETTE-PLAN.md
+.superpowers/

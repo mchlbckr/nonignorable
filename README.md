@@ -81,6 +81,16 @@ plot(ci)
 The confidence set covers the identified set, pointwise in λ. There is no
 confidence set for the mean scan yet.
 
+To compare two portfolios chosen by X, such as the arms of a trial,
+`shadow_scan_contrast()` gives the sharp set for the difference of their rates
+with a confidence set. It also reports the selection strength from which "no
+difference" can no longer be ruled out.
+
+```r
+k <- shadow_scan_contrast(inp$eta_obs, inp$r, d$observed, d$y,
+                          target_a = d$x1 > 0, target_b = d$x1 <= 0)
+```
+
 ## The scan for a mean
 
 For an outcome that is not binary, `shadow_scan_mean()` takes, per row, a grid
@@ -102,7 +112,7 @@ plot(sm)
 `quantile_grid()` builds the grid from a fitted model. It accepts a
 `quantreg::rq` fit (refitted at the K levels), any `function(tau, newdata)`,
 or a matrix of draws from a distributional model. It sorts crossing quantile
-curves and reports the share of rows that needed it.
+curves and reports how far that moved them.
 
 ```r
 obs <- dc[dc$observed == 1, ]
@@ -139,6 +149,14 @@ values. Quantile classes from `cut()` put boundaries on heaped values, such
 as loan amounts on round numbers, and then assign those rows by convention;
 `attr(screen_classes(x), "heaping")` reports how many. Call it yourself for
 known cut-offs or other class counts and pass factors.
+
+## Vignettes
+
+- `vignette("shadowscan")`: the tools on simulated data with a known truth,
+  and how to read their output.
+- `vignette("applications")`: reject inference on Lending Club 2014 and
+  dropout in the ACTG 175 trial, side by side, including a comparison of
+  treatment arms with `shadow_scan_contrast()`.
 
 ## Scope
 
