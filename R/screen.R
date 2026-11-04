@@ -33,6 +33,18 @@
 #' even when it is validly excluded; the screen is a screen, not a test of the
 #' restriction.
 #'
+#' **Code numeric characteristics flexibly.** Every column enters the models
+#' as it is given: a numeric column linearly, a factor with its levels. Where
+#' the selection decision uses a characteristic through a threshold -- a
+#' lender that declines every application below a score cut-off -- a linear
+#' term cannot represent the step, and the exclusion violation of that
+#' characteristic is understated, often by an order of magnitude. Pass such
+#' characteristics as factors (for instance quantile classes plus the known
+#' cut-off) or as spline terms built beforehand, both as candidates and as
+#' covariates. The relevance hardly changes; the exclusion axis does. Check
+#' that the result does not depend on how ties at class boundaries are
+#' assigned.
+#'
 #' @param data A data frame.
 #' @param outcome Name of the outcome column. May be `NA` where unobserved.
 #' @param response Name of the response indicator column (0/1 or logical;
@@ -86,7 +98,9 @@ shadow_screen <- function(data, outcome, response, covariates = character(),
 
   rows <- lapply(candidates, function(z) {
     cols <- c(response, covariates, z)
-    pooled <- data[stats::complete.cases(data[cols]), , drop = FALSE]
+    # keep only the columns needed, so that subsetting a wide frame stays cheap
+    pooled <- data[stats::complete.cases(data[cols]), c(outcome, cols),
+                   drop = FALSE]
     obs <- pooled[pooled[[response]] == 1, , drop = FALSE]
     rel <- incr_fit(obs, outcome, covariates, z, family)
     exc <- incr_fit(pooled, response, covariates, z, stats::binomial())
@@ -112,17 +126,33 @@ shadow_screen <- function(data, outcome, response, covariates = character(),
   out
 }
 
+# Incremental McFadden R^2 of z. Only deviances are kept: the design matrix is
+# built once, each fit is reduced to its deviance and rank at once, and no glm
+# object (model frame, QR, fitted values) is held while the next one is fitted.
+# With millions of rows that is the difference between one and several copies
+# of an n x p matrix.
 incr_fit <- function(d, lhs, covariates, z, family) {
-  f0 <- stats::reformulate(if (length(covariates)) covariates else "1", lhs)
   f1 <- stats::reformulate(c(covariates, z), lhs)
-  m0 <- stats::glm(f0, family = family, data = d)
-  m1 <- stats::glm(f1, family = family, data = d)
-  chisq <- max(m0$deviance - m1$deviance, 0)
-  df <- m0$df.residual - m1$df.residual
+  mf <- stats::model.frame(f1, d)
+  y <- stats::model.response(mf)
+  X <- stats::model.matrix(f1, mf)
+  z_term <- match(z, attr(stats::terms(f1), "term.labels"))
+  in_z <- attr(X, "assign") == z_term
+  rm(mf)
+  fit_dev <- function(X) {
+    fit <- suppressWarnings(stats::glm.fit(X, y, family = family))
+    c(deviance = fit$deviance, null = fit$null.deviance, rank = fit$rank)
+  }
+  full <- fit_dev(X)
+  X <- X[, !in_z, drop = FALSE]
+  red <- fit_dev(X)
+  rm(X)
+  chisq <- max(red[["deviance"]] - full[["deviance"]], 0)
+  df <- full[["rank"]] - red[["rank"]]
   if (df < 1)
     stop("Candidate `", z, "` adds no degrees of freedom (constant or ",
          "collinear with the covariates).", call. = FALSE)
-  list(r2 = chisq / m0$null.deviance, chisq = chisq, df = df)
+  list(r2 = chisq / red[["null"]], chisq = chisq, df = df)
 }
 
 #' @export

@@ -81,6 +81,18 @@ cannot condition on an outcome that is missing. Under nonignorable selection
 a relevant \eqn{Z} therefore shows some exclusion signal through \eqn{Y}
 even when it is validly excluded; the screen is a screen, not a test of the
 restriction.
+
+\strong{Code numeric characteristics flexibly.} Every column enters the models
+as it is given: a numeric column linearly, a factor with its levels. Where
+the selection decision uses a characteristic through a threshold -- a
+lender that declines every application below a score cut-off -- a linear
+term cannot represent the step, and the exclusion violation of that
+characteristic is understated, often by an order of magnitude. Pass such
+characteristics as factors (for instance quantile classes plus the known
+cut-off) or as spline terms built beforehand, both as candidates and as
+covariates. The relevance hardly changes; the exclusion axis does. Check
+that the result does not depend on how ties at class boundaries are
+assigned.
 }
 \examples{
 d <- simulate_shadow(5000, tilt = -1, seed = 1)

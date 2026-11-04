@@ -6,6 +6,7 @@
 \usage{
 \method{plot}{shadow_screen}(
   x,
+  scale = c("log", "linear"),
   label = NULL,
   col = scan_colors[["sharp"]],
   text_col = "grey20",
@@ -18,7 +19,9 @@
 \arguments{
 \item{x}{A \code{"shadow_screen"} object.}
 
-\item{label}{Candidates to label. Default: all if there are at most eight,
+\item{scale}{\code{"log"} (default) or \code{"linear"} axes.}
+
+\item{label}{Candidates to label. Default: all if there are at most fifteen,
 else the most relevant one and the one with the highest ratio.}
 
 \item{col}{Point colour.}
@@ -35,9 +38,18 @@ else the most relevant one and the one with the highest ratio.}
 \description{
 Scatter of the screen: exclusion violation on the horizontal axis,
 relevance on the vertical, both incremental McFadden \eqn{R^2} on the same
-scale, with the equality line dashed from the origin. Above the line a
-candidate predicts the outcome better than it predicts selection. Points are
-labelled directly rather than through a legend.
+scale, with the equality line dashed. Above the line a candidate predicts
+the outcome better than it predicts selection. Points are labelled directly
+rather than through a legend; labels are placed so that they do not overlap
+each other or the points.
+}
+\details{
+Both measures typically span several orders of magnitude, so the default is
+logarithmic axes, on which the equality line is still the diagonal of the
+square plotting region. Values of zero are drawn at the lower axis limit.
+Distance from the line reads as a factor; distance along it as size. Read
+the relevance itself too: a candidate far above the line with negligible
+relevance is no shadow variable (see \code{relevance_chisq_df}).
 }
 \examples{
 d <- simulate_shadow(5000, tilt = -1, seed = 1)

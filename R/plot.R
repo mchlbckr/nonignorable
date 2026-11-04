@@ -60,12 +60,13 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
   graphics::lines(xs, cv$upper, lwd = 2, col = colors[["sharp"]])
   graphics::lines(xs, cv$lower, lwd = 2, col = colors[["sharp"]])
 
-  if (min(cv$lambda) == 0) {
+  # The lambda = 0 point is explained in the legend, not by a label next to it:
+  # when the decision flips near lambda = 0, the flip marker, its drop line and
+  # the threshold all sit beside that point and any label there collides.
+  has_point <- min(cv$lambda) == 0
+  if (has_point)
     graphics::points(tx(0), x$point, pch = 21, cex = 1.4, lwd = 2,
                      bg = colors[["sharp"]], col = surface_col())
-    graphics::text(tx(0), x$point, "model on observed rows",
-                   adj = c(-0.08, 2.2), col = text_col, cex = 0.8)
-  }
   if (!is.null(x$threshold)) {
     usr <- graphics::par("usr")
     graphics::abline(h = x$threshold, lty = 2, col = text_col)
@@ -74,36 +75,46 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
     fs <- x$flip[["sharp"]]; fn <- x$flip[["naive"]]
     sym <- if (scale == "ratio") "e^lambda" else "lambda"
     lab <- function(v) bquote(.(as.name("flips at")) ~ .(parse(text = sym)[[1]]) %~~% .(sprintf("%.1f", tx(v))))
+    # label to the right of the drop line, or to its left near the right edge
+    flip_adj <- function(v, pad) {
+      if (tx(v) > usr[1] + 0.7 * (usr[2] - usr[1])) c(1 + pad, -0.6) else c(-pad, -0.6)
+    }
     if (!is.na(fs)) {
       graphics::segments(tx(fs), usr[3], tx(fs), x$threshold, lty = 3,
                          col = text_col)
-      graphics::points(tx(fs), x$threshold, pch = 21, cex = 1.4, lwd = 2,
-                       bg = colors[["sharp"]], col = surface_col())
-      graphics::text(tx(fs), usr[3], lab(fs), adj = c(-0.08, -0.6),
+      graphics::points(tx(fs), x$threshold, pch = 21, cex = 1.3, lwd = 2,
+                       bg = surface_col(), col = colors[["sharp"]])
+      graphics::text(tx(fs), usr[3], lab(fs), adj = flip_adj(fs, 0.08),
                      col = text_col, cex = 0.85)
     } else if (!is.na(fn)) {
       graphics::segments(tx(fn), usr[3], tx(fn), x$threshold, lty = 3,
                          col = text_col)
       graphics::points(tx(fn), x$threshold, pch = 21, cex = 1.1, lwd = 2,
-                       bg = colors[["naive"]], col = surface_col())
+                       bg = surface_col(), col = colors[["naive"]])
       graphics::text(tx(fn), usr[3],
                      sprintf("%s band flips at %.1f; sharp set never",
                              if (is_mean) "outer" else "naive", tx(fn)),
-                     adj = c(-0.05, -0.6), col = text_col, cex = 0.8)
+                     adj = flip_adj(fn, 0.05), col = text_col, cex = 0.8)
     }
   }
+  leg <- c(
+    if (is_mean) quote("Sharp identified set")
+    else if (x$aggregate == "common") quote("Sharp identified set (common tilt)")
+    else quote("Sharp identified set"),
+    if (is_mean) quote("Outer band (without " * pi <= 1 * ")")
+    else quote("Naive band " * expit(logit ~ eta[obs] %+-% lambda)),
+    if (has_point) quote("Model on observed rows " * (lambda == 0))
+  )
+  k <- length(leg)
   graphics::legend("topleft", bty = "n", text.col = text_col, cex = 0.85,
-                   legend = c(
-                     if (is_mean) quote("Sharp identified set")
-                     else if (x$aggregate == "common") quote("Sharp identified set (common tilt)")
-                     else quote("Sharp identified set"),
-                     if (is_mean) quote("Outer band (without " * pi <= 1 * ")")
-                     else quote("Naive band " * expit(logit ~ eta[obs] %+-% lambda))
-                   ),
-                   fill = c(grDevices::adjustcolor(colors[["sharp"]], 0.18), NA),
-                   border = c(colors[["sharp"]], NA),
-                   lty = c(NA, 2), lwd = c(NA, 1.5),
-                   col = c(NA, naive_col), merge = TRUE, x.intersp = 0.8)
+                   legend = as.expression(leg),
+                   fill = c(grDevices::adjustcolor(colors[["sharp"]], 0.18), NA, NA)[seq_len(k)],
+                   border = c(colors[["sharp"]], NA, NA)[seq_len(k)],
+                   lty = c(NA, 2, NA)[seq_len(k)], lwd = c(NA, 1.5, 2)[seq_len(k)],
+                   pch = c(NA, NA, 21)[seq_len(k)], pt.cex = 1.2,
+                   pt.bg = c(NA, NA, colors[["sharp"]])[seq_len(k)],
+                   col = c(NA, naive_col, surface_col())[seq_len(k)],
+                   merge = TRUE, x.intersp = 0.8)
   invisible(x)
 }
 
@@ -111,12 +122,21 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
 #'
 #' Scatter of the screen: exclusion violation on the horizontal axis,
 #' relevance on the vertical, both incremental McFadden \eqn{R^2} on the same
-#' scale, with the equality line dashed from the origin. Above the line a
-#' candidate predicts the outcome better than it predicts selection. Points are
-#' labelled directly rather than through a legend.
+#' scale, with the equality line dashed. Above the line a candidate predicts
+#' the outcome better than it predicts selection. Points are labelled directly
+#' rather than through a legend; labels are placed so that they do not overlap
+#' each other or the points.
+#'
+#' Both measures typically span several orders of magnitude, so the default is
+#' logarithmic axes, on which the equality line is still the diagonal of the
+#' square plotting region. Values of zero are drawn at the lower axis limit.
+#' Distance from the line reads as a factor; distance along it as size. Read
+#' the relevance itself too: a candidate far above the line with negligible
+#' relevance is no shadow variable (see `relevance_chisq_df`).
 #'
 #' @param x A `"shadow_screen"` object.
-#' @param label Candidates to label. Default: all if there are at most eight,
+#' @param scale `"log"` (default) or `"linear"` axes.
+#' @param label Candidates to label. Default: all if there are at most fifteen,
 #'   else the most relevant one and the one with the highest ratio.
 #' @param col Point colour.
 #' @param text_col Colour for text and reference lines.
@@ -128,40 +148,144 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
 #' d <- simulate_shadow(5000, tilt = -1, seed = 1)
 #' plot(shadow_screen(d, "y", "observed", c("x1", "x2"),
 #'                    c("z_shadow", "z_policy", "z_score")))
-plot.shadow_screen <- function(x, label = NULL, col = scan_colors[["sharp"]],
+plot.shadow_screen <- function(x, scale = c("log", "linear"), label = NULL,
+                               col = scan_colors[["sharp"]],
                                text_col = "grey20",
                                xlab = expression("Exclusion violation, incremental McFadden " * R^2),
                                ylab = expression("Relevance, incremental McFadden " * R^2),
                                main = NULL, ...) {
+  scale <- match.arg(scale)
   if (is.null(label)) {
-    label <- if (nrow(x) <= 8L) x$candidate else
+    label <- if (nrow(x) <= 15L) x$candidate else
       unique(c(x$candidate[which.max(x$relevance)],
                x$candidate[which.max(x$ratio)]))
   }
-  lim <- c(0, max(x$relevance, x$exclusion) * 1.08)
+  ex <- x$exclusion; re <- x$relevance
+  if (scale == "log") {
+    pos <- c(ex, re)[c(ex, re) > 0]
+    if (!length(pos)) stop("All values are zero; use scale = \"linear\".", call. = FALSE)
+    lo <- 10^floor(log10(min(pos)) - 0.3)
+    hi <- 10^ceiling(log10(max(pos)) + 0.05)
+    ex <- pmax(ex, lo); re <- pmax(re, lo)
+    lim <- c(lo, hi)
+  } else {
+    lim <- c(0, max(re, ex) * 1.08)
+  }
   op <- graphics::par(pty = "s")
   on.exit(graphics::par(op), add = TRUE)
-  graphics::plot(x$exclusion, x$relevance, type = "n", xlim = lim, ylim = lim,
-                 xlab = xlab, ylab = ylab,
-                 main = main, las = 1, bty = "l", col.axis = text_col,
-                 col.lab = text_col, col.main = text_col, fg = text_col, ...)
-  top <- lim[2]
-  graphics::segments(0, 0, top, top, lty = 2, col = text_col)
-  graphics::text(top * 0.04, top * 0.96, "more relevance than violation",
+  graphics::plot(ex, re, type = "n", xlim = lim, ylim = lim,
+                 log = if (scale == "log") "xy" else "",
+                 xlab = xlab, ylab = ylab, axes = FALSE,
+                 main = main, bty = "l", col.lab = text_col,
+                 col.main = text_col, fg = text_col, ...)
+  if (scale == "log") {
+    at <- 10^seq(log10(lim[1]), log10(lim[2]))
+    labs_at <- parse(text = paste0("10^", log10(at)))
+    for (s in 1:2) graphics::axis(s, at = at, labels = labs_at, las = 1,
+                                  col = text_col, col.axis = text_col)
+  } else {
+    for (s in 1:2) graphics::axis(s, las = 1, col = text_col, col.axis = text_col)
+  }
+  graphics::box(bty = "l", col = text_col)
+  usr <- graphics::par("usr")
+  # equality line: the diagonal in the coordinates actually drawn
+  graphics::segments(lim[1], lim[1], lim[2], lim[2], lty = 2, col = text_col)
+  ux <- function(f) if (scale == "log") 10^(usr[1] + f * (usr[2] - usr[1])) else usr[1] + f * (usr[2] - usr[1])
+  uy <- function(f) if (scale == "log") 10^(usr[3] + f * (usr[4] - usr[3])) else usr[3] + f * (usr[4] - usr[3])
+  graphics::text(ux(0.04), uy(0.96), "more relevance than violation",
                  adj = c(0, 1), col = text_col, cex = 0.8, font = 3)
-  graphics::points(x$exclusion, x$relevance, pch = 21, cex = 1.6, lwd = 2,
+  graphics::points(ex, re, pch = 21, cex = 1.6, lwd = 2,
                    bg = col, col = surface_col())
   i <- match(label, x$candidate)
   i <- i[!is.na(i)]
   if (length(i)) {
-    labs <- sprintf("%s (ratio %s)", x$candidate[i],
-                    formatC(x$ratio[i], digits = 2, format = "f"))
-    right <- x$exclusion[i] > 0.55 * lim[2]
-    graphics::text(x$exclusion[i], x$relevance[i], labs,
-                   pos = ifelse(right, 2, 4), col = text_col, cex = 0.8,
-                   offset = 0.7, xpd = NA)
+    labs <- sprintf("%s (ratio %s)", x$candidate[i], format_ratio(x$ratio[i]))
+    place_labels(ex[i], re[i], labs, px = ex, py = re, line = lim,
+                 col = text_col, cex = 0.8)
   }
   invisible(x)
+}
+
+format_ratio <- function(r) {
+  vapply(r, function(v) {
+    if (!is.finite(v)) "Inf"
+    else if (v >= 100) formatC(round(v), format = "d", big.mark = ",")
+    else if (v >= 0.01) formatC(v, digits = 2, format = "f")
+    else formatC(v, digits = 1, format = "e")
+  }, "")
+}
+
+# Greedy label placement: for each point, in order of position, try eight
+# positions around it and take the first whose text box overlaps neither a
+# label already placed, nor any point, nor the equality line from line[1] to
+# line[2], nor the plot border. Works in inches, so it is the same on linear
+# and log axes. If no position is free, the one with the least overlap is used.
+place_labels <- function(x, y, labels, px, py, line, col, cex) {
+  ix <- graphics::grconvertX(x, "user", "inches")
+  iy <- graphics::grconvertY(y, "user", "inches")
+  pix <- graphics::grconvertX(px, "user", "inches")
+  piy <- graphics::grconvertY(py, "user", "inches")
+  usr <- graphics::par("usr")
+  bx <- graphics::grconvertX(c(usr[1], usr[2]), "user", "inches")
+  if (graphics::par("xlog")) bx <- graphics::grconvertX(10^usr[1:2], "user", "inches")
+  by <- graphics::grconvertY(c(usr[3], usr[4]), "user", "inches")
+  if (graphics::par("ylog")) by <- graphics::grconvertY(10^usr[3:4], "user", "inches")
+  w <- graphics::strwidth(labels, units = "inches", cex = cex)
+  h <- graphics::strheight("Xg", units = "inches", cex = cex) * 1.25
+  r <- 0.09                                    # point radius plus gap, inches
+  # candidate positions: eight directions at the point, then the same eight
+  # further out; a label not touching its point gets a short leader line
+  dirs <- list(c(1, 0), c(-1, 0), c(0, 1), c(0, -1),
+               c(1, 1), c(1, -1), c(-1, 1), c(-1, -1))
+  cand <- c(lapply(dirs, function(d) list(d = d, s = 1)),
+            lapply(dirs, function(d) list(d = d, s = 3)))
+  box_of <- function(k, cd) {
+    d <- cd$d; g <- r * cd$s
+    cx <- ix[k] + d[1] * (g + if (d[1] == 0) 0 else w[k] / 2)
+    cy <- iy[k] + d[2] * (g + h / 2)
+    c(cx - w[k] / 2, cx + w[k] / 2, cy - h / 2, cy + h / 2)
+  }
+  overlap <- function(a, b)
+    max(0, min(a[2], b[2]) - max(a[1], b[1])) * max(0, min(a[4], b[4]) - max(a[3], b[3]))
+  pts <- lapply(seq_along(pix), function(j)
+    c(pix[j] - r * 0.7, pix[j] + r * 0.7, piy[j] - r * 0.7, piy[j] + r * 0.7))
+  # the equality line as a chain of small boxes
+  t <- seq(0, 1, length.out = 120)
+  lv <- if (graphics::par("xlog")) 10^(log10(line[1]) + t * diff(log10(line))) else line[1] + t * diff(line)
+  lx <- graphics::grconvertX(lv, "user", "inches")
+  ly <- graphics::grconvertY(lv, "user", "inches")
+  e <- 0.015
+  pts <- c(pts, lapply(seq_along(lx), function(j) c(lx[j] - e, lx[j] + e, ly[j] - e, ly[j] + e)))
+  placed <- list()
+  for (k in order(ix, iy)) {
+    cost <- vapply(cand, function(cd) {
+      b <- box_of(k, cd)
+      out <- max(0, bx[1] - b[1]) + max(0, b[2] - bx[2]) +
+             max(0, by[1] - b[3]) + max(0, b[4] - by[2])
+      sum(vapply(c(placed, pts), function(o) overlap(b, o), 0)) +
+        10 * out + 1e-4 * (cd$s - 1)          # prefer the near ring on a tie
+    }, 0)
+    cd <- cand[[which.min(cost)]]             # first minimum = preferred order
+    b <- box_of(k, cd)
+    placed[[length(placed) + 1L]] <- b
+    if (cd$s > 1 || all(cd$d != 0)) {
+      # leader from the point's edge to the nearest point of the box
+      tx <- min(max(ix[k], b[1]), b[2]); ty <- min(max(iy[k], b[3]), b[4])
+      v <- c(tx - ix[k], ty - iy[k]); len <- sqrt(sum(v^2))
+      if (len > r) {
+        p0 <- c(ix[k], iy[k]) + v / len * r * 0.6
+        graphics::segments(graphics::grconvertX(p0[1], "inches", "user"),
+                           graphics::grconvertY(p0[2], "inches", "user"),
+                           graphics::grconvertX(tx, "inches", "user"),
+                           graphics::grconvertY(ty, "inches", "user"),
+                           col = col, lwd = 0.6, xpd = NA)
+      }
+    }
+    graphics::text(graphics::grconvertX(mean(b[1:2]), "inches", "user"),
+                   graphics::grconvertY(mean(b[3:4]), "inches", "user"),
+                   labels[k], col = col, cex = cex, xpd = NA)
+  }
+  invisible(NULL)
 }
 
 surface_col <- function() {
