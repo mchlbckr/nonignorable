@@ -88,7 +88,9 @@ matrix \code{q}; each column carries mass \eqn{1/K}. The discretisation error is
 \eqn{O(1/K)}; \eqn{K = 200} is plenty for a plot. Where the quantiles come
 from -- quantile regression, a distributional model, draws from a
 generative model -- is the user's business, as \eqn{\hat\eta_{\mathrm{obs}}}
-is in the binary scan; the package never sees a learner. Rows are sorted
+is in the binary scan; the package never sees a learner. \code{\link[=quantile_grid]{quantile_grid()}}
+builds \code{q} from a quantile regression, any quantile function or draws.
+Rows are sorted
 internally, so crossing quantile curves do no harm. A quantile grid cuts
 off the tails: with heavy tails it underestimates \eqn{U(s)} for small
 \eqn{s}, and therefore the width of the set. \code{r} is the \emph{conditional}

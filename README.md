@@ -98,6 +98,18 @@ plot(sm)
 
 ![Sensitivity curve for a mean](man/figures/scan_mean.png)
 
+`obs_quantiles()` knows the simulator's truth. On real data,
+`quantile_grid()` builds the grid from a fitted model. It accepts a
+`quantreg::rq` fit (refitted at the K levels), any `function(tau, newdata)`,
+or a matrix of draws from a distributional model. It sorts crossing quantile
+curves and reports the share of rows that needed it.
+
+```r
+obs <- dc[dc$observed == 1, ]
+fq  <- quantreg::rq(y ~ x1 + x2 + z_shadow + z_policy + z_score, data = obs)
+q   <- quantile_grid(fq, dc[rej, ], K = 200)
+```
+
 ## The screen
 
 ```r

@@ -22,7 +22,7 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.1.0)
 Imports: graphics, grDevices, stats
-Suggests: testthat (>= 3.0.0)
+Suggests: quantreg, testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 Config/roxygen2/version: 8.0.0
