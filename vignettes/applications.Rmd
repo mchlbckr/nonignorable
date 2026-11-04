@@ -137,12 +137,19 @@ The candidates are the CD4 counts at baseline (`cd40`) and at week 20
 (`cd420`), sex, and `offtrt`, an indicator that the patient stopped the
 assigned treatment before week 96.
 
+Here the numeric characteristics enter linearly. Dropout follows no
+threshold rule, and the screen finds no trace of one. Classes would also
+cost more than the data carry: with `r iv(sum(d$y == 1, na.rm = TRUE))` counts below 200 among the observed,
+ten classes for each numeric characteristic leave fewer than ten of them per
+parameter, and the screen warns about exactly that. Flexible coding pays
+when the selection uses a threshold and the sample carries the degrees of
+freedom.
+
 ```{r actg-screen, eval = ok}
 base <- c("age", "wtkg", "hemo", "homo", "drugs", "karnof", "race",
           "symptom", "str2", "preanti", "arms", "cd80")
 sc <- shadow_screen(d, outcome = "y", response = "r", covariates = base,
-                    candidates = c("cd40", "cd420", "gender", "offtrt"),
-                    numeric = "classes")
+                    candidates = c("cd40", "cd420", "gender", "offtrt"))
 sc
 plot(sc)
 ```

@@ -11,6 +11,11 @@ First release.
 * `numeric = "classes"` codes numeric characteristics as atom-free classes
   (`screen_classes()`) instead of linearly. Linear coding understates the
   exclusion violation when selection cuts hard on a characteristic.
+* The screen reports the cases of the rarer class per parameter of the
+  outcome and of the response model (`epp_relevance`, `epp_exclusion`) and
+  warns below 10, where extra parameters can manufacture relevance or
+  violation.
+* `citation("shadowscan")` lists the package and the two papers behind it.
 
 ## Scan
 

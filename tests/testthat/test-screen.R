@@ -56,3 +56,20 @@ test_that("inputs are validated", {
   d$x0 <- 1
   expect_error(shadow_screen(d, "y", "observed", "x1", "x0"), "degrees")
 })
+
+test_that("too few minority cases per parameter are flagged, per side", {
+  d <- simulate_shadow(400, tilt = -1, seed = 5)
+  w <- character()
+  sc <- withCallingHandlers(
+    shadow_screen(d, "y", "observed", c("x1", "x2"), "z_shadow"),
+    warning = function(cnd) { w <<- c(w, conditionMessage(cnd)); invokeRestart("muffleWarning") })
+  expect_equal(sc$epp_relevance, 19 / 4)
+  expect_equal(sc$epp_exclusion, 185 / 4)
+  expect_true(any(grepl("outcome model", w)))
+  expect_false(any(grepl("response model", w)))
+})
+
+test_that("ample minority cases stay quiet", {
+  d <- simulate_shadow(5000, tilt = -1, seed = 1)
+  expect_no_warning(shadow_screen(d, "y", "observed", c("x1", "x2"), "z_shadow"))
+})

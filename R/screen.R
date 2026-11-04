@@ -51,7 +51,10 @@
 #' \eqn{\chi^2} per degree of freedom is lower than with one linear term,
 #' and a candidate that is relevant only through a smooth trend can fall
 #' below `min_relevance`. Read both codings when they disagree. The coding
-#' used is stored in `attr(x, "coding")`. For other cut-offs or class counts
+#' used is stored in `attr(x, "coding")`. Flexible coding pays only when the
+#' sample carries the degrees of freedom: the screen warns when a model has
+#' fewer than 10 cases of the rarer class per parameter, separately for the
+#' outcome model, fitted to the observed rows, and the response model. For other cut-offs or class counts
 #' per characteristic, code the columns yourself with [screen_classes()] and
 #' pass factors.
 #'
@@ -76,7 +79,10 @@
 #'
 #' @return A data frame of class `"shadow_screen"`, one row per candidate,
 #'   with `candidate`, `relevance`, `exclusion`, `ratio`, `relevance_chisq_df`,
-#'   `exclusion_chisq_df`, `df`, `n_observed`, `n`, `verdict` (`"pass"` or
+#'   `exclusion_chisq_df`, `df`, `n_observed`, `n`, `epp_relevance` and
+#'   `epp_exclusion` (cases of the rarer class per parameter of the outcome
+#'   and of the response model; `NA` for a target that is not binary),
+#'   `verdict` (`"pass"` or
 #'   `"reject"`) and `reason`. Attribute `"coding"`: one row per numeric
 #'   characteristic with its treatment, the number of classes, the share of
 #'   rows outside the range seen among the observed rows, and, for classes,
@@ -135,10 +141,22 @@ shadow_screen <- function(data, outcome, response, covariates = character(),
       relevance_chisq_df = rel$chisq / rel$df,
       exclusion_chisq_df = exc$chisq / exc$df,
       df = rel$df, n_observed = nrow(obs), n = nrow(pooled),
+      epp_relevance = rel$epp, epp_exclusion = exc$epp,
       stringsAsFactors = FALSE
     )
   })
   out <- do.call(rbind, rows)
+  thin <- function(v) out$candidate[!is.na(v) & v < 10]
+  for (side in list(list(v = out$epp_relevance, m = "outcome model (observed rows)"),
+                    list(v = out$epp_exclusion, m = "response model (all rows)")))
+    if (length(thin(side$v)))
+      warning("Fewer than 10 cases of the rarer class per parameter in the ",
+              side$m, " for: ", paste(sprintf("%s (%.1f)", thin(side$v),
+                                              side$v[!is.na(side$v) & side$v < 10]),
+                                      collapse = ", "),
+              ". The incremental McFadden R^2 has no penalty for degrees of ",
+              "freedom, so extra parameters can manufacture relevance or ",
+              "violation. Prefer linear coding or a smaller `k`.", call. = FALSE)
   weak <- out$relevance_chisq_df < min_relevance
   viol <- out$ratio <= min_ratio
   out$verdict <- ifelse(weak | viol, "reject", "pass")
@@ -210,12 +228,17 @@ incr_fit <- function(d, lhs, covariates, z, family) {
   X <- X[, !in_z, drop = FALSE]
   red <- fit_dev(X)
   rm(X)
+  # events per parameter: cases of the rarer class of a binary target per
+  # coefficient of the full model; NA for targets that are not binary
+  yy <- if (is.factor(y)) as.integer(y) - 1L else y
+  epp <- if (family$family == "binomial" && all(yy %in% c(0, 1)))
+    min(sum(yy == 1), sum(yy == 0)) / full[["rank"]] else NA_real_
   chisq <- max(red[["deviance"]] - full[["deviance"]], 0)
   df <- full[["rank"]] - red[["rank"]]
   if (df < 1)
     stop("Candidate `", z, "` adds no degrees of freedom (constant or ",
          "collinear with the covariates).", call. = FALSE)
-  list(r2 = chisq / red[["null"]], chisq = chisq, df = df)
+  list(r2 = chisq / red[["null"]], chisq = chisq, df = df, epp = epp)
 }
 
 #' @export

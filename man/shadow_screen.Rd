@@ -49,7 +49,10 @@ numeric characteristics.}
 \value{
 A data frame of class \code{"shadow_screen"}, one row per candidate,
 with \code{candidate}, \code{relevance}, \code{exclusion}, \code{ratio}, \code{relevance_chisq_df},
-\code{exclusion_chisq_df}, \code{df}, \code{n_observed}, \code{n}, \code{verdict} (\code{"pass"} or
+\code{exclusion_chisq_df}, \code{df}, \code{n_observed}, \code{n}, \code{epp_relevance} and
+\code{epp_exclusion} (cases of the rarer class per parameter of the outcome
+and of the response model; \code{NA} for a target that is not binary),
+\code{verdict} (\code{"pass"} or
 \code{"reject"}) and \code{reason}. Attribute \code{"coding"}: one row per numeric
 characteristic with its treatment, the number of classes, the share of
 rows outside the range seen among the observed rows, and, for classes,
@@ -110,7 +113,10 @@ freedom: a candidate with ten classes has nine, so its relevance
 \eqn{\chi^2} per degree of freedom is lower than with one linear term,
 and a candidate that is relevant only through a smooth trend can fall
 below \code{min_relevance}. Read both codings when they disagree. The coding
-used is stored in \code{attr(x, "coding")}. For other cut-offs or class counts
+used is stored in \code{attr(x, "coding")}. Flexible coding pays only when the
+sample carries the degrees of freedom: the screen warns when a model has
+fewer than 10 cases of the rarer class per parameter, separately for the
+outcome model, fitted to the observed rows, and the response model. For other cut-offs or class counts
 per characteristic, code the columns yourself with \code{\link[=screen_classes]{screen_classes()}} and
 pass factors.
 }

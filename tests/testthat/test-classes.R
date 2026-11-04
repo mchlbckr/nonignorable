@@ -39,8 +39,11 @@ test_that("a hard cut-off in selection triggers the warning; classes catch it", 
   d$y[d$observed == 0] <- NA
   expect_warning(lin <- shadow_screen(d, "y", "observed", c("x1", "x2"), "z_score"),
                  "never seen among the observed rows")
-  cls <- shadow_screen(d, "y", "observed", c("x1", "x2"), "z_score",
-                       numeric = "classes")
+  # three characteristics with ten classes each: about 31 parameters for
+  # about 240 defaults among the observed, which the screen flags
+  expect_warning(cls <- shadow_screen(d, "y", "observed", c("x1", "x2"), "z_score",
+                                      numeric = "classes"),
+                 "rarer class per parameter in the outcome model")
   expect_gt(cls$exclusion, 1.5 * lin$exclusion)
   cd <- attr(cls, "coding")
   expect_setequal(cd$variable, c("x1", "x2", "z_score"))

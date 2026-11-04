@@ -1,0 +1,32 @@
+bibentry(
+  bibtype = "Manual",
+  title = "shadowscan: Shadow-Variable Screens and Sharp Sensitivity Scans for Nonignorable Missing Outcomes",
+  author = person("Michael", "Bücker"),
+  year = "2026",
+  note = paste("R package version", meta$Version),
+  url = "https://github.com/mchlbckr/shadowscan",
+  textVersion = paste0("Bücker, M. (2026). shadowscan: Shadow-Variable Screens ",
+                       "and Sharp Sensitivity Scans for Nonignorable Missing Outcomes. ",
+                       "R package version ", meta$Version, ".")
+)
+
+bibentry(
+  bibtype = "Unpublished",
+  title = "Diagnosing Reject Inference: Relevance, Exclusion, and Selective Labeling",
+  author = person("Michael", "Bücker"),
+  year = "2026",
+  note = "Manuscript under review",
+  textVersion = paste("Bücker, M. (2026). Diagnosing reject inference: relevance,",
+                      "exclusion, and selective labeling. Manuscript under review.")
+)
+
+bibentry(
+  bibtype = "Unpublished",
+  title = "The Price of a Weak Shadow Variable: Inference under Nonignorable Missingness as Relevance Vanishes",
+  author = person("Michael", "Bücker"),
+  year = "2026",
+  note = "Manuscript under review",
+  textVersion = paste("Bücker, M. (2026). The price of a weak shadow variable:",
+                      "inference under nonignorable missingness as relevance",
+                      "vanishes. Manuscript under review.")
+)
