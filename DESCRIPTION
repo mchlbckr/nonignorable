@@ -1,0 +1,26 @@
+Package: shadowscan
+Title: Shadow-Variable Screens and Sharp Sensitivity Scans for Nonignorable Binary Outcomes
+Version: 0.0.0.9000
+Authors@R:
+    person("Michael", "Bücker", email = "michael.buecker@fh-muenster.de",
+           role = c("aut", "cre", "cph"))
+Description: Two tools for a binary outcome that is missing not at random.
+    'shadow_screen()' asks whether a candidate variable can serve as a shadow
+    variable, reporting its relevance for the outcome and its violation of the
+    exclusion restriction on a common scale (incremental McFadden R-squared).
+    'shadow_scan()' asks how far the answer can move: given the observed-data
+    outcome probability and the conditional observation rate, it returns the
+    sharp identified set under a bounded logit tilt of the selection mechanism,
+    in closed form, pointwise and aggregated over a portfolio. The two tools
+    answer different questions under different assumptions and are not two
+    halves of one procedure.
+URL: https://github.com/mchlbckr/shadowscan
+BugReports: https://github.com/mchlbckr/shadowscan/issues
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.1.0)
+Imports: graphics, grDevices, stats
+Suggests: testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+Config/roxygen2/version: 8.0.0

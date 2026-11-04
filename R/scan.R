@@ -1,0 +1,324 @@
+#' Sharp identified set for a binary outcome under a bounded logit tilt
+#'
+#' `shadow_scan()` answers *how far the answer can move* if the outcome is
+#' missing not at random. It assumes nothing but a bound \eqn{|b(x)| \le
+#' \lambda} on the logit tilt of the selection mechanism and needs **no
+#' shadow variable**. It is a different tool from [shadow_screen()], which asks
+#' whether a variable is fit to serve as a shadow variable for a
+#' point-identified model; the two rest on different assumptions.
+#'
+#' @section The set:
+#' Let \eqn{\eta(x) = P(Y=1 \mid X=x)} be the target,
+#' \eqn{\eta_{\mathrm{obs}}(x) = P(Y=1 \mid X=x, R=1)} its observed-data
+#' counterpart, \eqn{r(x) = P(R=1 \mid X=x)} the conditional observation rate
+#' and \eqn{b(x) = \log\{\pi(1,x)/\pi(0,x)\}} with \eqn{\pi(y,x) = P(R=1 \mid
+#' Y=y, X=x)}. By Bayes' rule \eqn{\mathrm{logit}\,\eta_{\mathrm{obs}} =
+#' \mathrm{logit}\,\eta + b}. With \eqn{\ell = \mathrm{logit}\,
+#' \eta_{\mathrm{obs}}} and \eqn{\eta_t = \mathrm{expit}(\ell - t)}, the
+#' identified set is
+#' \deqn{\mathcal H_\lambda(x) = \{\eta_t : |t| \le \lambda,\; c_t \in (0,1],\;
+#'   c_t e^{t} \le 1\}, \qquad c_t = \frac{r}{e^{t}\eta_t + 1 - \eta_t},}
+#' where \eqn{c_t = \pi(0,x)} and \eqn{c_t e^t = \pi(1,x)} are the two
+#' propensities that reproduce the observed \eqn{r}. Solving the two
+#' constraints gives the closed form
+#' \deqn{\mathcal H_\lambda(x) = \big[\max\{\mathrm{expit}(\ell-\lambda),\;
+#'   r\eta_{\mathrm{obs}}\},\; \min\{\mathrm{expit}(\ell+\lambda),\;
+#'   r\eta_{\mathrm{obs}} + 1 - r\}\big],}
+#' the naive band \eqn{[\mathrm{expit}(\ell-\lambda),
+#' \mathrm{expit}(\ell+\lambda)]} intersected with the worst-case (Manski)
+#' bounds. Both endpoints are attained, and at \eqn{\lambda = 0} the set is
+#' \eqn{\{\eta_{\mathrm{obs}}\}}: the value any model fitted on the observed
+#' rows asserts.
+#'
+#' @section When the sharp set is narrower, and when it is not:
+#' It is never wider than the naive band. It is strictly narrower exactly where
+#' a worst-case bound cuts the band: the lower end moves when \eqn{r >
+#' \mathrm{expit}(\ell-\lambda)/\eta_{\mathrm{obs}}}, the upper end when
+#' \eqn{r > \{1-\mathrm{expit}(\ell+\lambda)\}/(1-\eta_{\mathrm{obs}})}. For
+#' \eqn{r \le e^{-\lambda}} neither moves. In reject inference the rows of
+#' interest are the *rejected* applications, whose observation rate is
+#' typically small, so the **upper** end there often coincides with the naive
+#' one. Ignoring \eqn{r} is never wrong, only wasteful where \eqn{r} is large.
+#'
+#' @section The two inputs:
+#' The scan takes two numeric vectors, not one, evaluated at the rows for which
+#' the set is wanted: \eqn{\hat\eta_{\mathrm{obs}}(x)} and \eqn{\hat r(x)}.
+#' `r` is the *conditional observation rate* \eqn{P(R=1 \mid X=x)}, not the row
+#' indicator and not the global response rate. For rejected applications
+#' \eqn{\hat\eta_{\mathrm{obs}}} is an extrapolation of a model fitted on the
+#' accepted ones; that is a property of the task, not of this package. The
+#' package never sees the learner: `glm`, a scorecard, a random forest or a
+#' model from another language serve equally. [scan_inputs()] extracts both
+#' vectors from fitted models with a `predict()` method. The set requires
+#' \eqn{\hat r(x) > 0}: where acceptance was deterministic, nothing is
+#' observed and \eqn{\eta_{\mathrm{obs}}} is undefined.
+#'
+#' @section Aggregation:
+#' The set is pointwise. For a portfolio rate (a weighted mean of
+#' \eqn{\eta(x)}) there are two ways to aggregate:
+#' * `"common"` (default): one tilt \eqn{t} for all rows, the meaning of a
+#'   sensitivity analysis -- "had selection the strength \eqn{t}, the rate
+#'   would be \eqn{R(t)}". This adds an assumption: the tilt is constant in
+#'   \eqn{x}. Then \eqn{t} must be admissible in *every* row; the admissible
+#'   range is the intersection of the row ranges \eqn{[\ell -
+#'   \mathrm{logit}\,U,\; \ell - \mathrm{logit}\,L]}. It always contains
+#'   \eqn{t = 0}. A single row with \eqn{\hat r} near one can narrow it a lot;
+#'   the rows that bind are reported in `$binding`. Because the range is set
+#'   by the most extreme rows, with *estimated* inputs it inherits their
+#'   estimation error, at exactly the rows where \eqn{\hat r} is least
+#'   reliable. Inspect the binding rows before reading a plateau as
+#'   information.
+#' * `"union"`: every row at its own extreme. Under the bound \eqn{|b(x)| \le
+#'   \lambda} alone, with the tilt free to vary with \eqn{x}, this is the
+#'   sharp set for the portfolio rate. It is wider than `"common"` because it
+#'   allows the tilt to be \eqn{+\lambda} in some rows and to be cut by a
+#'   worst-case bound in others; read it as the bound that holds without the
+#'   constant-tilt assumption.
+#'
+#' @param eta_obs Numeric vector of \eqn{\hat\eta_{\mathrm{obs}}(x)}, in (0, 1).
+#' @param r Numeric vector of \eqn{\hat r(x)}, in (0, 1], same length.
+#' @param lambda Non-negative bounds on \eqn{|b|}, on the **log-odds** scale.
+#'   \eqn{e^\lambda} is the largest admissible ratio of the two observation
+#'   propensities. Sorted and de-duplicated.
+#' @param aggregate `"common"` or `"union"`, see Aggregation.
+#' @param weights Optional non-negative row weights for the portfolio mean.
+#' @param threshold Optional decision threshold on the portfolio rate. If
+#'   given, the smallest \eqn{\lambda} at which the sharp set (and the naive
+#'   band) reaches it is computed exactly, by root finding on the closed form.
+#'
+#' @return An object of class `"shadow_scan"`, a list with
+#'   * `curve`: data frame with `lambda`, `lower`, `upper` (sharp set of the
+#'     portfolio rate) and `naive_lower`, `naive_upper`;
+#'   * `point`: the portfolio rate at \eqn{\lambda = 0};
+#'   * `threshold`, `flip`: the threshold and the \eqn{\lambda} at which the
+#'     sharp set and the naive band first reach it (`NA` if not within the
+#'     scanned range);
+#'   * `binding`: for `"common"`, the row indices that bind the lower and the
+#'     upper end at each \eqn{\lambda} (`NA` where the naive bound binds);
+#'   * the inputs, so that `as.data.frame(x, lambda = )` can return the
+#'     pointwise sets.
+#' @seealso [plot.shadow_scan()], [shadow_screen()] for the other question.
+#' @export
+#' @examples
+#' d <- simulate_shadow(5000, tilt = -1, seed = 1)
+#' rej <- d[d$observed == 0, ]
+#' s <- shadow_scan(rej$eta_obs, rej$obs_rate, lambda = seq(0, 2, by = 0.05),
+#'                  threshold = 0.35)
+#' s
+#' mean(rej$eta)            # the truth, inside the set at lambda = 1
+#' plot(s)
+#' head(as.data.frame(s, lambda = 1))
+shadow_scan <- function(eta_obs, r, lambda = seq(0, 2, length.out = 81),
+                        aggregate = c("common", "union"), weights = NULL,
+                        threshold = NULL) {
+  aggregate <- match.arg(aggregate)
+  check_inputs(eta_obs, r)
+  if (!is.numeric(lambda) || length(lambda) == 0L || anyNA(lambda) ||
+      any(!is.finite(lambda)) || any(lambda < 0))
+    stop("`lambda` must be finite and non-negative.", call. = FALSE)
+  lambda <- sort(unique(lambda))
+  w <- check_weights(weights, length(eta_obs))
+  if (!is.null(threshold) &&
+      (!is.numeric(threshold) || length(threshold) != 1L ||
+       !is.finite(threshold) || threshold <= 0 || threshold >= 1))
+    stop("`threshold` must be a single number in (0, 1).", call. = FALSE)
+
+  ell <- stats::qlogis(eta_obs)
+  # Manski bounds do not depend on lambda; their tilts give each row's
+  # admissible t-range before the |t| <= lambda cap.
+  m_lo <- r * eta_obs
+  m_up <- r * eta_obs + 1 - r
+  t_min_row <- ell - stats::qlogis(m_up)   # most negative admissible tilt
+  t_max_row <- ell - stats::qlogis(m_lo)   # most positive admissible tilt
+
+  K <- length(lambda)
+  out <- data.frame(lambda = lambda, lower = NA_real_, upper = NA_real_,
+                    naive_lower = NA_real_, naive_upper = NA_real_)
+  binding <- data.frame(lambda = lambda, lower_row = NA_integer_,
+                        upper_row = NA_integer_)
+  # rows that can bind the common tilt: the most restrictive ones
+  i_min <- which.max(t_min_row)
+  i_max <- which.min(t_max_row)
+  T_min <- t_min_row[i_min]
+  T_max <- t_max_row[i_max]
+
+  for (k in seq_len(K)) {
+    lam <- lambda[k]
+    out$naive_lower[k] <- wmean(stats::plogis(ell - lam), w)
+    out$naive_upper[k] <- wmean(stats::plogis(ell + lam), w)
+    if (aggregate == "common") {
+      t_up <- max(-lam, T_min)
+      t_lo <- min(lam, T_max)
+      out$upper[k] <- wmean(stats::plogis(ell - t_up), w)
+      out$lower[k] <- wmean(stats::plogis(ell - t_lo), w)
+      if (T_min > -lam) binding$upper_row[k] <- i_min
+      if (T_max < lam) binding$lower_row[k] <- i_max
+    } else {
+      out$lower[k] <- wmean(pmax(stats::plogis(ell - lam), m_lo), w)
+      out$upper[k] <- wmean(pmin(stats::plogis(ell + lam), m_up), w)
+    }
+  }
+  point <- wmean(eta_obs, w)
+  # at lambda = 0 every expression above reduces to eta_obs; make it exact
+  z <- lambda == 0
+  out$lower[z] <- out$upper[z] <- out$naive_lower[z] <- out$naive_upper[z] <- point
+
+  bound_fun <- function(side, sharp) {
+    function(lam) {
+      if (!sharp) {
+        return(wmean(stats::plogis(ell + if (side == "upper") lam else -lam), w))
+      }
+      if (aggregate == "common") {
+        t <- if (side == "upper") max(-lam, T_min) else min(lam, T_max)
+        wmean(stats::plogis(ell - t), w)
+      } else if (side == "upper") {
+        wmean(pmin(stats::plogis(ell + lam), m_up), w)
+      } else {
+        wmean(pmax(stats::plogis(ell - lam), m_lo), w)
+      }
+    }
+  }
+  flip <- c(sharp = NA_real_, naive = NA_real_)
+  if (!is.null(threshold)) {
+    side <- if (threshold >= point) "upper" else "lower"
+    for (nm in names(flip)) {
+      flip[[nm]] <- first_crossing(bound_fun(side, nm == "sharp"), threshold,
+                                   max(lambda), side)
+    }
+  }
+
+  structure(list(
+    curve = out, point = point, threshold = threshold, flip = flip,
+    aggregate = aggregate,
+    binding = if (aggregate == "common") binding else NULL,
+    eta_obs = eta_obs, r = r, weights = weights, n = length(eta_obs)
+  ), class = "shadow_scan")
+}
+
+#' Pointwise sharp bounds
+#'
+#' Internal workhorse, exposed through `as.data.frame.shadow_scan()`.
+#' @noRd
+sharp_bounds <- function(eta_obs, r, lambda) {
+  ell <- stats::qlogis(eta_obs)
+  nlo <- stats::plogis(ell - lambda)
+  nup <- stats::plogis(ell + lambda)
+  data.frame(
+    eta_obs = eta_obs, r = r,
+    lower = pmax(nlo, r * eta_obs),
+    upper = pmin(nup, r * eta_obs + 1 - r),
+    naive_lower = nlo, naive_upper = nup
+  )
+}
+
+first_crossing <- function(f, threshold, lam_max, side) {
+  g <- if (side == "upper") function(l) f(l) - threshold
+       else function(l) threshold - f(l)
+  if (g(0) >= 0) return(0)
+  if (g(lam_max) < 0) return(NA_real_)
+  stats::uniroot(g, c(0, lam_max), tol = 1e-12)$root
+}
+
+check_inputs <- function(eta_obs, r) {
+  if (!is.numeric(eta_obs) || !is.numeric(r))
+    stop("`eta_obs` and `r` must be numeric vectors.", call. = FALSE)
+  if (length(eta_obs) != length(r) || length(r) == 0L)
+    stop("`eta_obs` and `r` must have the same, non-zero length.",
+         call. = FALSE)
+  if (anyNA(eta_obs) || anyNA(r))
+    stop("`eta_obs` and `r` must not contain missing values.", call. = FALSE)
+  if (any(eta_obs <= 0 | eta_obs >= 1))
+    stop("`eta_obs` must lie strictly inside (0, 1).", call. = FALSE)
+  if (any(r <= 0 | r > 1))
+    stop("`r` must lie in (0, 1]. r = 0 means no overlap: nothing is ",
+         "observed there and eta_obs is undefined.", call. = FALSE)
+  invisible(TRUE)
+}
+
+check_weights <- function(weights, n) {
+  if (is.null(weights)) return(NULL)
+  if (!is.numeric(weights) || length(weights) != n || anyNA(weights) ||
+      any(weights < 0) || sum(weights) <= 0)
+    stop("`weights` must be non-negative, of the same length as `r`, ",
+         "and not all zero.", call. = FALSE)
+  weights
+}
+
+wmean <- function(x, w) if (is.null(w)) mean(x) else sum(w * x) / sum(w)
+
+#' @rdname shadow_scan
+#' @param x A `"shadow_scan"` object.
+#' @param row.names,optional Ignored.
+#' @param ... Ignored.
+#' @return `as.data.frame()`: the portfolio curve, or, if `lambda` is a single
+#'   value, the pointwise sharp set and naive band for every row.
+#' @export
+as.data.frame.shadow_scan <- function(x, row.names = NULL, optional = FALSE,
+                                      ..., lambda = NULL) {
+  if (is.null(lambda)) return(x$curve)
+  if (!is.numeric(lambda) || length(lambda) != 1L || !is.finite(lambda) ||
+      lambda < 0)
+    stop("`lambda` must be a single non-negative number.", call. = FALSE)
+  sharp_bounds(x$eta_obs, x$r, lambda)
+}
+
+#' @export
+print.shadow_scan <- function(x, digits = 3, ...) {
+  cv <- x$curve
+  last <- nrow(cv)
+  cat("<shadow_scan> sharp identified set under |b(x)| <= lambda\n")
+  cat("  rows:", x$n, "  aggregation:", x$aggregate, "\n")
+  cat("  lambda = 0 (model on observed rows):", format(x$point, digits = digits),
+      "\n")
+  cat(sprintf("  lambda = %s (odds ratio %s): sharp [%s, %s], naive [%s, %s]\n",
+              format(cv$lambda[last], digits = digits),
+              format(exp(cv$lambda[last]), digits = digits),
+              format(cv$lower[last], digits = digits),
+              format(cv$upper[last], digits = digits),
+              format(cv$naive_lower[last], digits = digits),
+              format(cv$naive_upper[last], digits = digits)))
+  if (!is.null(x$threshold)) {
+    fl <- function(v) if (is.na(v)) "not within the scanned range" else
+      sprintf("lambda = %s (odds ratio %s)", format(v, digits = digits),
+              format(exp(v), digits = digits))
+    cat("  threshold", format(x$threshold, digits = digits), "reached by\n")
+    cat("    sharp set:  ", fl(x$flip[["sharp"]]), "\n")
+    cat("    naive band: ", fl(x$flip[["naive"]]), "\n")
+  }
+  invisible(x)
+}
+
+#' Extract the two scan inputs from fitted models
+#'
+#' A convenience, not an architectural commitment: calls `predict()` with
+#' `type = "response"` on each model at `newdata`. For a classification
+#' forest that returns class probabilities (e.g. `ranger` with
+#' `probability = TRUE`) the column for class `"1"` (or the last column) is
+#' used. Anything else, compute the two vectors yourself.
+#'
+#' @param eta_model Model of \eqn{Y} fitted on the observed rows.
+#' @param r_model Model of \eqn{R} fitted on all rows.
+#' @param newdata Rows at which the set is wanted.
+#' @return A list with numeric vectors `eta_obs` and `r`.
+#' @export
+#' @examples
+#' d <- simulate_shadow(3000, seed = 2)
+#' f <- ~ x1 + x2 + z_shadow + z_policy + z_score
+#' m_eta <- glm(update(f, y ~ .), binomial, data = d[d$observed == 1, ])
+#' m_r <- glm(update(f, observed ~ .), binomial, data = d)
+#' inp <- scan_inputs(m_eta, m_r, d[d$observed == 0, ])
+#' shadow_scan(inp$eta_obs, inp$r)
+scan_inputs <- function(eta_model, r_model, newdata) {
+  list(eta_obs = response_prob(eta_model, newdata),
+       r = response_prob(r_model, newdata))
+}
+
+response_prob <- function(m, newdata) {
+  p <- stats::predict(m, newdata = newdata, type = "response")
+  if (is.list(p) && !is.null(p$predictions)) p <- p$predictions
+  if (is.matrix(p) || is.data.frame(p)) {
+    p <- as.matrix(p)
+    p <- if ("1" %in% colnames(p)) p[, "1"] else p[, ncol(p)]
+  }
+  as.numeric(p)
+}
