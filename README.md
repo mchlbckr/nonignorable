@@ -54,6 +54,33 @@ averages each row's own bounds, which is sharp under the pointwise assumption.
 is narrower but is bounded by the most extreme rows, so with estimated inputs
 it inherits their estimation error. The help page explains how to read it.
 
+## Sampling error
+
+`shadow_scan()` treats its inputs as known. `shadow_scan_ci()` adds a
+confidence set for the binary scan, after Semenova (2025): the binding piece
+of each row is chosen from models fitted without it, and an orthogonal signal
+of that piece is averaged instead of its plug-in value, which is biased
+towards the inside of the set. It needs cross-fitted inputs for all rows and
+the observed outcomes; `crossfit_inputs()` produces them for any learner you
+pass as a function.
+
+```r
+f   <- ~ x1 + x2 + z_shadow + z_policy + z_score
+inp <- crossfit_inputs(d, "observed",
+  fit_eta = function(train, new) predict(glm(update(f, y ~ .), binomial, train),
+                                         new, type = "response"),
+  fit_r   = function(train, new) predict(glm(update(f, observed ~ .), binomial, train),
+                                         new, type = "response"),
+  seed = 1)
+ci  <- shadow_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, threshold = 0.35)
+plot(ci)
+```
+
+![Sensitivity curve with confidence set](man/figures/scan_ci.png)
+
+The confidence set covers the identified set, pointwise in λ. There is no
+confidence set for the mean scan yet.
+
 ## The scan for a mean
 
 For an outcome that is not binary, `shadow_scan_mean()` takes, per row, a grid

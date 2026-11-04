@@ -44,7 +44,8 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
   if (is.null(xlab)) xlab <- if (scale == "ratio")
     expression("Selection strength " * e^lambda * " (ratio of response propensities)")
   else expression("Selection strength " * lambda * " (log of the ratio)")
-  ylim <- range(cv$naive_lower, cv$naive_upper, x$threshold)
+  ylim <- range(cv$naive_lower, cv$naive_upper, cv$ci_lower, cv$ci_upper,
+                x$threshold)
   ylim <- ylim + c(-0.04, 0.04) * diff(ylim)
 
   graphics::plot(xs, cv$upper, type = "n", ylim = ylim, xlab = xlab,
@@ -59,6 +60,11 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
   graphics::lines(xs, cv$naive_lower, lty = 2, lwd = 1.5, col = naive_col)
   graphics::lines(xs, cv$upper, lwd = 2, col = colors[["sharp"]])
   graphics::lines(xs, cv$lower, lwd = 2, col = colors[["sharp"]])
+  has_ci <- !is.null(cv$ci_lower)
+  if (has_ci) {
+    graphics::lines(xs, cv$ci_upper, lwd = 1.3, lty = 3, col = colors[["sharp"]])
+    graphics::lines(xs, cv$ci_lower, lwd = 1.3, lty = 3, col = colors[["sharp"]])
+  }
 
   # The lambda = 0 point is explained in the legend, not by a label next to it:
   # when the decision flips near lambda = 0, the flip marker, its drop line and
@@ -96,24 +102,43 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
                              if (is_mean) "outer" else "naive", tx(fn)),
                      adj = flip_adj(fn, 0.05), col = text_col, cex = 0.8)
     }
+    fc <- if (inherits(x, "shadow_scan_ci")) x$flip[["ci"]] else NA_real_
+    if (!is.na(fc)) {
+      # where the confidence set reaches the threshold: from there on the data
+      # no longer rule out the other decision
+      graphics::segments(tx(fc), usr[3], tx(fc), x$threshold, lty = 3,
+                         col = text_col)
+      graphics::points(tx(fc), x$threshold, pch = 21, cex = 0.9, lwd = 1.5,
+                       bg = surface_col(), col = colors[["sharp"]])
+      graphics::text(tx(fc), usr[3],
+                     bquote("confidence set at" ~ .(parse(text = sym)[[1]]) %~~%
+                              .(sprintf("%.1f", tx(fc)))),
+                     adj = c(flip_adj(fc, 0.08)[1], -2.2), col = text_col, cex = 0.8)
+    }
   }
-  leg <- c(
-    if (is_mean) quote("Sharp identified set")
-    else if (x$aggregate == "common") quote("Sharp identified set (common tilt)")
-    else quote("Sharp identified set"),
-    if (is_mean) quote("Outer band (without " * pi <= 1 * ")")
-    else quote("Naive band " * expit(logit ~ eta[obs] %+-% lambda)),
-    if (has_point) quote("Model on observed rows " * (lambda == 0))
+  items <- list(
+    list(lab = if (inherits(x, "shadow_scan_ci")) quote("Sharp identified set, estimated")
+               else if (!is_mean && x$aggregate == "common") quote("Sharp identified set (common tilt)")
+               else quote("Sharp identified set"),
+         fill = grDevices::adjustcolor(colors[["sharp"]], 0.18), border = colors[["sharp"]],
+         lty = NA, lwd = NA, pch = NA, pt.bg = NA, col = NA),
+    list(lab = if (is_mean) quote("Outer band (without " * pi <= 1 * ")")
+               else quote("Naive band " * expit(logit ~ eta[obs] %+-% lambda)),
+         fill = NA, border = NA, lty = 2, lwd = 1.5, pch = NA, pt.bg = NA, col = naive_col),
+    if (has_ci) list(lab = bquote(.(sprintf("%g%% confidence set", 100 * x$level))),
+                     fill = NA, border = NA, lty = 3, lwd = 1.3, pch = NA, pt.bg = NA,
+                     col = colors[["sharp"]]),
+    if (has_point) list(lab = quote("Model on observed rows " * (lambda == 0)),
+                        fill = NA, border = NA, lty = NA, lwd = 2, pch = 21,
+                        pt.bg = colors[["sharp"]], col = surface_col())
   )
-  k <- length(leg)
+  items <- Filter(Negate(is.null), items)
+  gc_ <- function(nm) unlist(lapply(items, function(it) if (is.na(it[[nm]])) NA else it[[nm]]))
   graphics::legend("topleft", bty = "n", text.col = text_col, cex = 0.85,
-                   legend = as.expression(leg),
-                   fill = c(grDevices::adjustcolor(colors[["sharp"]], 0.18), NA, NA)[seq_len(k)],
-                   border = c(colors[["sharp"]], NA, NA)[seq_len(k)],
-                   lty = c(NA, 2, NA)[seq_len(k)], lwd = c(NA, 1.5, 2)[seq_len(k)],
-                   pch = c(NA, NA, 21)[seq_len(k)], pt.cex = 1.2,
-                   pt.bg = c(NA, NA, colors[["sharp"]])[seq_len(k)],
-                   col = c(NA, naive_col, surface_col())[seq_len(k)],
+                   legend = as.expression(lapply(items, `[[`, "lab")),
+                   fill = gc_("fill"), border = gc_("border"),
+                   lty = gc_("lty"), lwd = gc_("lwd"), pch = gc_("pch"),
+                   pt.cex = 1.2, pt.bg = gc_("pt.bg"), col = gc_("col"),
                    merge = TRUE, x.intersp = 0.8)
   invisible(x)
 }

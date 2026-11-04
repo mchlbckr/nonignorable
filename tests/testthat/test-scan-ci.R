@@ -1,0 +1,96 @@
+ci_sim <- function(n = 2000, seed = 61) {
+  d <- simulate_shadow(n, tilt = -1, seed = seed)
+  f <- ~ x1 + x2 + z_shadow + z_policy + z_score
+  inp <- crossfit_inputs(d, "observed",
+    fit_eta = function(tr, new) predict(glm(update(f, y ~ .), binomial, tr), new, type = "response"),
+    fit_r = function(tr, new) predict(glm(update(f, observed ~ .), binomial, tr), new, type = "response"),
+    seed = 1)
+  list(d = d, inp = inp)
+}
+
+test_that("crossfit predictions come from other folds", {
+  d <- simulate_shadow(500, seed = 62)
+  seen <- integer()
+  inp <- crossfit_inputs(d, "observed",
+    fit_eta = function(tr, new) { seen <<- c(seen, nrow(tr)); rep(0.3, nrow(new)) },
+    fit_r = function(tr, new) rep(0.5, nrow(new)), folds = 4, seed = 2)
+  expect_length(seen, 4)
+  expect_true(all(seen < sum(d$observed)))     # never all observed rows
+  expect_identical(sort(unique(inp$fold)), 1:4)
+  expect_equal(inp$eta_obs, rep(0.3, 500))
+  inp2 <- crossfit_inputs(d, "observed", function(tr, new) rep(0.3, nrow(new)),
+                          function(tr, new) rep(0.5, nrow(new)), folds = 4, seed = 2)
+  expect_identical(inp$fold, inp2$fold)
+  expect_error(crossfit_inputs(d, "observed", function(tr, new) 0.3,
+                               function(tr, new) rep(0.5, nrow(new))), "too few|missing")
+})
+
+test_that("the confidence set contains the estimate and widens with lambda", {
+  x <- ci_sim()
+  s <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y)
+  cv <- s$curve
+  expect_true(all(cv$ci_lower <= cv$lower & cv$upper <= cv$ci_upper))
+  expect_true(all(cv$se_lower > 0 & cv$se_upper > 0))
+  expect_gt(diff(range(cv$ci_upper - cv$ci_lower)), 0)
+  expect_gt(cv$ci_upper[nrow(cv)] - cv$ci_lower[nrow(cv)], cv$ci_upper[1] - cv$ci_lower[1])
+  expect_s3_class(s, "shadow_scan")
+})
+
+test_that("with in-sample truth the estimate is the plug-in when no Manski piece binds", {
+  # perfect nuisances and no residual: the correction vanishes on average
+  x <- ci_sim(4000, 63)
+  d <- x$d
+  s <- shadow_scan_ci(d$eta_obs, d$obs_rate, d$observed, d$y, target = "all",
+                      lambda = 0)
+  expect_lt(abs(s$point - mean(d$eta_obs)), 4 * s$curve$se_upper[1])
+})
+
+test_that("targets: unobserved, all and a logical segment", {
+  x <- ci_sim()
+  a <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, target = "all",
+                      lambda = c(0, 1))
+  u <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, lambda = c(0, 1))
+  g <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y,
+                      target = x$d$x1 > 0, lambda = c(0, 1))
+  expect_false(isTRUE(all.equal(a$curve$upper, u$curve$upper)))
+  expect_identical(u$target, "unobserved")
+  expect_identical(g$n_target, sum(x$d$x1 > 0))
+  expect_error(shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y,
+                              target = "nope"), "should be one of")
+})
+
+test_that("threshold gives three crossings, the confidence set first", {
+  x <- ci_sim()
+  s <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, threshold = 0.35)
+  expect_named(s$flip, c("sharp", "naive", "ci"))
+  expect_lte(s$flip[["ci"]], s$flip[["sharp"]])
+  expect_output(print(s), "confidence set")
+  pdf(NULL); on.exit(dev.off())
+  expect_identical(plot(s), s)
+})
+
+test_that("inputs are validated", {
+  x <- ci_sim(500, 64)
+  e <- x$inp$eta_obs; r <- x$inp$r; R <- x$d$observed; Y <- x$d$y
+  expect_error(shadow_scan_ci(e, r, R[-1], Y), "one per row")
+  expect_error(shadow_scan_ci(e, r, R, Y[-1]), "one value per row")
+  Y2 <- Y; Y2[which(R == 1)[1]] <- NA
+  expect_error(shadow_scan_ci(e, r, R, Y2), "0/1 where")
+  expect_error(shadow_scan_ci(e, r, R, Y, level = 1), "level")
+  expect_error(shadow_scan_ci(e, r, R, Y, target = rep(TRUE, 3)), "logical vector")
+})
+
+test_that("both standard errors are positive and of similar size; trim shrinks the target", {
+  x <- ci_sim()
+  a <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, lambda = c(0.5, 2))
+  b <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, lambda = c(0.5, 2),
+                      se_type = "empirical")
+  expect_equal(a$curve$upper, b$curve$upper)
+  ratio <- a$curve$se_upper / b$curve$se_upper
+  expect_true(all(ratio > 0.5 & ratio < 2))
+  t <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, lambda = 1, trim = 0.05)
+  expect_gt(t$trimmed, 0)
+  expect_lt(t$n_target, a$n_target)
+  expect_output(print(t), "trimmed")
+  expect_error(shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, trim = 1), "trim")
+})

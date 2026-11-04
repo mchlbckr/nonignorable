@@ -69,8 +69,9 @@
 #' observed-data law were known exactly. The scan plugs in
 #' \eqn{\hat\eta_{\mathrm{obs}}} and \eqn{\hat r} as if they were the truth.
 #' Their estimation error is **not** included, so the reported set is
-#' narrower than an honest statement about the population would be. No
-#' confidence set is offered. Inference for such sets is not routine: the
+#' narrower than an honest statement about the population would be. For a
+#' confidence set use [shadow_scan_ci()], which needs cross-fitted inputs for
+#' all rows and the observed outcomes. Inference for such sets is not routine: the
 #' endpoints are maxima and minima of estimated quantities, where the usual
 #' bootstrap can fail; a flexible learner needs more than a naive plug-in;
 #' and covering the set differs from covering the parameter inside it. Nor
