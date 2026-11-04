@@ -1,9 +1,9 @@
-#' Sharp identified set for a binary outcome under a bounded logit tilt
+#' Sharp identified set for a binary outcome under a bounded ratio of response propensities
 #'
 #' `shadow_scan()` answers *how far the answer can move* if the outcome is
 #' missing not at random. It assumes nothing but a bound \eqn{|b(x)| \le
-#' \lambda} on the logit tilt of the selection mechanism and needs **no
-#' shadow variable**. It is a different tool from [shadow_screen()], which asks
+#' \lambda} on the log ratio of the response propensities of the two outcome
+#' values and needs **no shadow variable**. It is a different tool from [shadow_screen()], which asks
 #' whether a variable is fit to serve as a shadow variable for a
 #' point-identified model; the two rest on different assumptions.
 #'
@@ -13,7 +13,16 @@
 #' counterpart, \eqn{r(x) = P(R=1 \mid X=x)} the conditional observation rate
 #' and \eqn{b(x) = \log\{\pi(1,x)/\pi(0,x)\}} with \eqn{\pi(y,x) = P(R=1 \mid
 #' Y=y, X=x)}. By Bayes' rule \eqn{\mathrm{logit}\,\eta_{\mathrm{obs}} =
-#' \mathrm{logit}\,\eta + b}. With \eqn{\ell = \mathrm{logit}\,
+#' \mathrm{logit}\,\eta + b}.
+#'
+#' Note the scale: \eqn{b} is the log of a **risk ratio** of response
+#' propensities. That it shifts the logit of \eqn{\eta} does not make it an
+#' odds ratio. It is not the odds-ratio parameter of Vansteelandt et al.
+#' (2006), whose set neither depends on \eqn{r} nor saturates, and not the
+#' \eqn{\Lambda} of the marginal sensitivity model. The assumption is a member
+#' of the class of Manski (2016, Sect. 4.2), with the ratio taken between
+#' outcome values rather than relative to the response rate; for a
+#' non-binary outcome see [shadow_scan_mean()]. With \eqn{\ell = \mathrm{logit}\,
 #' \eta_{\mathrm{obs}}} and \eqn{\eta_t = \mathrm{expit}(\ell - t)}, the
 #' identified set is
 #' \deqn{\mathcal H_\lambda(x) = \{\eta_t : |t| \le \lambda,\; c_t \in (0,1],\;
@@ -26,7 +35,7 @@
 #'   r\eta_{\mathrm{obs}} + 1 - r\}\big],}
 #' the naive band \eqn{[\mathrm{expit}(\ell-\lambda),
 #' \mathrm{expit}(\ell+\lambda)]} intersected with the worst-case (Manski)
-#' bounds. Both endpoints are attained, and at \eqn{\lambda = 0} the set is
+#' bounds of Manski (1989). Both endpoints are attained, and at \eqn{\lambda = 0} the set is
 #' \eqn{\{\eta_{\mathrm{obs}}\}}: the value any model fitted on the observed
 #' rows asserts.
 #'
@@ -38,7 +47,9 @@
 #' \eqn{r \le e^{-\lambda}} neither moves. In reject inference the rows of
 #' interest are the *rejected* applications, whose observation rate is
 #' typically small, so the **upper** end there often coincides with the naive
-#' one. Ignoring \eqn{r} is never wrong, only wasteful where \eqn{r} is large.
+#' one. Ignoring \eqn{r} is never wrong, only wasteful where \eqn{r} is
+#' large: it gives an outer set, not a sharp one, as Dorn and Guo (2023)
+#' observe for the marginal sensitivity model.
 #'
 #' @section The two inputs:
 #' The scan takes two numeric vectors, not one, evaluated at the rows for which
@@ -77,9 +88,9 @@
 #'
 #' @param eta_obs Numeric vector of \eqn{\hat\eta_{\mathrm{obs}}(x)}, in (0, 1).
 #' @param r Numeric vector of \eqn{\hat r(x)}, in (0, 1], same length.
-#' @param lambda Non-negative bounds on \eqn{|b|}, on the **log-odds** scale.
-#'   \eqn{e^\lambda} is the largest admissible ratio of the two observation
-#'   propensities. Sorted and de-duplicated.
+#' @param lambda Non-negative bounds on \eqn{|b|}. \eqn{e^\lambda} is the
+#'   largest admissible ratio of the two response propensities (a risk ratio,
+#'   not an odds ratio). Sorted and de-duplicated.
 #' @param aggregate `"common"` or `"union"`, see Aggregation.
 #' @param weights Optional non-negative row weights for the portfolio mean.
 #' @param threshold Optional decision threshold on the portfolio rate. If
@@ -97,7 +108,24 @@
 #'     upper end at each \eqn{\lambda} (`NA` where the naive bound binds);
 #'   * the inputs, so that `as.data.frame(x, lambda = )` can return the
 #'     pointwise sets.
-#' @seealso [plot.shadow_scan()], [shadow_screen()] for the other question.
+#' @references
+#' Dorn, J. and Guo, K. (2023). Sharp sensitivity analysis for inverse
+#' propensity weighting via quantile balancing. *Journal of the American
+#' Statistical Association*, 118(544), 2645--2657.
+#' \doi{10.1080/01621459.2022.2069572}
+#'
+#' Manski, C. F. (1989). Anatomy of the selection problem. *Journal of Human
+#' Resources*, 24(3), 343--360.
+#'
+#' Manski, C. F. (2016). Credible interval estimates for official statistics
+#' with survey nonresponse. *Journal of Econometrics*, 191(2), 293--301.
+#' \doi{10.1016/j.jeconom.2015.12.002}
+#'
+#' Vansteelandt, S., Goetghebeur, E., Kenward, M. G. and Molenberghs, G.
+#' (2006). Ignorance and uncertainty regions as inferential tools in a
+#' sensitivity analysis. *Statistica Sinica*, 16(3), 953--979.
+#' @seealso [plot.shadow_scan()], [shadow_scan_mean()] for a non-binary
+#'   outcome, [shadow_screen()] for the other question.
 #' @export
 #' @examples
 #' d <- simulate_shadow(5000, tilt = -1, seed = 1)
@@ -266,24 +294,28 @@ as.data.frame.shadow_scan <- function(x, row.names = NULL, optional = FALSE,
 print.shadow_scan <- function(x, digits = 3, ...) {
   cv <- x$curve
   last <- nrow(cv)
-  cat("<shadow_scan> sharp identified set under |b(x)| <= lambda\n")
+  is_mean <- inherits(x, "shadow_scan_mean")
+  cat(if (is_mean) "<shadow_scan_mean> sharp identified set for a mean"
+      else "<shadow_scan> sharp identified set for a rate",
+      "under a propensity ratio <= exp(lambda)\n")
+  outer <- if (is_mean) "outer" else "naive" 
   cat("  rows:", x$n, "  aggregation:", x$aggregate, "\n")
   cat("  lambda = 0 (model on observed rows):", format(x$point, digits = digits),
       "\n")
-  cat(sprintf("  lambda = %s (odds ratio %s): sharp [%s, %s], naive [%s, %s]\n",
+  cat(sprintf("  lambda = %s (propensity ratio %s): sharp [%s, %s], %s [%s, %s]\n",
               format(cv$lambda[last], digits = digits),
               format(exp(cv$lambda[last]), digits = digits),
               format(cv$lower[last], digits = digits),
-              format(cv$upper[last], digits = digits),
+              format(cv$upper[last], digits = digits), outer,
               format(cv$naive_lower[last], digits = digits),
               format(cv$naive_upper[last], digits = digits)))
   if (!is.null(x$threshold)) {
     fl <- function(v) if (is.na(v)) "not within the scanned range" else
-      sprintf("lambda = %s (odds ratio %s)", format(v, digits = digits),
+      sprintf("lambda = %s (propensity ratio %s)", format(v, digits = digits),
               format(exp(v), digits = digits))
     cat("  threshold", format(x$threshold, digits = digits), "reached by\n")
     cat("    sharp set:  ", fl(x$flip[["sharp"]]), "\n")
-    cat("    naive band: ", fl(x$flip[["naive"]]), "\n")
+    cat(sprintf("    %s band: ", outer), fl(x$flip[["naive"]]), "\n")
   }
   invisible(x)
 }

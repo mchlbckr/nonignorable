@@ -8,9 +8,12 @@ selects it. `shadowscan` provides two tools for two different questions:
 - **`shadow_screen()`**: *is this variable fit to serve as a shadow variable?*
   It puts relevance for the outcome against violation of the exclusion
   restriction, both as incremental McFadden R², on one scale.
-- **`shadow_scan()`**: *how far can the answer move?* It returns the sharp
-  identified set under a bound |b(x)| ≤ λ on the logit tilt of selection,
-  in closed form, with no shadow variable needed.
+- **`shadow_scan()`** and **`shadow_scan_mean()`**: *how far can the answer
+  move?* They return the sharp identified set under a bound e^λ on the ratio
+  of response propensities between outcome values (a risk ratio, not an odds
+  ratio), with no shadow variable needed. The first handles a binary outcome
+  in closed form, the second the mean of any outcome from a grid of
+  conditional quantiles.
 
 The two rest on different assumptions and are **not** two halves of one
 procedure.
@@ -49,6 +52,23 @@ narrower only where a worst-case bound cuts the band. With one common tilt for
 all rows (the default), the most extreme rows bound the admissible tilt, which
 produces the plateau above. The help page explains how to read it.
 
+## The scan for a mean
+
+For an outcome that is not binary, `shadow_scan_mean()` takes, per row, a grid
+of conditional quantiles of Y given R = 1 and X, together with r̂(x). It
+returns the sharp set for the mean under the same assumption. Binary input
+reproduces `shadow_scan()` exactly.
+
+```r
+dc  <- simulate_shadow(3000, tilt = -1, outcome = "continuous", seed = 1)
+q   <- obs_quantiles(dc, K = 200)       # n x K, levels (k - 1/2)/K
+rej <- dc$observed == 0
+sm  <- shadow_scan_mean(q[rej, ], dc$obs_rate[rej], threshold = 0.5)
+plot(sm)
+```
+
+![Sensitivity curve for a mean](man/figures/scan_mean.png)
+
 ## The screen
 
 ```r
@@ -63,9 +83,10 @@ plot(sc)
 
 ## Scope
 
-Version one handles a **binary** outcome only. For the scan this is not a
-choice of the package. For a continuous outcome the sharp set is an open
-question. Covariates, learners and sample size are unrestricted. The package
+The scan covers a binary outcome in closed form and the **mean** of any
+outcome with a finite mean. It does not cover quantiles or the whole
+distribution. The screen's measure, incremental McFadden R², presumes a
+discrete outcome. Covariates, learners and sample size are unrestricted. The package
 contains no estimator and fits neither η_obs nor r. It ships no outside data:
 examples and tests run on `simulate_shadow()`.
 

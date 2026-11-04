@@ -3,7 +3,7 @@
 \name{shadow_scan}
 \alias{shadow_scan}
 \alias{as.data.frame.shadow_scan}
-\title{Sharp identified set for a binary outcome under a bounded logit tilt}
+\title{Sharp identified set for a binary outcome under a bounded ratio of response propensities}
 \usage{
 shadow_scan(
   eta_obs,
@@ -21,9 +21,9 @@ shadow_scan(
 
 \item{r}{Numeric vector of \eqn{\hat r(x)}, in (0, 1], same length.}
 
-\item{lambda}{Non-negative bounds on \eqn{|b|}, on the \strong{log-odds} scale.
-\eqn{e^\lambda} is the largest admissible ratio of the two observation
-propensities. Sorted and de-duplicated.}
+\item{lambda}{Non-negative bounds on \eqn{|b|}. \eqn{e^\lambda} is the
+largest admissible ratio of the two response propensities (a risk ratio,
+not an odds ratio). Sorted and de-duplicated.}
 
 \item{aggregate}{\code{"common"} or \code{"union"}, see Aggregation.}
 
@@ -60,8 +60,8 @@ value, the pointwise sharp set and naive band for every row.
 \description{
 \code{shadow_scan()} answers \emph{how far the answer can move} if the outcome is
 missing not at random. It assumes nothing but a bound \eqn{|b(x)| \le
-\lambda} on the logit tilt of the selection mechanism and needs \strong{no
-shadow variable}. It is a different tool from \code{\link[=shadow_screen]{shadow_screen()}}, which asks
+\lambda} on the log ratio of the response propensities of the two outcome
+values and needs \strong{no shadow variable}. It is a different tool from \code{\link[=shadow_screen]{shadow_screen()}}, which asks
 whether a variable is fit to serve as a shadow variable for a
 point-identified model; the two rest on different assumptions.
 }
@@ -72,7 +72,16 @@ Let \eqn{\eta(x) = P(Y=1 \mid X=x)} be the target,
 counterpart, \eqn{r(x) = P(R=1 \mid X=x)} the conditional observation rate
 and \eqn{b(x) = \log\{\pi(1,x)/\pi(0,x)\}} with \eqn{\pi(y,x) = P(R=1 \mid
 Y=y, X=x)}. By Bayes' rule \eqn{\mathrm{logit}\,\eta_{\mathrm{obs}} =
-\mathrm{logit}\,\eta + b}. With \eqn{\ell = \mathrm{logit}\,
+\mathrm{logit}\,\eta + b}.
+
+Note the scale: \eqn{b} is the log of a \strong{risk ratio} of response
+propensities. That it shifts the logit of \eqn{\eta} does not make it an
+odds ratio. It is not the odds-ratio parameter of Vansteelandt et al.
+(2006), whose set neither depends on \eqn{r} nor saturates, and not the
+\eqn{\Lambda} of the marginal sensitivity model. The assumption is a member
+of the class of Manski (2016, Sect. 4.2), with the ratio taken between
+outcome values rather than relative to the response rate; for a
+non-binary outcome see \code{\link[=shadow_scan_mean]{shadow_scan_mean()}}. With \eqn{\ell = \mathrm{logit}\,
 \eta_{\mathrm{obs}}} and \eqn{\eta_t = \mathrm{expit}(\ell - t)}, the
 identified set is
 \deqn{\mathcal H_\lambda(x) = \{\eta_t : |t| \le \lambda,\; c_t \in (0,1],\;
@@ -85,7 +94,7 @@ constraints gives the closed form
   r\eta_{\mathrm{obs}} + 1 - r\}\big],}
 the naive band \eqn{[\mathrm{expit}(\ell-\lambda),
 \mathrm{expit}(\ell+\lambda)]} intersected with the worst-case (Manski)
-bounds. Both endpoints are attained, and at \eqn{\lambda = 0} the set is
+bounds of Manski (1989). Both endpoints are attained, and at \eqn{\lambda = 0} the set is
 \eqn{\{\eta_{\mathrm{obs}}\}}: the value any model fitted on the observed
 rows asserts.
 }
@@ -99,7 +108,9 @@ a worst-case bound cuts the band: the lower end moves when \eqn{r >
 \eqn{r \le e^{-\lambda}} neither moves. In reject inference the rows of
 interest are the \emph{rejected} applications, whose observation rate is
 typically small, so the \strong{upper} end there often coincides with the naive
-one. Ignoring \eqn{r} is never wrong, only wasteful where \eqn{r} is large.
+one. Ignoring \eqn{r} is never wrong, only wasteful where \eqn{r} is
+large: it gives an outer set, not a sharp one, as Dorn and Guo (2023)
+observe for the marginal sensitivity model.
 }
 
 \section{The two inputs}{
@@ -153,6 +164,24 @@ mean(rej$eta)            # the truth, inside the set at lambda = 1
 plot(s)
 head(as.data.frame(s, lambda = 1))
 }
+\references{
+Dorn, J. and Guo, K. (2023). Sharp sensitivity analysis for inverse
+propensity weighting via quantile balancing. \emph{Journal of the American
+Statistical Association}, 118(544), 2645--2657.
+\doi{10.1080/01621459.2022.2069572}
+
+Manski, C. F. (1989). Anatomy of the selection problem. \emph{Journal of Human
+Resources}, 24(3), 343--360.
+
+Manski, C. F. (2016). Credible interval estimates for official statistics
+with survey nonresponse. \emph{Journal of Econometrics}, 191(2), 293--301.
+\doi{10.1016/j.jeconom.2015.12.002}
+
+Vansteelandt, S., Goetghebeur, E., Kenward, M. G. and Molenberghs, G.
+(2006). Ignorance and uncertainty regions as inferential tools in a
+sensitivity analysis. \emph{Statistica Sinica}, 16(3), 953--979.
+}
 \seealso{
-\code{\link[=plot.shadow_scan]{plot.shadow_scan()}}, \code{\link[=shadow_screen]{shadow_screen()}} for the other question.
+\code{\link[=plot.shadow_scan]{plot.shadow_scan()}}, \code{\link[=shadow_scan_mean]{shadow_scan_mean()}} for a non-binary
+outcome, \code{\link[=shadow_screen]{shadow_screen()}} for the other question.
 }

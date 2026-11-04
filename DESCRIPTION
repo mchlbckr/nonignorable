@@ -10,8 +10,10 @@ Description: Two tools for a binary outcome that is missing not at random.
     exclusion restriction on a common scale (incremental McFadden R-squared).
     'shadow_scan()' asks how far the answer can move: given the observed-data
     outcome probability and the conditional observation rate, it returns the
-    sharp identified set under a bounded logit tilt of the selection mechanism,
-    in closed form, pointwise and aggregated over a portfolio. The two tools
+    sharp identified set under a bound on the ratio of response propensities
+    between outcome values, in closed form for a binary outcome
+    ('shadow_scan()') and for the mean of any outcome with a finite mean
+    ('shadow_scan_mean()'), pointwise and aggregated over a portfolio. The two tools
     answer different questions under different assumptions and are not two
     halves of one procedure.
 URL: https://github.com/mchlbckr/shadowscan

@@ -16,21 +16,30 @@ offers two tools for two different questions.
 \item \code{\link[=shadow_screen]{shadow_screen()}}: \emph{is this variable fit to serve as a shadow variable?}
 Relevance for the outcome against violation of the exclusion restriction,
 on one scale. This belongs to a point-identified shadow-variable model.
-\item \code{\link[=shadow_scan]{shadow_scan()}}: \emph{how far can the answer move?} The sharp identified set
-under a bound on the logit tilt of the selection mechanism, with no shadow
-variable at all.
+\item \code{\link[=shadow_scan]{shadow_scan()}} and \code{\link[=shadow_scan_mean]{shadow_scan_mean()}}: \emph{how far can the answer move?}
+The sharp identified set under a bound on the ratio of response
+propensities between outcome values, with no shadow variable at all; for
+a binary outcome and for the mean of any outcome.
 }
 
 The two rest on different assumptions and are not two halves of one
 procedure. The help pages state the formulas, so that every number can be
 checked by hand. \code{\link[=simulate_shadow]{simulate_shadow()}} provides data with known truth.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/mchlbckr/shadowscan}
+  \item Report bugs at \url{https://github.com/mchlbckr/shadowscan/issues}
+}
+
+}
 \author{
-\strong{Maintainer}: Michael B<c3><bc>cker \email{michael.buecker@gmail.com} [copyright holder]
+\strong{Maintainer}: Michael B<c3><bc>cker \email{michael.buecker@fh-muenster.de} [copyright holder]
 
 Authors:
 \itemize{
-  \item Michael B<c3><bc>cker \email{michael.buecker@gmail.com} [copyright holder]
+  \item Michael B<c3><bc>cker \email{michael.buecker@fh-muenster.de} [copyright holder]
 }
 
 }

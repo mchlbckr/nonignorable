@@ -8,7 +8,7 @@ test_that("plot methods run and return their input", {
     expect_identical(plot(s), s)
   }
   s <- shadow_scan(rej$eta_obs, rej$obs_rate, aggregate = "union", threshold = 0.4)
-  expect_identical(plot(s, scale = "logodds"), s)
+  expect_identical(plot(s, scale = "log"), s)
   sc <- shadow_screen(d, "y", "observed", c("x1", "x2"),
                       c("z_shadow", "z_policy", "z_score"))
   expect_identical(plot(sc), sc)

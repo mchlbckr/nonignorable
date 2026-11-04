@@ -6,21 +6,21 @@
 \usage{
 \method{plot}{shadow_scan}(
   x,
-  scale = c("odds", "logodds"),
+  scale = c("ratio", "log"),
   colors = scan_colors,
   text_col = "grey20",
   xlab = NULL,
-  ylab = "Portfolio rate",
+  ylab = NULL,
   main = NULL,
   ...
 )
 }
 \arguments{
-\item{x}{A \code{"shadow_scan"} object.}
+\item{x}{A \code{"shadow_scan"} or \code{"shadow_scan_mean"} object.}
 
-\item{scale}{\code{"odds"} (default) puts \eqn{e^\lambda}, the largest admissible
-ratio of observation propensities, on the horizontal axis, starting at 1;
-\code{"logodds"} puts \eqn{\lambda}.}
+\item{scale}{\code{"ratio"} (default) puts \eqn{e^\lambda}, the largest
+admissible ratio of response propensities, on the horizontal axis,
+starting at 1; \code{"log"} puts \eqn{\lambda}.}
 
 \item{colors}{Named colours \code{sharp} and \code{naive}. The defaults are validated
 for colour-vision deficiency; on a dark background use
@@ -37,9 +37,10 @@ in a series colour.}
 \code{x}, invisibly.
 }
 \description{
-Plots the portfolio rate against selection strength: the sharp identified
-set as a filled band with solid edges, the naive band
-\eqn{\mathrm{expit}(\ell \pm \lambda)} dashed and lighter, the point that a
+Plots the portfolio rate (or mean, for \code{\link[=shadow_scan_mean]{shadow_scan_mean()}}) against
+selection strength: the sharp identified set as a filled band with solid
+edges, the naive band \eqn{\mathrm{expit}(\ell \pm \lambda)} (for a mean:
+the outer band without the cap \eqn{\pi \le 1}) dashed and lighter, the point that a
 model on the observed rows asserts (\eqn{\lambda = 0}) marked, and, if the
 scan has a \code{threshold}, the decision threshold with a drop line where the
 sharp set first reaches it. That crossing is the reason to run the scan: it

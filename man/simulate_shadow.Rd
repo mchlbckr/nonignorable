@@ -2,35 +2,52 @@
 % Please edit documentation in R/simulate.R
 \name{simulate_shadow}
 \alias{simulate_shadow}
-\title{Simulate a nonignorably selected binary outcome with known truth}
+\alias{obs_quantiles}
+\title{Simulate a nonignorably selected outcome with known truth}
 \usage{
-simulate_shadow(n = 5000, tilt = -1, seed = 1L)
+simulate_shadow(
+  n = 5000,
+  tilt = -1,
+  outcome = c("binary", "continuous"),
+  seed = 1L
+)
+
+obs_quantiles(sim, K = 200L)
 }
 \arguments{
 \item{n}{Number of rows.}
 
-\item{tilt}{The log ratio \eqn{b} of the observation propensities of
-\eqn{Y = 1} and \eqn{Y = 0}. Negative values mean that a bad outcome
-(\eqn{Y = 1}) lowers the chance of being observed, as when defaults are
+\item{tilt}{The log of the largest ratio \eqn{b} of response propensities.
+Negative values mean that a high outcome (a default, \eqn{Y = 1}, or a
+large loss) lowers the chance of being observed, as when such cases are
 more likely to have been rejected. \code{0} is ignorable selection.}
+
+\item{outcome}{\code{"binary"} (default) or \code{"continuous"}.}
 
 \item{seed}{Seed for the random number generator. The caller's RNG state is
 restored on exit.}
+
+\item{sim}{A data frame from \code{simulate_shadow(outcome = "continuous")}.}
+
+\item{K}{Number of quantile levels, \eqn{(k - 1/2)/K}.}
 }
 \value{
 A data frame with columns \code{x1}, \code{x2}, \code{z_shadow}, \code{z_policy},
-\code{z_score}, \code{y} (the outcome, \code{NA} where unobserved), \code{observed} (0/1),
-and the exact truth \code{eta}, \code{eta_obs} and \code{obs_rate}. The tilt is stored
-in attribute \code{"tilt"}.
+\code{z_score}, \code{y} (the outcome, \code{NA} where unobserved), \code{observed} (0/1)
+and the exact truth columns described above. Attributes \code{"tilt"} and
+\code{"outcome"}.
+
+\code{obs_quantiles()}: the exact \eqn{n \times K} matrix of
+conditional quantiles of \eqn{Y} given \eqn{R = 1, X = x_i}.
 }
 \description{
-Draws covariates, a binary outcome \eqn{Y} and an observation indicator
-\eqn{R} whose propensity depends on \eqn{Y} through a constant logit tilt
-\eqn{b = \log\{\pi(1,x)/\pi(0,x)\}}. Because the mechanism is known, the
-target \eqn{\eta(x) = P(Y = 1 \mid X = x)}, the observed-data probability
-\eqn{\eta_{\mathrm{obs}}(x) = P(Y = 1 \mid X = x, R = 1)} and the conditional
-observation rate \eqn{r(x) = P(R = 1 \mid X = x)} are returned exactly. The
-simulator exists so that examples and tests depend on no outside data.
+Draws covariates, an outcome \eqn{Y} and an observation indicator \eqn{R}
+whose propensity depends on \eqn{Y}, with the ratio of response
+propensities between outcome values bounded by \eqn{e^{|\mathrm{tilt}|}}.
+Because the mechanism is known, the target, the observed-data law and the
+conditional observation rate \eqn{r(x) = P(R = 1 \mid X = x)} are returned
+exactly. The simulator exists so that examples and tests depend on no
+outside data.
 }
 \details{
 The covariates play fixed roles, so that \code{\link[=shadow_screen]{shadow_screen()}} has something to
@@ -44,14 +61,30 @@ relevance.
 the acceptance decision.
 }
 
-Outcome: \eqn{\mathrm{logit}\,\eta = -1.5 + 0.8 x_1 - 0.5 x_2 + 0.6 z_{\mathrm{shadow}} + 1.0 z_{\mathrm{score}}}.
-Selection: \eqn{\pi(0,x) = \mathrm{expit}(g(x)) \cdot \min(1, e^{-b})} and
-\eqn{\pi(1,x) = \pi(0,x)e^{b}}, with
-\eqn{g = 0.8 - 0.8 x_1 + 0.4 x_2 + 1.0 z_{\mathrm{policy}} - 1.0 z_{\mathrm{score}}}.
-All truth columns condition on all five covariates.
+Linear index of the outcome: \eqn{\mu = 0.8 x_1 - 0.5 x_2 + 0.6
+z_{\mathrm{shadow}} + 1.0 z_{\mathrm{score}}}; of selection: \eqn{g = 0.8 -
+0.8 x_1 + 0.4 x_2 + 1.0 z_{\mathrm{policy}} - 1.0 z_{\mathrm{score}}}. All
+truth columns condition on all five covariates.
+
+\strong{Binary} (\code{outcome = "binary"}): \eqn{\eta = \mathrm{expit}(\mu - 1.5)},
+\eqn{\pi(0,x) = \mathrm{expit}(g)\min(1, e^{-b})} and \eqn{\pi(1,x) =
+\pi(0,x)e^{b}} with \eqn{b} = \code{tilt}. Truth: \code{eta}, \code{eta_obs}, \code{obs_rate}.
+
+\strong{Continuous} (\code{outcome = "continuous"}): \eqn{Y = \mu + \varepsilon},
+\eqn{\varepsilon \sim N(0,1)}, and \eqn{\pi(y,x) = c(x)\exp\{b\,
+\Phi(\varepsilon)\}} with \eqn{c(x) = \mathrm{expit}(g)\min(1, e^{-b})}.
+Since \eqn{\Phi(\varepsilon)} is uniform, the ratio of propensities is at
+most \eqn{e^{|b|}}, \eqn{r(x) = c(x)(e^{b} - 1)/b}, and the quantile
+function of \eqn{Y} given \eqn{R = 1, X = x} is \eqn{\mu(x) +
+\Phi^{-1}[\log\{1 + p(e^{b} - 1)\}/b]}, all in closed form. Truth: \code{mu}
+\eqn{= E(Y \mid x)}, \code{mean_obs} \eqn{= E(Y \mid R = 1, x)}, \code{obs_rate};
+\code{\link[=obs_quantiles]{obs_quantiles()}} returns the quantile grid that \code{\link[=shadow_scan_mean]{shadow_scan_mean()}}
+takes.
 }
 \examples{
 d <- simulate_shadow(2000, tilt = -1, seed = 1)
 head(d)
-mean(d$observed)
+dc <- simulate_shadow(2000, tilt = -1, outcome = "continuous", seed = 1)
+head(dc)
+dim(obs_quantiles(dc, K = 50))
 }

@@ -2,9 +2,10 @@ scan_colors <- c(sharp = "#2a78d6", naive = "#eb6834")
 
 #' Sensitivity curve of a scan
 #'
-#' Plots the portfolio rate against selection strength: the sharp identified
-#' set as a filled band with solid edges, the naive band
-#' \eqn{\mathrm{expit}(\ell \pm \lambda)} dashed and lighter, the point that a
+#' Plots the portfolio rate (or mean, for [shadow_scan_mean()]) against
+#' selection strength: the sharp identified set as a filled band with solid
+#' edges, the naive band \eqn{\mathrm{expit}(\ell \pm \lambda)} (for a mean:
+#' the outer band without the cap \eqn{\pi \le 1}) dashed and lighter, the point that a
 #' model on the observed rows asserts (\eqn{\lambda = 0}) marked, and, if the
 #' scan has a `threshold`, the decision threshold with a drop line where the
 #' sharp set first reaches it. That crossing is the reason to run the scan: it
@@ -13,10 +14,10 @@ scan_colors <- c(sharp = "#2a78d6", naive = "#eb6834")
 #' Where \eqn{\hat r} is small, as for rejected applications, the upper edge of
 #' the sharp set coincides with the naive one; see [shadow_scan()].
 #'
-#' @param x A `"shadow_scan"` object.
-#' @param scale `"odds"` (default) puts \eqn{e^\lambda}, the largest admissible
-#'   ratio of observation propensities, on the horizontal axis, starting at 1;
-#'   `"logodds"` puts \eqn{\lambda}.
+#' @param x A `"shadow_scan"` or `"shadow_scan_mean"` object.
+#' @param scale `"ratio"` (default) puts \eqn{e^\lambda}, the largest
+#'   admissible ratio of response propensities, on the horizontal axis,
+#'   starting at 1; `"log"` puts \eqn{\lambda}.
 #' @param colors Named colours `sharp` and `naive`. The defaults are validated
 #'   for colour-vision deficiency; on a dark background use
 #'   `c(sharp = "#3987e5", naive = "#d95926")`.
@@ -30,17 +31,19 @@ scan_colors <- c(sharp = "#2a78d6", naive = "#eb6834")
 #' d <- simulate_shadow(5000, tilt = -1, seed = 1)
 #' rej <- d[d$observed == 0, ]
 #' plot(shadow_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35))
-plot.shadow_scan <- function(x, scale = c("odds", "logodds"),
+plot.shadow_scan <- function(x, scale = c("ratio", "log"),
                              colors = scan_colors, text_col = "grey20",
-                             xlab = NULL, ylab = "Portfolio rate", main = NULL,
+                             xlab = NULL, ylab = NULL, main = NULL,
                              ...) {
   scale <- match.arg(scale)
   cv <- x$curve
-  tx <- function(l) if (scale == "odds") exp(l) else l
+  is_mean <- inherits(x, "shadow_scan_mean")
+  if (is.null(ylab)) ylab <- if (is_mean) "Portfolio mean" else "Portfolio rate"
+  tx <- function(l) if (scale == "ratio") exp(l) else l
   xs <- tx(cv$lambda)
-  if (is.null(xlab)) xlab <- if (scale == "odds")
-    expression("Selection strength " * e^lambda * " (ratio of observation propensities)")
-  else expression("Selection strength " * lambda * " (log scale)")
+  if (is.null(xlab)) xlab <- if (scale == "ratio")
+    expression("Selection strength " * e^lambda * " (ratio of response propensities)")
+  else expression("Selection strength " * lambda * " (log of the ratio)")
   ylim <- range(cv$naive_lower, cv$naive_upper, x$threshold)
   ylim <- ylim + c(-0.04, 0.04) * diff(ylim)
 
@@ -69,7 +72,7 @@ plot.shadow_scan <- function(x, scale = c("odds", "logodds"),
     graphics::text(usr[2], x$threshold, "decision threshold", adj = c(1, 1.6),
                    col = text_col, cex = 0.8)
     fs <- x$flip[["sharp"]]; fn <- x$flip[["naive"]]
-    sym <- if (scale == "odds") "e^lambda" else "lambda"
+    sym <- if (scale == "ratio") "e^lambda" else "lambda"
     lab <- function(v) bquote(.(as.name("flips at")) ~ .(parse(text = sym)[[1]]) %~~% .(sprintf("%.1f", tx(v))))
     if (!is.na(fs)) {
       graphics::segments(tx(fs), usr[3], tx(fs), x$threshold, lty = 3,
@@ -84,15 +87,17 @@ plot.shadow_scan <- function(x, scale = c("odds", "logodds"),
       graphics::points(tx(fn), x$threshold, pch = 21, cex = 1.1, lwd = 2,
                        bg = colors[["naive"]], col = surface_col())
       graphics::text(tx(fn), usr[3],
-                     sprintf("naive band flips at %.1f; sharp set never",
-                             tx(fn)),
+                     sprintf("%s band flips at %.1f; sharp set never",
+                             if (is_mean) "outer" else "naive", tx(fn)),
                      adj = c(-0.05, -0.6), col = text_col, cex = 0.8)
     }
   }
   graphics::legend("topleft", bty = "n", text.col = text_col, cex = 0.85,
                    legend = c(
-                     bquote("Sharp identified set (" * .(x$aggregate) * " tilt)"),
-                     quote("Naive band " * expit(logit ~ eta[obs] %+-% lambda))
+                     if (is_mean) quote("Sharp identified set")
+                     else bquote("Sharp identified set (" * .(x$aggregate) * " tilt)"),
+                     if (is_mean) quote("Outer band (without " * pi <= 1 * ")")
+                     else quote("Naive band " * expit(logit ~ eta[obs] %+-% lambda))
                    ),
                    fill = c(grDevices::adjustcolor(colors[["sharp"]], 0.18), NA),
                    border = c(colors[["sharp"]], NA),

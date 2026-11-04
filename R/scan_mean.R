@@ -1,0 +1,220 @@
+#' Sharp identified set for a mean under a bounded ratio of response propensities
+#'
+#' `shadow_scan_mean()` is the scan of [shadow_scan()] for an outcome that is
+#' not binary: continuous, count or anything with a finite mean. It answers
+#' the same question -- how far can the answer move if the outcome is missing
+#' not at random -- under literally the same assumption, without restriction
+#' to two outcome values. Like [shadow_scan()] it needs no shadow variable.
+#'
+#' @section The assumption:
+#' With \eqn{\pi(y,x) = P(R=1 \mid Y=y, X=x)}, assume pointwise in \eqn{x}
+#' \deqn{\pi(y,x) \le 1, \qquad \sup_y \pi(y,x) \le e^{\lambda}\,\inf_y \pi(y,x).}
+#' \eqn{e^\lambda} bounds the ratio of response propensities between any two
+#' outcome values: a **risk ratio**, not an odds ratio. For binary \eqn{Y} it
+#' is exactly the assumption \eqn{|b(x)| \le \lambda} of [shadow_scan()]. It
+#' is a member of the class of assumptions of Manski (2016, Sect. 4.2), with
+#' the ratio taken between outcomes rather than relative to the response rate.
+#'
+#' @section The set:
+#' Fix \eqn{x}. Let \eqn{m} be the mean and \eqn{Q} the quantile function of
+#' \eqn{Y} given \eqn{R=1, X=x}, \eqn{r = P(R=1 \mid X=x)}, and
+#' \eqn{U(s) = \int_{1-s}^{1} Q(v)\,dv} the integral of the upper tail. With
+#' \eqn{\kappa = e^\lambda - 1} and \eqn{\bar s = \min\{1, (1-r)/(r\kappa)\}}
+#' the sharp identified set for \eqn{E(Y \mid X=x)} is \eqn{[\mu^-, \mu^+]},
+#' \deqn{\mu^+ = \max_{0 \le s \le \bar s} \frac{m + \kappa\,U(s)}{1 + \kappa s},}
+#' and \eqn{\mu^-} the same expression for \eqn{-Y}, negated. Both endpoints
+#' are attained: the extremal propensity is \eqn{1/a} below the quantile
+#' \eqn{Q(1-s^*)} and \eqn{e^{-\lambda}/a} above it, with \eqn{a = 1/\{r(1 +
+#' \kappa s^*)\}}. The upper bound \eqn{\bar s} on \eqn{s} is the constraint
+#' \eqn{\pi \le 1}; dropping it (\eqn{\bar s = 1}) gives the **outer band**,
+#' which does not depend on \eqn{r} and is the counterpart of the naive band
+#' of the binary scan. Ignoring \eqn{r} gives an outer set, not a sharp one,
+#' in the sense of Dorn and Guo (2023). The cap binds for \eqn{r} near one or
+#' large \eqn{\lambda}; for small \eqn{r} sharp set and outer band coincide.
+#'
+#' For binary \eqn{Y} the formula reduces to the closed form of
+#' [shadow_scan()], the naive band intersected with the bounds of Manski
+#' (1989). As \eqn{\lambda \to \infty} the set grows to those bounds,
+#' \eqn{[rm + (1-r)\inf Y,\; rm + (1-r)\sup Y]}, reaching them only in the
+#' limit for a continuous outcome. For every finite \eqn{\lambda} it is
+#' bounded, whatever the tails, as long as \eqn{E|Y| < \infty}.
+#'
+#' @section The inputs:
+#' Per row, the conditional quantiles of \eqn{Y} given \eqn{R=1, X=x_i} at the
+#' levels \eqn{(k - 1/2)/K}, \eqn{k = 1, \dots, K}, as an \eqn{n \times K}
+#' matrix `q`; each column carries mass \eqn{1/K}. The discretisation error is
+#' \eqn{O(1/K)}; \eqn{K = 200} is plenty for a plot. Where the quantiles come
+#' from -- quantile regression, a distributional model, draws from a
+#' generative model -- is the user's business, as \eqn{\hat\eta_{\mathrm{obs}}}
+#' is in the binary scan; the package never sees a learner. Rows are sorted
+#' internally, so crossing quantile curves do no harm. A quantile grid cuts
+#' off the tails: with heavy tails it underestimates \eqn{U(s)} for small
+#' \eqn{s}, and therefore the width of the set. `r` is the *conditional*
+#' observation rate, as in [shadow_scan()].
+#'
+#' @section Only the mean:
+#' The set is for \eqn{E(Y \mid x)} and its portfolio average. Quantiles or
+#' the whole distribution of \eqn{Y} are different optimisation problems and
+#' are not covered.
+#'
+#' @section Aggregation:
+#' Only the average of the pointwise endpoints (`"union"` in
+#' [shadow_scan()]). Because the assumption is pointwise and both the
+#' normalisation and the ratio bound separate across \eqn{x}, this is the
+#' sharp set for the portfolio mean. The `"common"` aggregation of the binary
+#' scan has no counterpart here: it fixes one tilt for all rows, which
+#' presupposes a parametric form of the tilt in \eqn{y}, and the
+#' nonparametric model has none.
+#'
+#' @param q Numeric matrix, \eqn{n \times K}: row \eqn{i} holds the
+#'   conditional quantiles of \eqn{Y} given \eqn{R=1, X=x_i} at the levels
+#'   \eqn{(k - 1/2)/K}. A vector is taken as a single row.
+#' @param r Numeric vector of \eqn{\hat r(x)}, in (0, 1], length \eqn{n}.
+#' @param lambda Non-negative bounds; \eqn{e^\lambda} is the largest
+#'   admissible ratio of response propensities. Sorted and de-duplicated.
+#' @param weights Optional non-negative row weights for the portfolio mean.
+#' @param threshold Optional decision threshold on the portfolio mean; the
+#'   smallest \eqn{\lambda} at which the sharp set (and the outer band)
+#'   reaches it is found by root finding. Both bounds are monotone in
+#'   \eqn{\lambda}.
+#'
+#' @return An object of class `c("shadow_scan_mean", "shadow_scan")` with the
+#'   same structure as [shadow_scan()]: `curve` (`lambda`, `lower`, `upper`,
+#'   and `naive_lower`, `naive_upper` for the outer band without the cap),
+#'   `point`, `threshold`, `flip`. `as.data.frame(x, lambda = )` returns the
+#'   pointwise sets.
+#' @references
+#' Dorn, J. and Guo, K. (2023). Sharp sensitivity analysis for inverse
+#' propensity weighting via quantile balancing. *Journal of the American
+#' Statistical Association*, 118(544), 2645--2657.
+#' \doi{10.1080/01621459.2022.2069572}
+#'
+#' Manski, C. F. (1989). Anatomy of the selection problem. *Journal of Human
+#' Resources*, 24(3), 343--360.
+#'
+#' Manski, C. F. (2016). Credible interval estimates for official statistics
+#' with survey nonresponse. *Journal of Econometrics*, 191(2), 293--301.
+#' \doi{10.1016/j.jeconom.2015.12.002}
+#' @seealso [shadow_scan()] for a binary outcome, with the additional
+#'   common-tilt aggregation; [obs_quantiles()] for simulated input.
+#' @export
+#' @examples
+#' d <- simulate_shadow(3000, tilt = -1, outcome = "continuous", seed = 1)
+#' q <- obs_quantiles(d, K = 200)
+#' rej <- d$observed == 0
+#' s <- shadow_scan_mean(q[rej, ], d$obs_rate[rej], threshold = 0.5)
+#' s
+#' mean(d$mu[rej])     # the truth, inside the set from lambda = 1 on
+#' plot(s)
+shadow_scan_mean <- function(q, r, lambda = seq(0, 2, length.out = 81),
+                             weights = NULL, threshold = NULL) {
+  if (is.null(dim(q))) q <- matrix(q, nrow = 1L)
+  q <- as.matrix(q)
+  if (!is.numeric(q) || anyNA(q) || any(!is.finite(q)))
+    stop("`q` must be a finite numeric matrix.", call. = FALSE)
+  if (!is.numeric(r) || length(r) != nrow(q))
+    stop("`r` must be numeric with one value per row of `q`.", call. = FALSE)
+  if (anyNA(r) || any(r <= 0 | r > 1))
+    stop("`r` must lie in (0, 1]. r = 0 means no overlap: nothing is ",
+         "observed there.", call. = FALSE)
+  if (!is.numeric(lambda) || length(lambda) == 0L || anyNA(lambda) ||
+      any(!is.finite(lambda)) || any(lambda < 0))
+    stop("`lambda` must be finite and non-negative.", call. = FALSE)
+  lambda <- sort(unique(lambda))
+  w <- check_weights(weights, nrow(q))
+  point_rows <- rowMeans(q)
+  point <- wmean(point_rows, w)
+  if (!is.null(threshold) &&
+      (!is.numeric(threshold) || length(threshold) != 1L ||
+       !is.finite(threshold)))
+    stop("`threshold` must be a single finite number.", call. = FALSE)
+
+  prep <- mean_prep(q)
+  bounds_at <- function(lam, cap) mean_bounds(prep, r, lam, cap)
+
+  K <- length(lambda)
+  out <- data.frame(lambda = lambda, lower = NA_real_, upper = NA_real_,
+                    naive_lower = NA_real_, naive_upper = NA_real_)
+  for (k in seq_len(K)) {
+    b <- bounds_at(lambda[k], TRUE)
+    o <- bounds_at(lambda[k], FALSE)
+    out$lower[k] <- wmean(b$lower, w)
+    out$upper[k] <- wmean(b$upper, w)
+    out$naive_lower[k] <- wmean(o$lower, w)
+    out$naive_upper[k] <- wmean(o$upper, w)
+  }
+
+  flip <- c(sharp = NA_real_, naive = NA_real_)
+  if (!is.null(threshold)) {
+    side <- if (threshold >= point) "upper" else "lower"
+    for (nm in names(flip)) {
+      cap <- nm == "sharp"
+      f <- function(lam) wmean(bounds_at(lam, cap)[[side]], w)
+      flip[[nm]] <- first_crossing(f, threshold, max(lambda), side)
+    }
+  }
+
+  structure(list(
+    curve = out, point = point, threshold = threshold, flip = flip,
+    aggregate = "union", binding = NULL,
+    q = q, r = r, weights = weights, n = nrow(q)
+  ), class = c("shadow_scan_mean", "shadow_scan"))
+}
+
+# Sort each row once; both sides and every lambda reuse it.
+mean_prep <- function(q) {
+  K <- ncol(q)
+  desc <- t(apply(q, 1L, sort, decreasing = TRUE))
+  if (K == 1L) desc <- t(desc)
+  asc <- desc[, K:1, drop = FALSE]
+  list(K = K, m = rowMeans(q),
+       hi = tail_sums(desc), lo = tail_sums(-asc))
+}
+
+# For values sorted in decreasing order: cumulative sums S_j = U(j/K), j = 0..K.
+tail_sums <- function(ys) {
+  K <- ncol(ys)
+  cs <- t(apply(ys, 1L, cumsum))
+  if (K == 1L) cs <- t(cs)
+  list(ys = ys, S = cbind(0, cs) / K)
+}
+
+# Upper bound of E(Y | x) per row: max over s in [0, sbar] of
+# (m + k U(s)) / (1 + k s). f is linear-fractional between the kinks
+# s = j/K, hence monotone there, so the maximum sits at a kink or at sbar.
+mean_upper <- function(side, m, r, lam, cap) {
+  kap <- expm1(lam)
+  n <- length(m)
+  if (kap == 0) return(m)
+  K <- ncol(side$ys)
+  P <- (0:K) / K
+  sbar <- if (cap) pmin(1, (1 - r) / (r * kap)) else rep(1, n)
+  f <- (m + kap * side$S) / (1 + kap * rep(P, each = n))
+  f[outer(sbar, P, "<")] <- -Inf
+  best <- f[cbind(seq_len(n), max.col(f, ties.method = "first"))]
+  # value at sbar itself (between kinks)
+  j <- pmin(floor(sbar * K), K - 1L)
+  U <- side$S[cbind(seq_len(n), j + 1L)] +
+    (sbar - j / K) * side$ys[cbind(seq_len(n), j + 1L)]
+  pmax(best, (m + kap * U) / (1 + kap * sbar))
+}
+
+mean_bounds <- function(prep, r, lam, cap = TRUE) {
+  list(lower = -mean_upper(prep$lo, -prep$m, r, lam, cap),
+       upper = mean_upper(prep$hi, prep$m, r, lam, cap))
+}
+
+#' @export
+as.data.frame.shadow_scan_mean <- function(x, row.names = NULL,
+                                           optional = FALSE, ...,
+                                           lambda = NULL) {
+  if (is.null(lambda)) return(x$curve)
+  if (!is.numeric(lambda) || length(lambda) != 1L || !is.finite(lambda) ||
+      lambda < 0)
+    stop("`lambda` must be a single non-negative number.", call. = FALSE)
+  prep <- mean_prep(x$q)
+  b <- mean_bounds(prep, x$r, lambda, TRUE)
+  o <- mean_bounds(prep, x$r, lambda, FALSE)
+  data.frame(mean_obs = prep$m, r = x$r, lower = b$lower, upper = b$upper,
+             naive_lower = o$lower, naive_upper = o$upper)
+}
