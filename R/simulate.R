@@ -63,6 +63,8 @@ simulate_shadow <- function(n = 5000, tilt = -1,
   stopifnot(length(n) == 1L, n >= 1, length(tilt) == 1L, is.finite(tilt))
   c_max <- min(1, exp(-tilt))
   with_seed(seed, {
+    # Keep the order of the draws: standalone replications of this simulator
+    # reproduce it draw for draw from the same seed.
     x1 <- stats::rnorm(n); x2 <- stats::rnorm(n)
     z_shadow <- stats::rnorm(n); z_policy <- stats::rnorm(n)
     z_score <- stats::rnorm(n)

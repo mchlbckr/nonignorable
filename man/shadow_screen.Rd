@@ -12,7 +12,9 @@ shadow_screen(
   candidates,
   family = stats::binomial(),
   min_relevance = 10,
-  min_ratio = 1
+  min_ratio = 1,
+  numeric = c("linear", "classes"),
+  k = 10
 )
 }
 \arguments{
@@ -38,12 +40,20 @@ for a candidate to pass. Default 10.}
 
 \item{min_ratio}{Minimum ratio of relevance to exclusion for a candidate to
 pass. Default 1, the equality line.}
+
+\item{numeric}{\code{"linear"} (default) or \code{"classes"}; see the section on
+numeric characteristics.}
+
+\item{k}{Target number of classes for \code{numeric = "classes"}. Default 10.}
 }
 \value{
 A data frame of class \code{"shadow_screen"}, one row per candidate,
 with \code{candidate}, \code{relevance}, \code{exclusion}, \code{ratio}, \code{relevance_chisq_df},
 \code{exclusion_chisq_df}, \code{df}, \code{n_observed}, \code{n}, \code{verdict} (\code{"pass"} or
-\code{"reject"}) and \code{reason}.
+\code{"reject"}) and \code{reason}. Attribute \code{"coding"}: one row per numeric
+characteristic with its treatment, the number of classes, the share of
+rows outside the range seen among the observed rows, and, for classes,
+the heaping share of \code{\link[=screen_classes]{screen_classes()}}.
 }
 \description{
 \code{shadow_screen()} asks whether a variable \eqn{Z} is fit to serve as a
@@ -82,17 +92,27 @@ a relevant \eqn{Z} therefore shows some exclusion signal through \eqn{Y}
 even when it is validly excluded; the screen is a screen, not a test of the
 restriction.
 
-\strong{Code numeric characteristics flexibly.} Every column enters the models
-as it is given: a numeric column linearly, a factor with its levels. Where
-the selection decision uses a characteristic through a threshold -- a
-lender that declines every application below a score cut-off -- a linear
-term cannot represent the step, and the exclusion violation of that
-characteristic is understated, often by an order of magnitude. Pass such
-characteristics as factors (for instance quantile classes plus the known
-cut-off) or as spline terms built beforehand, both as candidates and as
-covariates. The relevance hardly changes; the exclusion axis does. Check
-that the result does not depend on how ties at class boundaries are
-assigned.
+\strong{Numeric characteristics.} With \code{numeric = "linear"} (the default) a
+numeric column enters linearly. Where the selection decision uses a
+characteristic through a threshold -- a lender that declines every
+application below a score cut-off -- a linear term cannot represent the
+step, and the exclusion violation is understated, often by an order of
+magnitude. The screen warns when a numeric characteristic takes values
+never seen among the observed rows on more than 1\% of the sample, the
+visible trace of such a rule.
+
+\code{numeric = "classes"} codes every numeric covariate and candidate with
+more than two distinct values by \code{\link[=screen_classes]{screen_classes()}}: about \code{k} classes of
+equal mass, cut only between distinct values, plus a class \code{"below"} or
+\code{"above"} for values outside the range seen among the observed rows. The
+relevance hardly changes; the exclusion axis does. The cost is degrees of
+freedom: a candidate with ten classes has nine, so its relevance
+\eqn{\chi^2} per degree of freedom is lower than with one linear term,
+and a candidate that is relevant only through a smooth trend can fall
+below \code{min_relevance}. Read both codings when they disagree. The coding
+used is stored in \code{attr(x, "coding")}. For other cut-offs or class counts
+per characteristic, code the columns yourself with \code{\link[=screen_classes]{screen_classes()}} and
+pass factors.
 }
 \examples{
 d <- simulate_shadow(5000, tilt = -1, seed = 1)
@@ -101,7 +121,10 @@ sc <- shadow_screen(d, outcome = "y", response = "observed",
                     candidates = c("z_shadow", "z_policy", "z_score"))
 sc
 plot(sc)
+# numeric characteristics as classes, robust to threshold rules
+shadow_screen(d, "y", "observed", c("x1", "x2"), "z_score",
+              numeric = "classes")
 }
 \seealso{
-\code{\link[=plot.shadow_screen]{plot.shadow_screen()}}
+\code{\link[=plot.shadow_screen]{plot.shadow_screen()}}, \code{\link[=screen_classes]{screen_classes()}}
 }

@@ -83,6 +83,24 @@ plot(sc)
 
 ![Screen](man/figures/screen.png)
 
+Numeric characteristics enter linearly by default. If the selection uses one
+through a threshold, as a lender declining every score below a cut-off, a
+linear term cannot represent the step and understates the exclusion
+violation. The screen warns when it sees the trace of such a rule: values on
+more than 1% of the sample that never occur among the observed rows.
+`numeric = "classes"` then codes every numeric characteristic as about ten
+classes of equal mass, plus a class for values outside the observed range:
+
+```r
+shadow_screen(d, "y", "observed", c("x1", "x2"), "z_score", numeric = "classes")
+```
+
+The classes come from `screen_classes()`, which cuts only between distinct
+values. Quantile classes from `cut()` put boundaries on heaped values, such
+as loan amounts on round numbers, and then assign those rows by convention;
+`attr(screen_classes(x), "heaping")` reports how many. Call it yourself for
+known cut-offs or other class counts and pass factors.
+
 ## Scope
 
 The scan covers a binary outcome in closed form and the **mean** of any

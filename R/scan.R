@@ -77,6 +77,17 @@
 #' does resampling capture misspecification of the extrapolation to rows that
 #' are rarely observed.
 #'
+#' If you bootstrap the set yourself, re-estimating both inputs in every
+#' draw, do not take percentile intervals of the endpoints. Each endpoint is a
+#' mean over rows of a minimum (or maximum) of the band and the worst-case
+#' bound; its plug-in is biased towards the inside of the set, and the
+#' percentile bootstrap inherits that bias. In simulations at
+#' \eqn{\lambda = 2}, nominal 90% percentile intervals covered 72%
+#' (\eqn{n = 1000}) and 80% (\eqn{n = 4000}). The basic bootstrap,
+#' \eqn{2\hat\theta - Q(\hat\theta^*)}, came close to nominal. The bias is
+#' largest where many rows lie near the switch between band and bound, which
+#' is where the scan looks for its flip.
+#'
 #' @section Aggregation:
 #' The set is pointwise. For a portfolio rate (a weighted mean of
 #' \eqn{\eta(x)}) there are two ways to aggregate:

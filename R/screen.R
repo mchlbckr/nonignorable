@@ -33,17 +33,27 @@
 #' even when it is validly excluded; the screen is a screen, not a test of the
 #' restriction.
 #'
-#' **Code numeric characteristics flexibly.** Every column enters the models
-#' as it is given: a numeric column linearly, a factor with its levels. Where
-#' the selection decision uses a characteristic through a threshold -- a
-#' lender that declines every application below a score cut-off -- a linear
-#' term cannot represent the step, and the exclusion violation of that
-#' characteristic is understated, often by an order of magnitude. Pass such
-#' characteristics as factors (for instance quantile classes plus the known
-#' cut-off) or as spline terms built beforehand, both as candidates and as
-#' covariates. The relevance hardly changes; the exclusion axis does. Check
-#' that the result does not depend on how ties at class boundaries are
-#' assigned.
+#' **Numeric characteristics.** With `numeric = "linear"` (the default) a
+#' numeric column enters linearly. Where the selection decision uses a
+#' characteristic through a threshold -- a lender that declines every
+#' application below a score cut-off -- a linear term cannot represent the
+#' step, and the exclusion violation is understated, often by an order of
+#' magnitude. The screen warns when a numeric characteristic takes values
+#' never seen among the observed rows on more than 1% of the sample, the
+#' visible trace of such a rule.
+#'
+#' `numeric = "classes"` codes every numeric covariate and candidate with
+#' more than two distinct values by [screen_classes()]: about `k` classes of
+#' equal mass, cut only between distinct values, plus a class `"below"` or
+#' `"above"` for values outside the range seen among the observed rows. The
+#' relevance hardly changes; the exclusion axis does. The cost is degrees of
+#' freedom: a candidate with ten classes has nine, so its relevance
+#' \eqn{\chi^2} per degree of freedom is lower than with one linear term,
+#' and a candidate that is relevant only through a smooth trend can fall
+#' below `min_relevance`. Read both codings when they disagree. The coding
+#' used is stored in `attr(x, "coding")`. For other cut-offs or class counts
+#' per characteristic, code the columns yourself with [screen_classes()] and
+#' pass factors.
 #'
 #' @param data A data frame.
 #' @param outcome Name of the outcome column. May be `NA` where unobserved.
@@ -60,12 +70,18 @@
 #'   for a candidate to pass. Default 10.
 #' @param min_ratio Minimum ratio of relevance to exclusion for a candidate to
 #'   pass. Default 1, the equality line.
+#' @param numeric `"linear"` (default) or `"classes"`; see the section on
+#'   numeric characteristics.
+#' @param k Target number of classes for `numeric = "classes"`. Default 10.
 #'
 #' @return A data frame of class `"shadow_screen"`, one row per candidate,
 #'   with `candidate`, `relevance`, `exclusion`, `ratio`, `relevance_chisq_df`,
 #'   `exclusion_chisq_df`, `df`, `n_observed`, `n`, `verdict` (`"pass"` or
-#'   `"reject"`) and `reason`.
-#' @seealso [plot.shadow_screen()]
+#'   `"reject"`) and `reason`. Attribute `"coding"`: one row per numeric
+#'   characteristic with its treatment, the number of classes, the share of
+#'   rows outside the range seen among the observed rows, and, for classes,
+#'   the heaping share of [screen_classes()].
+#' @seealso [plot.shadow_screen()], [screen_classes()]
 #' @export
 #' @examples
 #' d <- simulate_shadow(5000, tilt = -1, seed = 1)
@@ -74,9 +90,14 @@
 #'                     candidates = c("z_shadow", "z_policy", "z_score"))
 #' sc
 #' plot(sc)
+#' # numeric characteristics as classes, robust to threshold rules
+#' shadow_screen(d, "y", "observed", c("x1", "x2"), "z_score",
+#'               numeric = "classes")
 shadow_screen <- function(data, outcome, response, covariates = character(),
                           candidates, family = stats::binomial(),
-                          min_relevance = 10, min_ratio = 1) {
+                          min_relevance = 10, min_ratio = 1,
+                          numeric = c("linear", "classes"), k = 10) {
+  numeric <- match.arg(numeric)
   if (!is.data.frame(data)) stop("`data` must be a data frame.", call. = FALSE)
   if (missing(candidates) || length(candidates) == 0L)
     stop("Give at least one candidate.", call. = FALSE)
@@ -95,6 +116,9 @@ shadow_screen <- function(data, outcome, response, covariates = character(),
   if (any(rv == 1 & is.na(data[[outcome]]), na.rm = TRUE))
     stop("The outcome is missing for some rows marked as observed.",
          call. = FALSE)
+
+  coded <- code_numeric(data, response, c(covariates, candidates), numeric, k)
+  data <- coded$data
 
   rows <- lapply(candidates, function(z) {
     cols <- c(response, covariates, z)
@@ -121,9 +145,48 @@ shadow_screen <- function(data, outcome, response, covariates = character(),
   out$reason <- ifelse(weak & viol, "weak and violates exclusion",
                 ifelse(weak, "weak", ifelse(viol, "violates exclusion", "")))
   attr(out, "settings") <- list(min_relevance = min_relevance,
-                                min_ratio = min_ratio)
+                                min_ratio = min_ratio, numeric = numeric, k = k)
+  attr(out, "coding") <- coded$coding
   class(out) <- c("shadow_screen", "data.frame")
   out
+}
+
+# Numeric characteristics with more than two distinct values: report the share
+# of rows outside the range seen among the observed rows (the trace of a
+# threshold rule) and, for numeric = "classes", replace them by screen_classes().
+code_numeric <- function(data, response, vars, numeric, k) {
+  num <- vars[vapply(vars, function(v) is.numeric(data[[v]]) &&
+                       length(unique(stats::na.omit(data[[v]]))) > 2L, logical(1))]
+  if (!length(num)) return(list(data = data, coding = NULL))
+  obs <- data[[response]] == 1 & !is.na(data[[response]])
+  coding <- do.call(rbind, lapply(num, function(v) {
+    x <- data[[v]]
+    sup <- range(x[obs], na.rm = TRUE)
+    outside <- mean(x < sup[1] | x > sup[2], na.rm = TRUE)
+    if (numeric == "classes") {
+      f <- screen_classes(x, k = k, support = sup)
+      data[[v]] <<- f
+      data.frame(variable = v, coding = "classes", classes = nlevels(f),
+                 outside = outside, heaping = attr(f, "heaping"),
+                 stringsAsFactors = FALSE)
+    } else {
+      data.frame(variable = v, coding = "linear", classes = NA_integer_,
+                 outside = outside, heaping = NA_real_, stringsAsFactors = FALSE)
+    }
+  }))
+  if (numeric == "linear") {
+    flag <- coding$variable[coding$outside > 0.01]
+    if (length(flag))
+      warning("Numeric characteristic(s) with values never seen among the ",
+              "observed rows on more than 1% of the sample: ",
+              paste(sprintf("%s (%.0f%%)", flag,
+                            100 * coding$outside[coding$outside > 0.01]),
+                    collapse = ", "),
+              ". A threshold rule in the selection is likely; a linear term ",
+              "understates its exclusion violation. Consider numeric = \"classes\".",
+              call. = FALSE)
+  }
+  list(data = data, coding = coding)
 }
 
 # Incremental McFadden R^2 of z. Only deviances are kept: the design matrix is
@@ -161,6 +224,16 @@ print.shadow_screen <- function(x, digits = 3, ...) {
   cat("<shadow_screen> relevance vs exclusion violation, incremental McFadden R^2\n")
   cat(sprintf("  pass: relevance chi2/df >= %s and ratio > %s\n",
               format(s$min_relevance), format(s$min_ratio)))
+  cd <- attr(x, "coding")
+  if (!is.null(cd) && nrow(cd)) {
+    if (all(cd$coding == "classes")) {
+      cat(sprintf("  numeric as classes: %s\n", paste(sprintf("%s (%d)",
+          cd$variable, cd$classes), collapse = ", ")))
+    } else {
+      cat(sprintf("  numeric as linear terms: %s\n",
+                  paste(cd$variable, collapse = ", ")))
+    }
+  }
   df <- as.data.frame(unclass(x), stringsAsFactors = FALSE)
   attr(df, "settings") <- NULL
   show <- df[c("candidate", "relevance", "exclusion", "ratio",

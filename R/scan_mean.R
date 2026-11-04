@@ -65,6 +65,14 @@
 #' does resampling capture misspecification of the extrapolation to rows that
 #' are rarely observed.
 #'
+#' Estimate \eqn{\hat r(x)} flexibly. Unlike the binary scan, the set for a
+#' mean reacts to \eqn{\hat r} in first order: \eqn{\hat r} decides row by row
+#' through \eqn{\bar s(x)} whether the cap \eqn{\pi \le 1} binds. In
+#' simulations a misspecified response model narrowed the set visibly from
+#' \eqn{\lambda = 1} on, and by about 0.008 per endpoint at \eqn{\lambda = 2};
+#' in the binary case the same misspecification moved the endpoints by at most
+#' 0.0005.
+#'
 #' @section Only the mean:
 #' The set is for \eqn{E(Y \mid x)} and its portfolio average. Quantiles or
 #' the whole distribution of \eqn{Y} are different optimisation problems and
