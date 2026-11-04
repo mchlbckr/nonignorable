@@ -91,7 +91,7 @@ test_that("common tilt is inside union and inside naive", {
 
 test_that("common tilt reports the binding row and respects it", {
   e <- c(0.2, 0.2, 0.2); r <- c(0.1, 0.1, 0.99)
-  s <- shadow_scan(e, r, lambda = c(0.5, 2))
+  s <- shadow_scan(aggregate = "common", e, r, lambda = c(0.5, 2))
   # row 3 has r near one and pins the common tilt
   expect_equal(s$binding$upper_row, c(3L, 3L))
   expect_equal(s$binding$lower_row, c(3L, 3L))
@@ -99,9 +99,14 @@ test_that("common tilt reports the binding row and respects it", {
   t_up <- qlogis(0.2) - qlogis(0.99 * 0.2 + 0.01)
   expect_equal(s$curve$upper, rep(plogis(qlogis(0.2) - t_up), 2))
   # non-binding: the naive bound binds
-  s2 <- shadow_scan(c(0.2, 0.3), c(0.1, 0.2), lambda = 0.5)
+  s2 <- shadow_scan(aggregate = "common", c(0.2, 0.3), c(0.1, 0.2), lambda = 0.5)
   expect_true(is.na(s2$binding$upper_row))
   expect_equal(s2$curve$upper, s2$curve$naive_upper)
+})
+
+test_that("union is the default aggregation", {
+  expect_identical(shadow_scan(0.2, 0.5)$aggregate, "union")
+  expect_null(shadow_scan(0.2, 0.5)$binding)
 })
 
 test_that("weights enter the portfolio mean", {
@@ -113,14 +118,14 @@ test_that("weights enter the portfolio mean", {
 test_that("flip point is exact and sharp flips no earlier than naive", {
   d <- simulate_shadow(5000, tilt = -1, seed = 1)
   rej <- d[d$observed == 0, ]
-  s <- shadow_scan(rej$eta_obs, rej$obs_rate, lambda = seq(0, 2, by = 0.1),
+  s <- shadow_scan(aggregate = "common", rej$eta_obs, rej$obs_rate, lambda = seq(0, 2, by = 0.1),
                    threshold = 0.35)
   expect_false(is.na(s$flip[["sharp"]]))
-  up <- shadow_scan(rej$eta_obs, rej$obs_rate, lambda = s$flip[["sharp"]])
+  up <- shadow_scan(aggregate = "common", rej$eta_obs, rej$obs_rate, lambda = s$flip[["sharp"]])
   expect_equal(up$curve$upper, 0.35, tolerance = 1e-9)
   expect_gte(s$flip[["sharp"]], s$flip[["naive"]] - 1e-9)
   # a threshold the naive band reaches but the common-tilt set never does
-  s2 <- shadow_scan(rej$eta_obs, rej$obs_rate, lambda = seq(0, 2, by = 0.1),
+  s2 <- shadow_scan(aggregate = "common", rej$eta_obs, rej$obs_rate, lambda = seq(0, 2, by = 0.1),
                     threshold = 0.4)
   expect_true(is.na(s2$flip[["sharp"]]))
   expect_false(is.na(s2$flip[["naive"]]))

@@ -48,9 +48,11 @@ plot(s)
 
 The sharp set is never wider than the naive band. Where r̂ is small, as for
 rejected applications, its upper edge coincides with the naive one; it is
-narrower only where a worst-case bound cuts the band. With one common tilt for
-all rows (the default), the most extreme rows bound the admissible tilt, which
-produces the plateau above. The help page explains how to read it.
+narrower only where a worst-case bound cuts the band. The default aggregation
+averages each row's own bounds, which is sharp under the pointwise assumption.
+`aggregate = "common"` adds the assumption of one tilt for all rows. That set
+is narrower but is bounded by the most extreme rows, so with estimated inputs
+it inherits their estimation error. The help page explains how to read it.
 
 ## The scan for a mean
 

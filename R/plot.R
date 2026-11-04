@@ -95,7 +95,8 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
   graphics::legend("topleft", bty = "n", text.col = text_col, cex = 0.85,
                    legend = c(
                      if (is_mean) quote("Sharp identified set")
-                     else bquote("Sharp identified set (" * .(x$aggregate) * " tilt)"),
+                     else if (x$aggregate == "common") quote("Sharp identified set (common tilt)")
+                     else quote("Sharp identified set"),
                      if (is_mean) quote("Outer band (without " * pi <= 1 * ")")
                      else quote("Naive band " * expit(logit ~ eta[obs] %+-% lambda))
                    ),

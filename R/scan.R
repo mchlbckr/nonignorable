@@ -67,31 +67,29 @@
 #' @section Aggregation:
 #' The set is pointwise. For a portfolio rate (a weighted mean of
 #' \eqn{\eta(x)}) there are two ways to aggregate:
-#' * `"common"` (default): one tilt \eqn{t} for all rows, the meaning of a
-#'   sensitivity analysis -- "had selection the strength \eqn{t}, the rate
-#'   would be \eqn{R(t)}". This adds an assumption: the tilt is constant in
-#'   \eqn{x}. Then \eqn{t} must be admissible in *every* row; the admissible
-#'   range is the intersection of the row ranges \eqn{[\ell -
-#'   \mathrm{logit}\,U,\; \ell - \mathrm{logit}\,L]}. It always contains
-#'   \eqn{t = 0}. A single row with \eqn{\hat r} near one can narrow it a lot;
-#'   the rows that bind are reported in `$binding`. Because the range is set
-#'   by the most extreme rows, with *estimated* inputs it inherits their
-#'   estimation error, at exactly the rows where \eqn{\hat r} is least
-#'   reliable. Inspect the binding rows before reading a plateau as
-#'   information.
-#' * `"union"`: every row at its own extreme. Under the bound \eqn{|b(x)| \le
-#'   \lambda} alone, with the tilt free to vary with \eqn{x}, this is the
-#'   sharp set for the portfolio rate. It is wider than `"common"` because it
-#'   allows the tilt to be \eqn{+\lambda} in some rows and to be cut by a
-#'   worst-case bound in others; read it as the bound that holds without the
-#'   constant-tilt assumption.
+#' * `"union"` (default): every row at its own extreme, averaged. Under the
+#'   bound \eqn{|b(x)| \le \lambda} alone, with the tilt free to vary with
+#'   \eqn{x}, this is the sharp set for the portfolio rate. Each row
+#'   contributes only its own bounds, so no single row dominates.
+#' * `"common"`: one tilt \eqn{t} for all rows -- "had selection the strength
+#'   \eqn{t} everywhere, the rate would be \eqn{R(t)}". This adds an
+#'   assumption, a tilt constant in \eqn{x}, and gives a narrower set. Then
+#'   \eqn{t} must be admissible in *every* row; the admissible range is the
+#'   intersection of the row ranges \eqn{[\ell - \mathrm{logit}\,U,\; \ell -
+#'   \mathrm{logit}\,L]}. It always contains \eqn{t = 0}. A single row with
+#'   \eqn{\hat r} near one can narrow it a lot; the rows that bind are
+#'   reported in `$binding`. Because the range is set by the most extreme
+#'   rows, with *estimated* inputs it inherits their estimation error, at
+#'   exactly the rows where \eqn{\hat r} is least reliable. Inspect the
+#'   binding rows before reading a plateau as information. This is why it is
+#'   not the default.
 #'
 #' @param eta_obs Numeric vector of \eqn{\hat\eta_{\mathrm{obs}}(x)}, in (0, 1).
 #' @param r Numeric vector of \eqn{\hat r(x)}, in (0, 1], same length.
 #' @param lambda Non-negative bounds on \eqn{|b|}. \eqn{e^\lambda} is the
 #'   largest admissible ratio of the two response propensities (a risk ratio,
 #'   not an odds ratio). Sorted and de-duplicated.
-#' @param aggregate `"common"` or `"union"`, see Aggregation.
+#' @param aggregate `"union"` (default) or `"common"`, see Aggregation.
 #' @param weights Optional non-negative row weights for the portfolio mean.
 #' @param threshold Optional decision threshold on the portfolio rate. If
 #'   given, the smallest \eqn{\lambda} at which the sharp set (and the naive
@@ -115,7 +113,7 @@
 #' \doi{10.1080/01621459.2022.2069572}
 #'
 #' Manski, C. F. (1989). Anatomy of the selection problem. *Journal of Human
-#' Resources*, 24(3), 343--360.
+#' Resources*, 24(3), 343--360. \doi{10.2307/145818}
 #'
 #' Manski, C. F. (2016). Credible interval estimates for official statistics
 #' with survey nonresponse. *Journal of Econometrics*, 191(2), 293--301.
@@ -137,7 +135,7 @@
 #' plot(s)
 #' head(as.data.frame(s, lambda = 1))
 shadow_scan <- function(eta_obs, r, lambda = seq(0, 2, length.out = 81),
-                        aggregate = c("common", "union"), weights = NULL,
+                        aggregate = c("union", "common"), weights = NULL,
                         threshold = NULL) {
   aggregate <- match.arg(aggregate)
   check_inputs(eta_obs, r)

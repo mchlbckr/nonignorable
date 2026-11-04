@@ -58,7 +58,7 @@
 #' are not covered.
 #'
 #' @section Aggregation:
-#' Only the average of the pointwise endpoints (`"union"` in
+#' Only the average of the pointwise endpoints (`"union"`, the default of
 #' [shadow_scan()]). Because the assumption is pointwise and both the
 #' normalisation and the ratio bound separate across \eqn{x}, this is the
 #' sharp set for the portfolio mean. The `"common"` aggregation of the binary
@@ -90,12 +90,12 @@
 #' \doi{10.1080/01621459.2022.2069572}
 #'
 #' Manski, C. F. (1989). Anatomy of the selection problem. *Journal of Human
-#' Resources*, 24(3), 343--360.
+#' Resources*, 24(3), 343--360. \doi{10.2307/145818}
 #'
 #' Manski, C. F. (2016). Credible interval estimates for official statistics
 #' with survey nonresponse. *Journal of Econometrics*, 191(2), 293--301.
 #' \doi{10.1016/j.jeconom.2015.12.002}
-#' @seealso [shadow_scan()] for a binary outcome, with the additional
+#' @seealso [shadow_scan()] for a binary outcome, with the optional
 #'   common-tilt aggregation; [obs_quantiles()] for simulated input.
 #' @export
 #' @examples
