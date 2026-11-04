@@ -38,7 +38,10 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
   scale <- match.arg(scale)
   cv <- x$curve
   is_mean <- inherits(x, "shadow_scan_mean")
-  if (is.null(ylab)) ylab <- if (is_mean) "Portfolio mean" else "Portfolio rate"
+  is_contrast <- inherits(x, "shadow_scan_contrast")
+  if (is.null(ylab)) ylab <- if (is_mean) "Portfolio mean"
+    else if (is_contrast) sprintf("Difference of rates, %s - %s", x$labels[1], x$labels[2])
+    else "Portfolio rate"
   tx <- function(l) if (scale == "ratio") exp(l) else l
   xs <- tx(cv$lambda)
   if (is.null(xlab)) xlab <- if (scale == "ratio")
@@ -76,7 +79,9 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
   if (!is.null(x$threshold)) {
     usr <- graphics::par("usr")
     graphics::abline(h = x$threshold, lty = 2, col = text_col)
-    graphics::text(usr[2], x$threshold, "decision threshold", adj = c(1, 1.6),
+    graphics::text(usr[2], x$threshold,
+                   if (is_contrast && x$threshold == 0) "no difference" else "decision threshold",
+                   adj = c(1, 1.6),
                    col = text_col, cex = 0.8)
     fs <- x$flip[["sharp"]]; fn <- x$flip[["naive"]]
     sym <- if (scale == "ratio") "e^lambda" else "lambda"
@@ -123,6 +128,7 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
          fill = grDevices::adjustcolor(colors[["sharp"]], 0.18), border = colors[["sharp"]],
          lty = NA, lwd = NA, pch = NA, pt.bg = NA, col = NA),
     list(lab = if (is_mean) quote("Outer band (without " * pi <= 1 * ")")
+               else if (is_contrast) quote("Naive band, difference")
                else quote("Naive band " * expit(logit ~ eta[obs] %+-% lambda)),
          fill = NA, border = NA, lty = 2, lwd = 1.5, pch = NA, pt.bg = NA, col = naive_col),
     if (has_ci) list(lab = bquote(.(sprintf("%g%% confidence set", 100 * x$level))),

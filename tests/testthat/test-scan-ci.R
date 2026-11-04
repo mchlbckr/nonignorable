@@ -129,4 +129,7 @@ test_that("trimmed counts only target rows that left the target", {
   eta <- pmin(pmax(d$eta_obs, 0.01), 0.99)
   s <- shadow_scan_ci(eta, d$obs_rate, d$observed, d$y, lambda = c(0, 1), trim = 0.2)
   expect_equal(s$trimmed, sum(d$observed == 0 & d$obs_rate < 0.2))
+  k <- shadow_scan_contrast(eta, d$obs_rate, d$observed, d$y, d$x1 > 0, d$x1 <= 0,
+                            lambda = c(0, 1), trim = 0.2)
+  expect_equal(k$trimmed, sum(d$obs_rate < 0.2))
 })
