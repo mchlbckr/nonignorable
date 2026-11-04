@@ -163,7 +163,10 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
 #' square plotting region. Values of zero are drawn at the lower axis limit.
 #' Distance from the line reads as a factor; distance along it as size. Read
 #' the relevance itself too: a candidate far above the line with negligible
-#' relevance is no shadow variable (see `relevance_chisq_df`).
+#' relevance is no shadow variable (see `relevance_chisq_df`). Hollow points
+#' mark candidates whose exclusion is below its noise floor (`ratio_readable`
+#' is `FALSE`): their horizontal position is not estimated, and their label
+#' gives no ratio.
 #'
 #' @param x A `"shadow_screen"` object.
 #' @param scale `"log"` (default) or `"linear"` axes.
@@ -225,12 +228,19 @@ plot.shadow_screen <- function(x, scale = c("log", "linear"), label = NULL,
   uy <- function(f) if (scale == "log") 10^(usr[3] + f * (usr[4] - usr[3])) else usr[3] + f * (usr[4] - usr[3])
   graphics::text(ux(0.04), uy(0.96), "more relevance than violation",
                  adj = c(0, 1), col = text_col, cex = 0.8, font = 3)
-  graphics::points(ex, re, pch = 21, cex = 1.6, lwd = 2,
+  # a ratio over an exclusion violation below its noise floor is not an
+  # estimate: draw such points hollow and do not print their ratio
+  readable <- if (is.null(x$ratio_readable)) rep(TRUE, nrow(x)) else x$ratio_readable
+  graphics::points(ex[readable], re[readable], pch = 21, cex = 1.6, lwd = 2,
                    bg = col, col = surface_col())
+  graphics::points(ex[!readable], re[!readable], pch = 21, cex = 1.6, lwd = 2,
+                   bg = surface_col(), col = col)
   i <- match(label, x$candidate)
   i <- i[!is.na(i)]
   if (length(i)) {
-    labs <- sprintf("%s (ratio %s)", x$candidate[i], format_ratio(x$ratio[i]))
+    labs <- ifelse(readable[i],
+                   sprintf("%s (ratio %s)", x$candidate[i], format_ratio(x$ratio[i])),
+                   sprintf("%s (ratio not readable)", x$candidate[i]))
     place_labels(ex[i], re[i], labs, px = ex, py = re, line = lim,
                  col = text_col, cex = 0.8)
   }

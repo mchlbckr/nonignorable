@@ -52,6 +52,7 @@ with \code{candidate}, \code{relevance}, \code{exclusion}, \code{ratio}, \code{r
 \code{exclusion_chisq_df}, \code{df}, \code{n_observed}, \code{n}, \code{epp_relevance} and
 \code{epp_exclusion} (cases of the rarer class per parameter of the outcome
 and of the response model; \code{NA} for a target that is not binary),
+\code{ratio_readable} (\code{FALSE} where the exclusion \eqn{\chi^2}/df is below 1),
 \code{verdict} (\code{"pass"} or
 \code{"reject"}) and \code{reason}. Attribute \code{"coding"}: one row per numeric
 characteristic with its treatment, the number of classes, the share of
@@ -85,9 +86,18 @@ better than it predicts selection.
 
 As a second column for each axis the likelihood-ratio \eqn{\chi^2} per
 degree of freedom is reported, the form in which relevance is read against
-the conventional first-stage standard of 10. In large samples every
-violation is significant, so exclusion should be read as an effect size, not
-a test.
+the conventional first-stage standard of 10. It is the measured
+\eqn{\Delta R^2} divided by its noise floor: without any effect,
+\eqn{\chi^2} has mean df, so the same coding yields \eqn{\Delta R^2}
+of about df / \eqn{D_0} from noise alone. \code{min_relevance = 10} asks for
+ten times that floor. The floor grows with the degrees of freedom, so a
+finer coding raises \eqn{\Delta R^2} by itself; \eqn{\chi^2}/df does not.
+The same holds for the denominator of the ratio: where the exclusion
+\eqn{\chi^2}/df is below 1, the violation is not told apart from noise and
+the ratio is a division by noise. Such ratios are flagged in
+\code{ratio_readable}, by \code{print()} and by hollow points in the plot. In large
+samples every violation is significant, so exclusion should be read as an
+effect size, not a test.
 
 Exclusion is measured \emph{marginally} over \eqn{Y}: the pooled response model
 cannot condition on an outcome that is missing. Under nonignorable selection
@@ -116,7 +126,19 @@ below \code{min_relevance}. Read both codings when they disagree. The coding
 used is stored in \code{attr(x, "coding")}. Flexible coding pays only when the
 sample carries the degrees of freedom: the screen warns when a model has
 fewer than 10 cases of the rarer class per parameter, separately for the
-outcome model, fitted to the observed rows, and the response model. For other cut-offs or class counts
+outcome model, fitted to the observed rows, and the response model.
+
+Two different questions sit behind the coding. Whether a characteristic
+needs flexible coding is answered by the gap in support: the share of rows
+outside the range seen among the observed rows (\code{outside} in
+\code{attr(x, "coding")}), which a threshold in the selection leaves and a
+threshold that only defines the population does not. Whether classes are
+well defined is answered by the mass on single values (\code{heaping}, reported
+for \code{numeric = "classes"} and by \code{\link[=screen_classes]{screen_classes()}}). Classes
+are cut only between distinct values, so heavy atoms give classes of
+unequal mass, not arbitrary ones; but a characteristic with no gap in
+support and heavy atoms, such as a loan amount in round numbers, is
+usually better left linear. For other cut-offs or class counts
 per characteristic, code the columns yourself with \code{\link[=screen_classes]{screen_classes()}} and
 pass factors.
 }

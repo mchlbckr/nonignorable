@@ -23,9 +23,18 @@
 #'
 #' As a second column for each axis the likelihood-ratio \eqn{\chi^2} per
 #' degree of freedom is reported, the form in which relevance is read against
-#' the conventional first-stage standard of 10. In large samples every
-#' violation is significant, so exclusion should be read as an effect size, not
-#' a test.
+#' the conventional first-stage standard of 10. It is the measured
+#' \eqn{\Delta R^2} divided by its noise floor: without any effect,
+#' \eqn{\chi^2} has mean df, so the same coding yields \eqn{\Delta R^2}
+#' of about df / \eqn{D_0} from noise alone. `min_relevance = 10` asks for
+#' ten times that floor. The floor grows with the degrees of freedom, so a
+#' finer coding raises \eqn{\Delta R^2} by itself; \eqn{\chi^2}/df does not.
+#' The same holds for the denominator of the ratio: where the exclusion
+#' \eqn{\chi^2}/df is below 1, the violation is not told apart from noise and
+#' the ratio is a division by noise. Such ratios are flagged in
+#' `ratio_readable`, by `print()` and by hollow points in the plot. In large
+#' samples every violation is significant, so exclusion should be read as an
+#' effect size, not a test.
 #'
 #' Exclusion is measured *marginally* over \eqn{Y}: the pooled response model
 #' cannot condition on an outcome that is missing. Under nonignorable selection
@@ -54,7 +63,19 @@
 #' used is stored in `attr(x, "coding")`. Flexible coding pays only when the
 #' sample carries the degrees of freedom: the screen warns when a model has
 #' fewer than 10 cases of the rarer class per parameter, separately for the
-#' outcome model, fitted to the observed rows, and the response model. For other cut-offs or class counts
+#' outcome model, fitted to the observed rows, and the response model.
+#'
+#' Two different questions sit behind the coding. Whether a characteristic
+#' needs flexible coding is answered by the gap in support: the share of rows
+#' outside the range seen among the observed rows (`outside` in
+#' `attr(x, "coding")`), which a threshold in the selection leaves and a
+#' threshold that only defines the population does not. Whether classes are
+#' well defined is answered by the mass on single values (`heaping`, reported
+#' for `numeric = "classes"` and by [screen_classes()]). Classes
+#' are cut only between distinct values, so heavy atoms give classes of
+#' unequal mass, not arbitrary ones; but a characteristic with no gap in
+#' support and heavy atoms, such as a loan amount in round numbers, is
+#' usually better left linear. For other cut-offs or class counts
 #' per characteristic, code the columns yourself with [screen_classes()] and
 #' pass factors.
 #'
@@ -82,6 +103,7 @@
 #'   `exclusion_chisq_df`, `df`, `n_observed`, `n`, `epp_relevance` and
 #'   `epp_exclusion` (cases of the rarer class per parameter of the outcome
 #'   and of the response model; `NA` for a target that is not binary),
+#'   `ratio_readable` (`FALSE` where the exclusion \eqn{\chi^2}/df is below 1),
 #'   `verdict` (`"pass"` or
 #'   `"reject"`) and `reason`. Attribute `"coding"`: one row per numeric
 #'   characteristic with its treatment, the number of classes, the share of
@@ -141,6 +163,7 @@ shadow_screen <- function(data, outcome, response, covariates = character(),
       relevance_chisq_df = rel$chisq / rel$df,
       exclusion_chisq_df = exc$chisq / exc$df,
       df = rel$df, n_observed = nrow(obs), n = nrow(pooled),
+      ratio_readable = exc$chisq / exc$df >= 1,
       epp_relevance = rel$epp, epp_exclusion = exc$epp,
       stringsAsFactors = FALSE
     )
@@ -264,5 +287,9 @@ print.shadow_screen <- function(x, digits = 3, ...) {
   num <- vapply(show, is.numeric, logical(1))
   show[num] <- lapply(show[num], signif, digits = digits)
   print(show, row.names = FALSE)
+  if (!is.null(x$ratio_readable) && any(!x$ratio_readable))
+    cat(sprintf(paste0("  ratio not readable (exclusion chi2/df below 1, so the ",
+                       "violation is not told apart from noise): %s\n"),
+                paste(x$candidate[!x$ratio_readable], collapse = ", ")))
   invisible(x)
 }

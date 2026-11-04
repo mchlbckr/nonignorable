@@ -33,3 +33,16 @@ test_that("ratio labels stay readable across magnitudes", {
   expect_identical(format_ratio(c(0.0042, 0.95, 16.52, 530.4, Inf)),
                    c("4.2e-03", "0.95", "16.52", "530", "Inf"))
 })
+
+test_that("the screen plot labels unreadable ratios as such", {
+  pdf(NULL)
+  on.exit(dev.off())
+  d <- simulate_shadow(2000, tilt = -1, seed = 2)
+  d$noise <- with_seed(105, rnorm(nrow(d)))
+  sc <- shadow_screen(d, "y", "observed", c("x1", "x2"), c("z_shadow", "noise"))
+  txt <- character()
+  local_mocked_bindings(place_labels = function(x, y, labels, ...) txt <<- labels)
+  plot(sc)
+  expect_match(txt[2], "noise \\(ratio not readable\\)")
+  expect_match(txt[1], "z_shadow \\(ratio 17")
+})

@@ -15,6 +15,9 @@ First release.
   outcome and of the response model (`epp_relevance`, `epp_exclusion`) and
   warns below 10, where extra parameters can manufacture relevance or
   violation.
+* A ratio whose exclusion chi2/df is below 1 divides by noise. The screen
+  flags it in `ratio_readable`; `print()` names such candidates and `plot()`
+  draws them hollow without a ratio.
 * `citation("shadowscan")` lists the package and the two papers behind it.
 
 ## Scan

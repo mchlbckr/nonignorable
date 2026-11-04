@@ -164,7 +164,10 @@ v <- function(nm, col) sc[[col]][sc$candidate == nm]
 - **Sex is too weak.** Its relevance has a $\chi^2/\mathrm{df}$ of
   `r iv(f2(v("gender", "relevance_chisq_df")))`. It has been used as an
   instrument in this literature, but on these data it carries almost no
-  information about the outcome.
+  information about the outcome. Its point in the plot is hollow: its exclusion
+  $\chi^2/\mathrm{df}$ is `r iv(format(signif(v("gender", "exclusion_chisq_df"), 2)))`,
+  below the noise floor of 1, so its ratio divides by noise and is not
+  reported.
 - **Stopping treatment violates the exclusion restriction.** It is strongly
   relevant, but its ratio is `r iv(f2(v("offtrt", "ratio")))`: it predicts
   dropout more strongly still. It plays the part a bureau score plays in

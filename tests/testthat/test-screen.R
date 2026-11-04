@@ -73,3 +73,13 @@ test_that("ample minority cases stay quiet", {
   d <- simulate_shadow(5000, tilt = -1, seed = 1)
   expect_no_warning(shadow_screen(d, "y", "observed", c("x1", "x2"), "z_shadow"))
 })
+
+test_that("a ratio over an exclusion below its noise floor is marked unreadable", {
+  d <- simulate_shadow(2000, tilt = -1, seed = 2)
+  d$noise <- with_seed(105, rnorm(nrow(d)))
+  sc <- shadow_screen(d, "y", "observed", c("x1", "x2"), c("z_shadow", "noise"))
+  expect_equal(sc$ratio_readable, sc$exclusion_chisq_df >= 1)
+  expect_identical(sc$ratio_readable, c(TRUE, FALSE))
+  expect_output(print(sc), "ratio not readable.*noise")
+  expect_false(any(grepl("not readable.*z_shadow", capture.output(print(sc)))))
+})

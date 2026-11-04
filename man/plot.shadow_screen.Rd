@@ -49,7 +49,10 @@ logarithmic axes, on which the equality line is still the diagonal of the
 square plotting region. Values of zero are drawn at the lower axis limit.
 Distance from the line reads as a factor; distance along it as size. Read
 the relevance itself too: a candidate far above the line with negligible
-relevance is no shadow variable (see \code{relevance_chisq_df}).
+relevance is no shadow variable (see \code{relevance_chisq_df}). Hollow points
+mark candidates whose exclusion is below its noise floor (\code{ratio_readable}
+is \code{FALSE}): their horizontal position is not estimated, and their label
+gives no ratio.
 }
 \examples{
 d <- simulate_shadow(5000, tilt = -1, seed = 1)
