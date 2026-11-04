@@ -94,3 +94,14 @@ test_that("both standard errors are positive and of similar size; trim shrinks t
   expect_output(print(t), "trimmed")
   expect_error(shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, trim = 1), "trim")
 })
+
+test_that("the default standard error is the larger of the two", {
+  x <- ci_sim()
+  args <- list(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, lambda = c(0, 1, 2))
+  m <- do.call(shadow_scan_ci, args)
+  cnd <- do.call(shadow_scan_ci, c(args, se_type = "conditional"))
+  emp <- do.call(shadow_scan_ci, c(args, se_type = "empirical"))
+  expect_equal(m$curve$se_upper, pmax(cnd$curve$se_upper, emp$curve$se_upper))
+  expect_equal(m$curve$se_lower, pmax(cnd$curve$se_lower, emp$curve$se_lower))
+  expect_identical(m$se_type, "max")
+})

@@ -15,7 +15,7 @@ shadow_scan_ci(
   threshold = NULL,
   level = 0.9,
   trim = 0,
-  se_type = c("conditional", "empirical")
+  se_type = c("max", "conditional", "empirical")
 )
 }
 \arguments{
@@ -40,7 +40,7 @@ selecting the rows of the portfolio by \eqn{X}.}
 \item{trim}{Rows with \eqn{\hat r <} \code{trim} leave the target. Default 0.
 See the section on what is covered.}
 
-\item{se_type}{\code{"conditional"} (default) or \code{"empirical"}; see the section
+\item{se_type}{\code{"max"} (default), \code{"conditional"} or \code{"empirical"}; see the section
 on what is covered.}
 }
 \value{
@@ -99,15 +99,24 @@ score. The usual standard error, the sample standard deviation of the
 influence values (\code{se_type = "empirical"}), then depends on whether the
 sample happens to contain such rows, and it is too small on average: in
 simulations for the rejected rows it covered 0.84 to 0.88 at nominal 0.90,
-without improving from 1,000 to 16,000 rows. The default
-\code{se_type = "conditional"} computes the variance of the score given \eqn{X}
-in closed form from the nuisances, for instance
+without improving from 1,000 to 16,000 rows. \code{se_type = "conditional"}
+computes the variance of the score given \eqn{X} in closed form from the
+nuisances, for instance
 \eqn{(1-\hat r)^2 f'(\hat\eta)^2 \hat\eta(1-\hat\eta)/\hat r} for the
 band piece, and averages it over \strong{all} rows, including the many
 unobserved ones in the same regions. In the same simulations it covered
 0.91 to 0.97 from 4,000 rows on, with intervals about 2\% wider; at 1,000
-rows and small \eqn{\lambda}, 0.85. It relies on \eqn{\hat\eta_{\mathrm{obs}}}
-for the conditional variance of \eqn{Y}.
+rows and small \eqn{\lambda}, 0.85.
+
+The conditional variance takes \eqn{\hat\eta_{\mathrm{obs}}(1 -
+\hat\eta_{\mathrm{obs}})} for the variance of \eqn{Y}; if the outcome
+model is misspecified, the squared error \eqn{(\eta_{\mathrm{obs}} -
+\hat\eta_{\mathrm{obs}})^2} is missing from it, and only the empirical
+variance sees it. Each of the two guards against the failure of the other,
+so the default, \code{se_type = "max"}, takes the larger at each endpoint and
+\eqn{\lambda}. On Lending Club data the empirical one was the larger, by
+about 40\%; in the simulations, with a correctly specified outcome model,
+the conditional one.
 
 \code{trim} removes rows with \eqn{\hat r <} \code{trim} from the target, together
 with their correction terms. That changes the target to the rows with

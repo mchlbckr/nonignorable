@@ -43,15 +43,24 @@
 #' influence values (`se_type = "empirical"`), then depends on whether the
 #' sample happens to contain such rows, and it is too small on average: in
 #' simulations for the rejected rows it covered 0.84 to 0.88 at nominal 0.90,
-#' without improving from 1,000 to 16,000 rows. The default
-#' `se_type = "conditional"` computes the variance of the score given \eqn{X}
-#' in closed form from the nuisances, for instance
+#' without improving from 1,000 to 16,000 rows. `se_type = "conditional"`
+#' computes the variance of the score given \eqn{X} in closed form from the
+#' nuisances, for instance
 #' \eqn{(1-\hat r)^2 f'(\hat\eta)^2 \hat\eta(1-\hat\eta)/\hat r} for the
 #' band piece, and averages it over **all** rows, including the many
 #' unobserved ones in the same regions. In the same simulations it covered
 #' 0.91 to 0.97 from 4,000 rows on, with intervals about 2% wider; at 1,000
-#' rows and small \eqn{\lambda}, 0.85. It relies on \eqn{\hat\eta_{\mathrm{obs}}}
-#' for the conditional variance of \eqn{Y}.
+#' rows and small \eqn{\lambda}, 0.85.
+#'
+#' The conditional variance takes \eqn{\hat\eta_{\mathrm{obs}}(1 -
+#' \hat\eta_{\mathrm{obs}})} for the variance of \eqn{Y}; if the outcome
+#' model is misspecified, the squared error \eqn{(\eta_{\mathrm{obs}} -
+#' \hat\eta_{\mathrm{obs}})^2} is missing from it, and only the empirical
+#' variance sees it. Each of the two guards against the failure of the other,
+#' so the default, `se_type = "max"`, takes the larger at each endpoint and
+#' \eqn{\lambda}. On Lending Club data the empirical one was the larger, by
+#' about 40%; in the simulations, with a correctly specified outcome model,
+#' the conditional one.
 #'
 #' `trim` removes rows with \eqn{\hat r <} `trim` from the target, together
 #' with their correction terms. That changes the target to the rows with
@@ -80,7 +89,7 @@
 #' @param level Confidence level. Default 0.9.
 #' @param trim Rows with \eqn{\hat r <} `trim` leave the target. Default 0.
 #'   See the section on what is covered.
-#' @param se_type `"conditional"` (default) or `"empirical"`; see the section
+#' @param se_type `"max"` (default), `"conditional"` or `"empirical"`; see the section
 #'   on what is covered.
 #' @return An object of class `c("shadow_scan_ci", "shadow_scan")`, as from
 #'   [shadow_scan()], whose `curve` holds the debiased estimates `lower`,
@@ -111,7 +120,7 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
                            target = "unobserved",
                            lambda = seq(0, 2, length.out = 81),
                            weights = NULL, threshold = NULL, level = 0.9,
-                           trim = 0, se_type = c("conditional", "empirical")) {
+                           trim = 0, se_type = c("max", "conditional", "empirical")) {
   se_type <- match.arg(se_type)
   check_inputs(eta_obs, r)
   n <- length(eta_obs)
@@ -189,10 +198,9 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
     }
     score <- w * (s * h + p * (rho - h))
     est <- mean(score) / den
-    if (se_type == "empirical") {
-      infl <- (score - est * w * s) / den
-      return(c(est = est, se = stats::sd(infl) / sqrt(n)))
-    }
+    infl <- (score - est * w * s) / den
+    se_emp <- stats::sd(infl) / sqrt(n)
+    if (se_type == "empirical") return(c(est = est, se = se_emp))
     # Conditional variance given X of D = rho - h, and its covariance with the
     # random target indicator 1 - R, in closed form from the nuisances. They
     # are evaluated at every row, so the variance does not hinge on the few
@@ -217,7 +225,8 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
       v1 <- w^2 * s^2 * vD
     }
     v <- (mean((m1 - mean(m1))^2) + mean(v1)) / den^2
-    c(est = est, se = sqrt(v / n))
+    se_cond <- sqrt(v / n)
+    c(est = est, se = if (se_type == "max") max(se_cond, se_emp) else se_cond)
   }
 
   K <- length(lambda)
