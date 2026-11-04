@@ -89,7 +89,8 @@ The scan covers a binary outcome in closed form and the **mean** of any
 outcome with a finite mean. It does not cover quantiles or the whole
 distribution. The screen's measure, incremental McFadden R², presumes a
 discrete outcome. Covariates, learners and sample size are unrestricted. The package
-contains no estimator and fits neither η_obs nor r. It ships no outside data:
+contains no estimator and fits neither η_obs nor r. The sets are identified sets: estimated inputs are treated as known, and no
+confidence sets are offered. It ships no outside data:
 examples and tests run on `simulate_shadow()`.
 
 ## License

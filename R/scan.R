@@ -64,6 +64,19 @@
 #' \eqn{\hat r(x) > 0}: where acceptance was deterministic, nothing is
 #' observed and \eqn{\eta_{\mathrm{obs}}} is undefined.
 #'
+#' @section Estimated inputs, no inference:
+#' The set is an *identified* set: it is what the data would permit if the
+#' observed-data law were known exactly. The scan plugs in
+#' \eqn{\hat\eta_{\mathrm{obs}}} and \eqn{\hat r} as if they were the truth.
+#' Their estimation error is **not** included, so the reported set is
+#' narrower than an honest statement about the population would be. No
+#' confidence set is offered. Inference for such sets is not routine: the
+#' endpoints are maxima and minima of estimated quantities, where the usual
+#' bootstrap can fail; a flexible learner needs more than a naive plug-in;
+#' and covering the set differs from covering the parameter inside it. Nor
+#' does resampling capture misspecification of the extrapolation to rows that
+#' are rarely observed.
+#'
 #' @section Aggregation:
 #' The set is pointwise. For a portfolio rate (a weighted mean of
 #' \eqn{\eta(x)}) there are two ways to aggregate:

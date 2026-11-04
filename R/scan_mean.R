@@ -52,6 +52,19 @@
 #' \eqn{s}, and therefore the width of the set. `r` is the *conditional*
 #' observation rate, as in [shadow_scan()].
 #'
+#' @section Estimated inputs, no inference:
+#' The set is an *identified* set: it is what the data would permit if the
+#' observed-data law were known exactly. The scan plugs in
+#' the quantiles and \eqn{\hat r} as if they were the truth.
+#' Their estimation error is **not** included, so the reported set is
+#' narrower than an honest statement about the population would be. No
+#' confidence set is offered. Inference for such sets is not routine: the
+#' endpoints are maxima and minima of estimated quantities, where the usual
+#' bootstrap can fail; a flexible learner needs more than a naive plug-in;
+#' and covering the set differs from covering the parameter inside it. Nor
+#' does resampling capture misspecification of the extrapolation to rows that
+#' are rarely observed.
+#'
 #' @section Only the mean:
 #' The set is for \eqn{E(Y \mid x)} and its portfolio average. Quantiles or
 #' the whole distribution of \eqn{Y} are different optimisation problems and
