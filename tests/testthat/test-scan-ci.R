@@ -133,3 +133,12 @@ test_that("trimmed counts only target rows that left the target", {
                             lambda = c(0, 1), trim = 0.2)
   expect_equal(k$trimmed, sum(d$obs_rate < 0.2))
 })
+
+test_that("crossfit_inputs rejects a response column with NA", {
+  d <- simulate_shadow(500, tilt = -1, seed = 83)
+  d$observed[3] <- NA
+  expect_error(crossfit_inputs(d, "observed",
+                               function(tr, nd) rep(0.3, nrow(nd)),
+                               function(tr, nd) rep(0.5, nrow(nd)), seed = 1),
+               "0/1 or logical")
+})

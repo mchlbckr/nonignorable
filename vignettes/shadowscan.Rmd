@@ -181,7 +181,8 @@ Two lines of the output deserve attention.
 ## Comparing two portfolios
 
 `shadow_scan_contrast()` scans the difference of rates between two
-portfolios chosen by $X$, such as two treatment arms or two branches. Its
+portfolios chosen by $X$, such as two treatment arms or two regions. Each
+portfolio is a whole segment of rows, observed and unobserved alike. Its
 threshold is 0, no difference.
 
 ```{r contrast}

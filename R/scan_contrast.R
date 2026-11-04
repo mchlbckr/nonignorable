@@ -1,8 +1,8 @@
 #' Debiased scan for the difference between two portfolios
 #'
 #' `shadow_scan_contrast()` compares two disjoint portfolios chosen by
-#' \eqn{X} -- treatment arms of a trial, branches, application years -- under
-#' the same assumption as [shadow_scan()]: in every row the ratio of the
+#' \eqn{X} -- treatment arms of a trial, or two segments such as two regions --
+#' under the same assumption as [shadow_scan()]: in every row the ratio of the
 #' response propensities is at most \eqn{e^\lambda}. It answers the question
 #' a comparison is run for: up to which strength of selection does the
 #' finding "A differs from B" survive?
@@ -16,7 +16,9 @@
 #' different rows and have mean zero, so they are uncorrelated and the
 #' standard error of the difference is the root of the sum of the squared
 #' standard errors. Overlapping targets would need their covariance and are
-#' not supported.
+#' not supported. Each target is a whole segment of rows, observed and
+#' unobserved alike; a target that depends on \eqn{R}, such as only the
+#' rejected applicants of each segment, is outside what the contrast covers.
 #'
 #' The flip points say from which \eqn{\lambda} on the set, and the confidence
 #' set, reach `threshold` (by default 0: no difference). They are found by
@@ -69,15 +71,23 @@ shadow_scan_contrast <- function(eta_obs, r, response, outcome,
     stop("`target_a` and `target_b` must be disjoint.", call. = FALSE)
   if (!is.numeric(lambda) || !any(lambda == 0))
     stop("`lambda` must include lambda = 0.", call. = FALSE)
+  if (length(unique(lambda)) < 2L)
+    stop("`lambda` needs at least two distinct values, so that flip points can ",
+         "be interpolated.", call. = FALSE)
   if (!is.numeric(threshold) || length(threshold) != 1L || !is.finite(threshold) ||
       abs(threshold) >= 1)
     stop("`threshold` must be a single number in (-1, 1).", call. = FALSE)
   if (!is.character(labels) || length(labels) != 2L)
     stop("`labels` must be two strings.", call. = FALSE)
-  arm <- function(tg) shadow_scan_ci(eta_obs, r, response, outcome, target = tg,
-                                     lambda = lambda, weights = weights,
-                                     level = level, trim = trim, se_type = se_type)
-  a <- arm(target_a); b <- arm(target_b)
+  arm <- function(tg, label) withCallingHandlers(
+    shadow_scan_ci(eta_obs, r, response, outcome, target = tg,
+                   lambda = lambda, weights = weights,
+                   level = level, trim = trim, se_type = se_type),
+    warning = function(cnd) {
+      warning(label, ": ", conditionMessage(cnd), call. = FALSE)
+      invokeRestart("muffleWarning")
+    })
+  a <- arm(target_a, labels[1]); b <- arm(target_b, labels[2])
   ca <- a$curve; cb <- b$curve
   z <- stats::qnorm(1 - (1 - level) / 2)
   out <- data.frame(lambda = ca$lambda,

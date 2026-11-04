@@ -45,14 +45,15 @@ in almost every respect:
   who left the trial, plausibly those who did worse. In this literature the
   shadow variable is usually called a *nonresponse instrument*
   (Scharfstein, Rotnitzky and Robins, 1999; Zhao, Wang and Shao, 2021; Beppu
-  and Morikawa, 2023).
+  and Morikawa, 2024; Chen and Shao, 2025).
 
 Each step below is run on both, side by side. `vignette("shadowscan")`
 explains the tools on simulated data.
 
 ```{r no-suggests, eval = !ok, echo = FALSE, results = "asis"}
 cat("**The ACTG 175 part needs the packages speff2trial and quantreg, which",
-    "are not installed. Its code is shown but not run.**")
+    "are not installed. Its code is shown but not run, its numbers appear as",
+    "?, and the text describes the result obtained with the data.**")
 ```
 
 ## The data
@@ -309,8 +310,10 @@ it is. With didanosine added, they are that much *less* likely, which makes
 that arm look better. Selection would have to run in opposite directions in
 the two arms, and with that strength, to undo the comparison.
 
-The same function compares any two groups chosen by $X$: two branches of a
-lender, or two years of applications.
+The same function compares any two groups chosen by $X$, such as two regions
+of a lender. Each group is a whole segment of rows, observed and unobserved
+alike. Comparing only the rejected applicants of two segments makes the
+target depend on $R$, which the function does not cover.
 
 ## The mean of a continuous outcome
 
@@ -330,12 +333,13 @@ sm
 plot(sm, ylab = "Mean CD4 count at week 96, missing patients")
 ```
 
-`r iv(if (attr(q, "crossing") == 1) "Every row has" else "Almost every row has")`
-crossing quantiles somewhere among the 100 levels. That is the sampling noise
-of a quantile regression fitted level by level. The shift says how much
-sorting moved the quantiles: a median of
-`r iv(round(100 * attr(q, "shift"), 1))`% of each row's range, which is
-harmless. Counts cannot be negative, so the grid is cut at zero.
+In `r iv(round(100 * attr(q, "crossing")))`% of the rows the quantiles cross
+somewhere among the 100 levels. Crossing is the sampling noise of a quantile
+regression fitted level by level. The shift says how much sorting moved the
+quantiles: a median of `r iv(round(100 * attr(q, "shift"), 1))`% of each row's
+range, which
+`r iv(if (attr(q, "shift") < 0.05) "is small enough to ignore" else "is large enough to suggest that the quantile model fits poorly")`.
+Counts cannot be negative, so the grid is cut at zero.
 
 ## The two side by side
 
@@ -403,9 +407,12 @@ The objects were built on `r m$built` with shadowscan `r m$package_version`.
 
 ## References
 
-Beppu, K. and Morikawa, K. (2023). Verifiable identification condition for
+Beppu, K. and Morikawa, K. (2024). Verifiable identification condition for
 nonignorable nonresponse data with categorical instrumental variables.
-arXiv:2304.02270.
+*Statistical Theory and Related Fields*, 8(1), 40–50.
+
+Chen, J. and Shao, J. (2025). Instrument, variable and model selection with
+nonignorable nonresponse. arXiv:2509.12557.
 
 Hammer, S. M. et al. (1996). A trial comparing nucleoside monotherapy with
 combination therapy in HIV-infected adults with CD4 cell counts from 200 to

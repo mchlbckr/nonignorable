@@ -59,3 +59,21 @@ test_that("contrast prints and plots", {
   pdf(NULL); on.exit(dev.off())
   expect_no_error(plot(k))
 })
+
+test_that("contrast needs a grid of at least two lambdas", {
+  expect_error(shadow_scan_contrast(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y,
+                                    fx$A, fx$B, lambda = 0), "at least two")
+})
+
+test_that("contrast labels the warnings of each arm", {
+  eta <- fx$inp$eta_obs; r <- fx$inp$r
+  bad <- which(fx$d$observed == 1 & fx$d$y %in% 1 & fx$A)[1:3]
+  r[bad] <- 1e-5; eta[bad] <- 0.01
+  w <- character()
+  withCallingHandlers(
+    shadow_scan_contrast(eta, r, fx$d$observed, fx$d$y, fx$A, fx$B,
+                         lambda = c(0, 1), labels = c("arm one", "arm two")),
+    warning = function(cnd) { w <<- c(w, conditionMessage(cnd)); invokeRestart("muffleWarning") })
+  expect_true(any(grepl("^arm one: ", w)))
+  expect_false(any(grepl("^arm two: ", w)))
+})

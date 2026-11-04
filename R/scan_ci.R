@@ -360,7 +360,10 @@ crossfit_inputs <- function(data, response, fit_eta, fit_r, folds = 5L,
   folds <- as.integer(folds)
   if (folds < 2L || folds > n) stop("`folds` must be between 2 and the number of rows.",
                                     call. = FALSE)
-  R <- as.integer(as.logical(data[[response]]))
+  rv <- data[[response]]
+  if (!(is.logical(rv) || (is.numeric(rv) && all(rv %in% c(0, 1)))) || anyNA(rv))
+    stop("Column `", response, "` must be 0/1 or logical, without NA.", call. = FALSE)
+  R <- as.integer(rv)
   draw <- function() sample(rep_len(seq_len(folds), n))
   fold <- if (is.null(seed)) draw() else with_seed(seed, draw())
   eta <- r <- rep(NA_real_, n)

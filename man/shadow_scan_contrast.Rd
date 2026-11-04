@@ -58,8 +58,8 @@ the flip points of the set, the naive band and the confidence set.
 }
 \description{
 \code{shadow_scan_contrast()} compares two disjoint portfolios chosen by
-\eqn{X} -- treatment arms of a trial, branches, application years -- under
-the same assumption as \code{\link[=shadow_scan]{shadow_scan()}}: in every row the ratio of the
+\eqn{X} -- treatment arms of a trial, or two segments such as two regions --
+under the same assumption as \code{\link[=shadow_scan]{shadow_scan()}}: in every row the ratio of the
 response propensities is at most \eqn{e^\lambda}. It answers the question
 a comparison is run for: up to which strength of selection does the
 finding "A differs from B" survive?
@@ -74,7 +74,9 @@ are disjoint, the influence functions of the two endpoints are non-zero on
 different rows and have mean zero, so they are uncorrelated and the
 standard error of the difference is the root of the sum of the squared
 standard errors. Overlapping targets would need their covariance and are
-not supported.
+not supported. Each target is a whole segment of rows, observed and
+unobserved alike; a target that depends on \eqn{R}, such as only the
+rejected applicants of each segment, is outside what the contrast covers.
 
 The flip points say from which \eqn{\lambda} on the set, and the confidence
 set, reach \code{threshold} (by default 0: no difference). They are found by
