@@ -62,6 +62,15 @@
 #' about 40%; in the simulations, with a correctly specified outcome model,
 #' the conditional one.
 #'
+#' Both standard errors depend on how much mass the response model puts where
+#' \eqn{\hat r} is small: a smoother fit of \eqn{r} can raise the
+#' conditional one markedly while the empirical one barely moves. The output
+#' therefore reports the rows with \eqn{\hat r <
+#' 0.01} next to the estimate, and the width of the confidence set should be
+#' read together with that count. A debiased estimate far outside \eqn{[0, 1]}
+#' means the inverse weights have blown up, typically through separation in
+#' the response model; a warning says so.
+#'
 #' `trim` removes rows with \eqn{\hat r <} `trim` from the target, together
 #' with their correction terms. That changes the target to the rows with
 #' \eqn{\hat r \ge} `trim`, and the output says how many rows left it. Rows
@@ -168,6 +177,7 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
     stop("`trim` must be a single number in [0, 1).", call. = FALSE)
   # rows with r-hat below trim leave the target, with their correction terms
   keep <- r >= trim
+  n_trimmed <- sum(s > 0 & !keep)        # target rows that leave the target
   s <- s * keep; p <- p * keep
   if (sum(w * s) <= 0) stop("The target is empty.", call. = FALSE)
   z <- stats::qnorm(1 - (1 - level) / 2)
@@ -242,6 +252,15 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
     out$naive_lower[k] <- sum(tw * stats::plogis(ell - lambda[k])) / sum(tw)
     out$naive_upper[k] <- sum(tw * stats::plogis(ell + lambda[k])) / sum(tw)
   }
+  # A rate lies in [0, 1]; the debiased estimate may leave it slightly by
+  # sampling error, but far outside it the inverse weights 1/r-hat have blown up.
+  off <- pmax(-out$lower, out$upper - 1, 0)
+  if (max(off) > 0.05)
+    warning(sprintf(paste0(
+      "The debiased estimate leaves [0, 1] by up to %.3g: the inverse weights ",
+      "1/r-hat have blown up. Check the response model for separation (a fit ",
+      "that drives r-hat of observed rows towards 0), or use `trim`."), max(off)),
+      call. = FALSE)
   out$ci_lower <- pmax(out$lower - z * out$se_lower, 0)
   out$ci_upper <- pmin(out$upper + z * out$se_upper, 1)
   p0 <- endpoint(0, "upper")
@@ -265,7 +284,9 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
   structure(list(
     curve = out, point = point, threshold = threshold, flip = flip,
     aggregate = "union", binding = NULL, level = level, target = target_label,
-    trim = trim, trimmed = sum(!keep), se_type = se_type,
+    trim = trim, trimmed = n_trimmed, se_type = se_type,
+    tail = c(target = sum(s > 0 & r < 0.01), observed = sum(R == 1 & r < 0.01),
+             min_r_observed = min(r[R == 1])),
     eta_obs = eta_obs, r = r, weights = weights, n = n,
     n_target = sum(s > 0)
   ), class = c("shadow_scan_ci", "shadow_scan"))
@@ -283,7 +304,10 @@ print.shadow_scan_ci <- function(x, digits = 3, ...) {
   if (x$trim > 0)
     cat(sprintf("  trimmed: %d rows with r-hat < %g, out of the target\n",
                 x$trimmed, x$trim))
-
+  if (!is.null(x$tail))
+    cat(sprintf("  r-hat < 0.01: %d target rows, %d observed rows; smallest r-hat observed %s\n",
+                as.integer(x$tail[["target"]]), as.integer(x$tail[["observed"]]),
+                format(x$tail[["min_r_observed"]], digits = 2)))
   cat("  lambda = 0:", format(x$point, digits = digits),
       sprintf("[%s, %s]\n", format(cv$ci_lower[1], digits = digits),
               format(cv$ci_upper[1], digits = digits)))
@@ -352,6 +376,13 @@ crossfit_inputs <- function(data, response, fit_eta, fit_r, folds = 5L,
   }
   if (anyNA(eta) || anyNA(r))
     stop("A fit function returned missing or too few predictions.", call. = FALSE)
+  n_clip <- sum(data[[response]] == 1 & r < clip)
+  if (n_clip > 0)
+    warning(sprintf(paste0(
+      "%d observed row(s) got r-hat below `clip` = %g out of fold: the ",
+      "response model separates them. Their inverse weights will dominate ",
+      "the debiased estimate; use a less flexible or penalised response model."),
+      n_clip, clip), call. = FALSE)
   list(eta_obs = pmin(pmax(eta, clip), 1 - clip),
        r = pmin(pmax(r, clip), 1), fold = fold)
 }

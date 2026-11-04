@@ -105,3 +105,28 @@ test_that("the default standard error is the larger of the two", {
   expect_equal(m$curve$se_lower, pmax(cnd$curve$se_lower, emp$curve$se_lower))
   expect_identical(m$se_type, "max")
 })
+
+test_that("blown-up inverse weights and separation are flagged", {
+  d <- simulate_shadow(2000, tilt = -1, seed = 81)
+  eta <- pmin(pmax(d$eta_obs, 0.01), 0.99); r <- d$obs_rate
+  ok <- shadow_scan_ci(eta, r, d$observed, d$y, lambda = c(0, 1))
+  expect_named(ok$tail, c("target", "observed", "min_r_observed"))
+  expect_output(print(ok), "r-hat < 0.01")
+  bad <- which(d$observed == 1 & d$y == 1)[1:3]
+  r2 <- r; r2[bad] <- 1e-5; eta2 <- eta; eta2[bad] <- 0.01
+  expect_warning(shadow_scan_ci(eta2, r2, d$observed, d$y, lambda = c(0, 1)),
+                 "separation")
+  expect_warning(
+    crossfit_inputs(d, "observed",
+                    fit_eta = function(train, new) rep(0.3, nrow(new)),
+                    fit_r = function(train, new) ifelse(new$observed == 1 & new$y %in% 1, 1e-9, 0.5),
+                    seed = 1),
+    "separates")
+})
+
+test_that("trimmed counts only target rows that left the target", {
+  d <- simulate_shadow(2000, tilt = -1, seed = 82)
+  eta <- pmin(pmax(d$eta_obs, 0.01), 0.99)
+  s <- shadow_scan_ci(eta, d$obs_rate, d$observed, d$y, lambda = c(0, 1), trim = 0.2)
+  expect_equal(s$trimmed, sum(d$observed == 0 & d$obs_rate < 0.2))
+})

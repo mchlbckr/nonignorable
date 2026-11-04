@@ -118,6 +118,15 @@ so the default, \code{se_type = "max"}, takes the larger at each endpoint and
 about 40\%; in the simulations, with a correctly specified outcome model,
 the conditional one.
 
+Both standard errors depend on how much mass the response model puts where
+\eqn{\hat r} is small: a smoother fit of \eqn{r} can raise the
+conditional one markedly while the empirical one barely moves. The output
+therefore reports the rows with \eqn{\hat r <
+0.01} next to the estimate, and the width of the confidence set should be
+read together with that count. A debiased estimate far outside \eqn{[0, 1]}
+means the inverse weights have blown up, typically through separation in
+the response model; a warning says so.
+
 \code{trim} removes rows with \eqn{\hat r <} \code{trim} from the target, together
 with their correction terms. That changes the target to the rows with
 \eqn{\hat r \ge} \code{trim}, and the output says how many rows left it. Rows

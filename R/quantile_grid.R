@@ -20,8 +20,11 @@
 #' Quantile curves estimated level by level can cross. Each row is sorted
 #' (rearranged), which yields a proper quantile function and never moves it
 #' further from the truth (Chernozhukov, Fernández-Val and Galichon, 2010).
-#' The share of rows that needed it is returned as attribute `"crossing"`;
-#' a large share says the quantile model is poor, not merely noisy.
+#' With many levels nearly every row crosses somewhere by sampling noise
+#' alone, so the share of rows that needed it (attribute `"crossing"`) says
+#' little. Attribute `"shift"` says how much was moved: the median over rows of
+#' the largest change by sorting, relative to the row's range. A few percent is
+#' noise; a large shift says the quantile model is poor.
 #'
 #' @param fit An `rq`/`rqs` object, a `function(tau, newdata)`, or a numeric
 #'   matrix of draws.
@@ -29,7 +32,7 @@
 #'   function fits).
 #' @param K Number of levels. Default 200.
 #' @return A numeric matrix, `nrow(newdata)` (or `nrow(fit)` for draws) by
-#'   `K`, rows sorted, with attributes `"levels"` and `"crossing"`.
+#'   `K`, rows sorted, with attributes `"levels"`, `"crossing"` and `"shift"`.
 #' @references
 #' Chernozhukov, V., Fernández-Val, I. and Galichon, A. (2010). Quantile and
 #' probability curves without crossing. *Econometrica*, 78(3), 1093--1125.
@@ -91,8 +94,16 @@ quantile_grid <- function(fit, newdata = NULL, K = 200L) {
   }
   q <- unname(q)
   crossed <- apply(q, 1L, is.unsorted)
-  if (any(crossed)) q[crossed, ] <- t(apply(q[crossed, , drop = FALSE], 1L, sort))
+  shift <- numeric(nrow(q))
+  if (any(crossed)) {
+    raw <- q[crossed, , drop = FALSE]
+    srt <- t(apply(raw, 1L, sort))
+    span <- srt[, K] - srt[, 1L]
+    shift[crossed] <- ifelse(span > 0, apply(abs(srt - raw), 1L, max) / span, 0)
+    q[crossed, ] <- srt
+  }
   attr(q, "levels") <- tau
   attr(q, "crossing") <- mean(crossed)
+  attr(q, "shift") <- stats::median(shift)
   q
 }

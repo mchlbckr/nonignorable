@@ -17,7 +17,7 @@ function fits).}
 }
 \value{
 A numeric matrix, \code{nrow(newdata)} (or \code{nrow(fit)} for draws) by
-\code{K}, rows sorted, with attributes \code{"levels"} and \code{"crossing"}.
+\code{K}, rows sorted, with attributes \code{"levels"}, \code{"crossing"} and \code{"shift"}.
 }
 \description{
 \code{quantile_grid()} produces the \eqn{n \times K} matrix of conditional
@@ -43,8 +43,11 @@ or generative model. \code{newdata} is then not used.
 Quantile curves estimated level by level can cross. Each row is sorted
 (rearranged), which yields a proper quantile function and never moves it
 further from the truth (Chernozhukov, Fernández-Val and Galichon, 2010).
-The share of rows that needed it is returned as attribute \code{"crossing"};
-a large share says the quantile model is poor, not merely noisy.
+With many levels nearly every row crosses somewhere by sampling noise
+alone, so the share of rows that needed it (attribute \code{"crossing"}) says
+little. Attribute \code{"shift"} says how much was moved: the median over rows of
+the largest change by sorting, relative to the row's range. A few percent is
+noise; a large shift says the quantile model is poor.
 }
 \examples{
 dc <- simulate_shadow(3000, tilt = -1, outcome = "continuous", seed = 1)

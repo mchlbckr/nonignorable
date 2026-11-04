@@ -20,6 +20,8 @@ test_that("a function fit is used as given and crossings are rearranged", {
   }
   q2 <- quantile_grid(g, nd, K = 10)
   expect_equal(attr(q2, "crossing"), 0.2)
+  expect_equal(attr(q2, "shift"), 0)            # median over rows: 4 of 5 untouched
+  expect_gt(attr(quantile_grid(function(tau, nd) g(tau, nd)[c(2, 2, 2), ], nd[1:3, , drop = FALSE], K = 10), "shift"), 0.5)
   expect_false(is.unsorted(q2[2, ]))
   expect_error(quantile_grid(function(tau, newdata) 1, nd, K = 10), "one row per row")
   expect_error(quantile_grid(f, NULL), "newdata")
