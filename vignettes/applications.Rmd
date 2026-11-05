@@ -367,7 +367,10 @@ pl <- shadow_scan_mean(cq$q, cq$r, lambda = km$curve$lambda)
 
 Under MAR the mean count at week 96 is `r iv(round(km$point))`, below the
 mean at baseline of `r iv(round(baseline))`. The threshold is that baseline
-mean: has the count fallen on average? The answer survives selection up to a
+mean: has the count fallen on average? The baseline mean is itself an
+estimate, with a standard error of
+`r iv(round(sd(d$cd40) / sqrt(nrow(d)), 1))`, which the confidence set does
+not include. The answer survives selection up to a
 propensity ratio of `r iv(f2(exp(km$flip[["sharp"]])))` in the estimate and
 `r iv(f2(exp(km$flip[["ci"]])))` in the confidence set. Beyond that, a
 dropout that hides the patients with high counts could carry the mean back
@@ -376,7 +379,7 @@ to its starting level. At a ratio of $e^1$ the set is
 plug-in, `shadow_scan_mean()` on the same inputs, gives
 [`r iv(round(pl$curve$lower[i1]))`, `r iv(round(pl$curve$upper[i1]))`]. It
 skips the correction terms, and here it
-`r iv(if (pl$curve$lower[i1] >= km$curve$lower[i1] && pl$curve$upper[i1] <= km$curve$upper[i1]) "lies inside the debiased set, the direction of its bias" else "does not lie inside the debiased set")`.
+`r iv(if (pl$curve$lower[i1] >= km$curve$lower[i1] && pl$curve$upper[i1] <= km$curve$upper[i1]) "lies inside the debiased set, the direction in which the plug-in typically errs" else "does not lie inside the debiased set")`.
 
 ## The two side by side
 

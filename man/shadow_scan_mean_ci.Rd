@@ -67,14 +67,15 @@ that is not binary.
 Each endpoint of the set is a mean over rows of \eqn{\mu^\pm(x)}, which
 depends on \eqn{r(x)} and on the quantile function of \eqn{Y} given
 \eqn{R = 1, X = x}. The plug-in, \code{\link[=shadow_scan_mean]{shadow_scan_mean()}}, inherits the
-first-order error of both estimates and is biased towards the inside of
-the set. The estimator here adds to each row a correction term that
+first-order error of both estimates; in simulations it was typically biased
+towards the inside of the set. The estimator here adds to each row a correction term that
 removes that first-order error: an inverse-probability weighted residual
 of the observed outcome, and, where the constraint \eqn{\pi \le 1} binds,
 a term in \eqn{R - \hat r}. The resulting score is Neyman-orthogonal in
 both regimes, so the estimate is insensitive to small errors in the
 nuisances, and the correction in \eqn{r} vanishes continuously where the
-regime changes, so no margin condition is needed. The confidence set is
+regime changes (on the grid of quantile levels below: up to an error of
+order \eqn{1/K}), so no margin condition is needed. The confidence set is
 the Wald interval from the empirical standard deviation of the score.
 
 The quantiles enter as a grid of \eqn{K} levels \eqn{(k - 1/2)/K}, as in
@@ -108,9 +109,10 @@ of 2000 rows.
 
 The learner matters for width, not for validity alone. A smooth location
 and scale model for \eqn{Y} given \eqn{X}, such as \code{mgcv::gaulss()}, with
-the quantiles of the standardised residuals, is a good default. A linear
-model for the location only cannot follow heteroskedasticity and makes the
-set markedly too wide; quantile forests are valid but conservative.
+the quantiles of the standardised residuals, is a good default. In
+simulations, a linear model for the location only, which cannot follow
+heteroskedasticity, made the set markedly too wide, and quantile forests
+gave valid but conservative sets.
 
 The target is the mean over all rows (\code{target = "all"}) or over a segment
 chosen by \eqn{X} (a logical vector). The mean over the unobserved rows

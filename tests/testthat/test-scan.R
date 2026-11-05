@@ -172,3 +172,10 @@ test_that("scan_inputs extracts predictions", {
   expect_equal(inp$eta_obs, unname(predict(m_eta, d[1:10, ], type = "response")))
   expect_length(inp$r, 10L)
 })
+
+test_that("first_crossing finds the first crossing of a curve that is not monotone", {
+  f <- function(l) (l - 0.2) * (l - 0.4) * (l - 1.8)      # crosses 0 at 0.2, 0.4, 1.8
+  expect_equal(shadowscan:::first_crossing(f, 0, 2, "upper",
+                                           grid = seq(0, 2, length.out = 81)),
+               0.2, tolerance = 1e-8)
+})

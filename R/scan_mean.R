@@ -59,8 +59,9 @@
 #' observed-data law were known exactly. The scan plugs in
 #' the quantiles and \eqn{\hat r} as if they were the truth.
 #' Their estimation error is **not** included, so the reported set is
-#' narrower than an honest statement about the population would be, and the
-#' plug-in is biased towards the inside of the set. For a debiased estimate
+#' narrower than an honest statement about the population would be; in
+#' simulations the plug-in was typically biased towards the inside of the
+#' set. For a debiased estimate
 #' with a confidence set, for the mean over all rows or over a segment chosen
 #' by \eqn{X}, use [shadow_scan_mean_ci()] with inputs from
 #' [crossfit_quantiles()]. No resampling captures misspecification of the

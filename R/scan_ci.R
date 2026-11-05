@@ -276,9 +276,12 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
     }
     naive_fun <- function(l)
       sum(tw * stats::plogis(ell + sgn * l)) / sum(tw)
-    flip[["sharp"]] <- first_crossing(est_fun, threshold, max(lambda), side)
-    flip[["naive"]] <- first_crossing(naive_fun, threshold, max(lambda), side)
-    flip[["ci"]] <- first_crossing(ci_fun, threshold, max(lambda), side)
+    flip[["sharp"]] <- first_crossing(est_fun, threshold, max(lambda), side,
+                                      grid = out$lambda, values = out[[side]])
+    flip[["naive"]] <- first_crossing(naive_fun, threshold, max(lambda), side,
+                                      grid = out$lambda, values = out[[paste0("naive_", side)]])
+    flip[["ci"]] <- first_crossing(ci_fun, threshold, max(lambda), side,
+                                   grid = out$lambda, values = out[[paste0("ci_", side)]])
   }
 
   structure(list(
@@ -430,9 +433,9 @@ crossfit_quantiles <- function(data, response, fit_q, fit_r, K = 200L, folds = 5
   if (!is.function(fit_q) || !is.function(fit_r))
     stop("`fit_q` must be a function(train, newdata, tau) and `fit_r` a ",
          "function(train, newdata).", call. = FALSE)
+  if (!is.numeric(K) || length(K) != 1L || is.na(K) || K < 1 || K != round(K))
+    stop("`K` must be a positive whole number.", call. = FALSE)
   K <- as.integer(K)
-  if (length(K) != 1L || is.na(K) || K < 1L) stop("`K` must be a positive integer.",
-                                                  call. = FALSE)
   cs <- crossfit_setup(data, response, folds, seed)
   n <- cs$n; R <- cs$R; fold <- cs$fold
   tau <- (seq_len(K) - 0.5) / K
@@ -444,6 +447,8 @@ crossfit_quantiles <- function(data, response, fit_q, fit_r, K = 200L, folds = 5
     if (is.null(dim(pq)) || nrow(pq) != nrow(te) || ncol(pq) != K)
       stop("`fit_q` must return a matrix with one row per row of `newdata` ",
            "and one column per level in `tau`.", call. = FALSE)
+    if (!is.numeric(as.matrix(pq)))
+      stop("`fit_q` must return numeric quantiles.", call. = FALSE)
     pr <- as.numeric(fit_r(tr, te))
     if (length(pr) != nrow(te))
       stop("`fit_r` must return one prediction per row of `newdata`.", call. = FALSE)

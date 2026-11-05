@@ -103,9 +103,9 @@ shadow_scan_contrast <- function(eta_obs, r, response, outcome,
   lam_max <- max(out$lambda)
   on_grid <- function(v) stats::approxfun(out$lambda, v)
   pick <- function(lo, up) on_grid(if (side == "upper") up else lo)
-  flip <- c(sharp = first_crossing(pick(out$lower, out$upper), threshold, lam_max, side),
-            naive = first_crossing(pick(out$naive_lower, out$naive_upper), threshold, lam_max, side),
-            ci = first_crossing(pick(out$ci_lower, out$ci_upper), threshold, lam_max, side))
+  flip <- c(sharp = first_crossing(pick(out$lower, out$upper), threshold, lam_max, side, out$lambda),
+            naive = first_crossing(pick(out$naive_lower, out$naive_upper), threshold, lam_max, side, out$lambda),
+            ci = first_crossing(pick(out$ci_lower, out$ci_upper), threshold, lam_max, side, out$lambda))
   structure(list(
     curve = out, point = point, threshold = threshold, flip = flip,
     aggregate = "union", binding = NULL, level = level, se_type = se_type,

@@ -45,14 +45,15 @@ mean_score <- function(side, m, r, Y, R, lam) {
 #' Each endpoint of the set is a mean over rows of \eqn{\mu^\pm(x)}, which
 #' depends on \eqn{r(x)} and on the quantile function of \eqn{Y} given
 #' \eqn{R = 1, X = x}. The plug-in, [shadow_scan_mean()], inherits the
-#' first-order error of both estimates and is biased towards the inside of
-#' the set. The estimator here adds to each row a correction term that
+#' first-order error of both estimates; in simulations it was typically biased
+#' towards the inside of the set. The estimator here adds to each row a correction term that
 #' removes that first-order error: an inverse-probability weighted residual
 #' of the observed outcome, and, where the constraint \eqn{\pi \le 1} binds,
 #' a term in \eqn{R - \hat r}. The resulting score is Neyman-orthogonal in
 #' both regimes, so the estimate is insensitive to small errors in the
 #' nuisances, and the correction in \eqn{r} vanishes continuously where the
-#' regime changes, so no margin condition is needed. The confidence set is
+#' regime changes (on the grid of quantile levels below: up to an error of
+#' order \eqn{1/K}), so no margin condition is needed. The confidence set is
 #' the Wald interval from the empirical standard deviation of the score.
 #'
 #' The quantiles enter as a grid of \eqn{K} levels \eqn{(k - 1/2)/K}, as in
@@ -85,9 +86,10 @@ mean_score <- function(side, m, r, Y, R, lam) {
 #'
 #' The learner matters for width, not for validity alone. A smooth location
 #' and scale model for \eqn{Y} given \eqn{X}, such as `mgcv::gaulss()`, with
-#' the quantiles of the standardised residuals, is a good default. A linear
-#' model for the location only cannot follow heteroskedasticity and makes the
-#' set markedly too wide; quantile forests are valid but conservative.
+#' the quantiles of the standardised residuals, is a good default. In
+#' simulations, a linear model for the location only, which cannot follow
+#' heteroskedasticity, made the set markedly too wide, and quantile forests
+#' gave valid but conservative sets.
 #'
 #' The target is the mean over all rows (`target = "all"`) or over a segment
 #' chosen by \eqn{X} (a logical vector). The mean over the unobserved rows
@@ -164,6 +166,10 @@ shadow_scan_mean_ci <- function(q, r, response, outcome, target = "all",
          call. = FALSE)
   if (length(outcome) != n)
     stop("`outcome` must have one value per row.", call. = FALSE)
+  if (!is.numeric(outcome))
+    stop("`outcome` must be numeric. Convert a logical or factor outcome to ",
+         "numbers first; for a binary outcome, shadow_scan_ci() is the direct ",
+         "route.", call. = FALSE)
   R <- response
   if (!any(R == 1)) stop("No observed rows.", call. = FALSE)
   if (!is.numeric(outcome[R == 1]) || anyNA(outcome[R == 1]) ||
@@ -177,9 +183,11 @@ shadow_scan_mean_ci <- function(q, r, response, outcome, target = "all",
   if (!is.null(threshold) && (!is.numeric(threshold) || length(threshold) != 1L ||
                               !is.finite(threshold)))
     stop("`threshold` must be a single finite number.", call. = FALSE)
-  if (!is.numeric(level) || length(level) != 1L || level <= 0 || level >= 1)
+  if (!is.numeric(level) || length(level) != 1L || is.na(level) ||
+      level <= 0 || level >= 1)
     stop("`level` must be a single number in (0, 1).", call. = FALSE)
-  if (!is.numeric(trim) || length(trim) != 1L || trim < 0 || trim >= 1)
+  if (!is.numeric(trim) || length(trim) != 1L || is.na(trim) ||
+      trim < 0 || trim >= 1)
     stop("`trim` must be a single number in [0, 1).", call. = FALSE)
   if (!is.numeric(r_bounds) || length(r_bounds) != 2L || anyNA(r_bounds) ||
       r_bounds[1] <= 0 || r_bounds[2] > 1 || r_bounds[1] >= r_bounds[2])
@@ -205,7 +213,7 @@ shadow_scan_mean_ci <- function(q, r, response, outcome, target = "all",
   s <- s * keep
   if (sum(w * s) <= 0) stop("The target is empty.", call. = FALSE)
   rc <- pmin(pmax(r, r_bounds[1]), r_bounds[2])
-  n_clipped <- sum(rc != r)
+  n_clipped <- sum(s > 0 & rc != r)
   z <- stats::qnorm(1 - (1 - level) / 2)
   prep <- mean_prep(q)
   ws <- w * s
@@ -237,11 +245,25 @@ shadow_scan_mean_ci <- function(q, r, response, outcome, target = "all",
   # the inverse weights have blown up.
   rng <- range(q[s > 0, , drop = FALSE])
   off <- max(rng[1] - out$lower, out$upper - rng[2], 0)
-  if (off > 0.1 * max(diff(rng), .Machine$double.eps))
-    warning(sprintf(paste0(
-      "The debiased estimate leaves the range of the quantiles by up to %.3g: ",
-      "the inverse weights 1/r-hat have blown up. Check the response model for ",
-      "separation, or use `trim`."), off), call. = FALSE)
+  if (off > 0.1 * max(diff(rng), .Machine$double.eps)) {
+    obs <- R == 1 & s > 0
+    small_r <- any(obs & r < 0.05)
+    outside <- mean(outcome[obs] < apply(q[obs, , drop = FALSE], 1, min) |
+                    outcome[obs] > apply(q[obs, , drop = FALSE], 1, max))
+    cause <- c(
+      if (small_r) paste0("observed target rows with r-hat below 0.05 get large ",
+                          "inverse weights 1/r-hat; check the response model for ",
+                          "separation, or use `trim`"),
+      if (outside > 0.1) sprintf(paste0("the quantiles do not cover the observed ",
+                                        "outcomes (%.0f%% of them lie outside their ",
+                                        "row's quantile range); check the quantile ",
+                                        "model"), 100 * outside))
+    if (is.null(cause))
+      cause <- paste0("check the response model for separation and the quantile ",
+                      "model for fit")
+    warning(sprintf("The debiased estimate leaves the range of the quantiles by up to %.3g: %s.",
+                    off, paste(cause, collapse = "; and ")), call. = FALSE)
+  }
 
   point <- endpoint(0, "upper")[["est"]]
   flip <- c(sharp = NA_real_, naive = NA_real_, ci = NA_real_)
@@ -255,16 +277,20 @@ shadow_scan_mean_ci <- function(q, r, response, outcome, target = "all",
       sum(ws * o[[side]]) / sum(ws)
     }
     lam_max <- max(lambda)
-    flip[["sharp"]] <- first_crossing(est_fun, threshold, lam_max, side)
-    flip[["naive"]] <- first_crossing(naive_fun, threshold, lam_max, side)
-    flip[["ci"]] <- first_crossing(ci_fun, threshold, lam_max, side)
+    flip[["sharp"]] <- first_crossing(est_fun, threshold, lam_max, side,
+                                      grid = out$lambda, values = out[[side]])
+    flip[["naive"]] <- first_crossing(naive_fun, threshold, lam_max, side,
+                                      grid = out$lambda, values = out[[paste0("naive_", side)]])
+    flip[["ci"]] <- first_crossing(ci_fun, threshold, lam_max, side,
+                                   grid = out$lambda, values = out[[paste0("ci_", side)]])
   }
 
   structure(list(
     curve = out, point = point, threshold = threshold, flip = flip,
     aggregate = "union", binding = NULL, level = level, target = target_label,
     trim = trim, trimmed = n_trimmed, clipped = n_clipped, r_bounds = r_bounds,
-    tail = c(target = sum(s > 0 & r < 0.01), observed = sum(R == 1 & r < 0.01),
+    tail = c(target = sum(s > 0 & r < r_bounds[1]),
+             observed = sum(R == 1 & r < r_bounds[1]),
              min_r_observed = min(r[R == 1])),
     n = n, n_target = sum(s > 0),
     # for per-row plug-in bounds via as.data.frame(x, lambda = )
@@ -285,8 +311,8 @@ print.shadow_scan_mean_ci <- function(x, digits = 3, ...) {
   if (x$clipped > 0)
     cat(sprintf("  clipped: %d rows with r-hat outside [%g, %g]\n", x$clipped,
                 x$r_bounds[1], x$r_bounds[2]))
-  cat(sprintf("  r-hat < 0.01: %d target rows, %d observed rows; smallest r-hat observed %s\n",
-              as.integer(x$tail[["target"]]), as.integer(x$tail[["observed"]]),
+  cat(sprintf("  r-hat < %g: %d target rows, %d observed rows; smallest r-hat observed %s\n",
+              x$r_bounds[1], as.integer(x$tail[["target"]]), as.integer(x$tail[["observed"]]),
               format(x$tail[["min_r_observed"]], digits = 2)))
   i0 <- which(cv$lambda == 0)
   if (length(i0))
@@ -298,9 +324,9 @@ print.shadow_scan_mean_ci <- function(x, digits = 3, ...) {
     fl <- function(v) if (is.na(v)) "not within the scanned range" else
       sprintf("lambda = %s (propensity ratio %s)", f(v), f(exp(v)))
     cat("  threshold", f(x$threshold), "reached by\n")
-    cat("    estimated set:  ", fl(x$flip[["sharp"]]), "\n")
-    cat("    confidence set: ", fl(x$flip[["ci"]]), "\n")
-    cat("    outer band:     ", fl(x$flip[["naive"]]), "\n")
+    cat("    estimated set:       ", fl(x$flip[["sharp"]]), "\n")
+    cat("    confidence set:      ", fl(x$flip[["ci"]]), "\n")
+    cat("    outer band (plug-in):", fl(x$flip[["naive"]]), "\n")
   }
   invisible(x)
 }

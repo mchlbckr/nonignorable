@@ -103,8 +103,9 @@ The set is an \emph{identified} set: it is what the data would permit if the
 observed-data law were known exactly. The scan plugs in
 the quantiles and \eqn{\hat r} as if they were the truth.
 Their estimation error is \strong{not} included, so the reported set is
-narrower than an honest statement about the population would be, and the
-plug-in is biased towards the inside of the set. For a debiased estimate
+narrower than an honest statement about the population would be; in
+simulations the plug-in was typically biased towards the inside of the
+set. For a debiased estimate
 with a confidence set, for the mean over all rows or over a segment chosen
 by \eqn{X}, use \code{\link[=shadow_scan_mean_ci]{shadow_scan_mean_ci()}} with inputs from
 \code{\link[=crossfit_quantiles]{crossfit_quantiles()}}. No resampling captures misspecification of the

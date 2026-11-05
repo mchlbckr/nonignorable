@@ -262,12 +262,27 @@ sharp_bounds <- function(eta_obs, r, lambda) {
   )
 }
 
-first_crossing <- function(f, threshold, lam_max, side) {
+# The smallest lambda at which f reaches threshold. The plug-in bounds are
+# monotone in lambda, so a root on [0, lam_max] is the first one. Estimated
+# bounds need not be: with `grid`, the first grid interval where the curve
+# reaches the threshold is found first and the root is sought only there.
+# `values`, the curve already computed on `grid`, saves evaluating f there.
+first_crossing <- function(f, threshold, lam_max, side, grid = NULL, values = NULL) {
   g <- if (side == "upper") function(l) f(l) - threshold
        else function(l) threshold - f(l)
   if (g(0) >= 0) return(0)
-  if (g(lam_max) < 0) return(NA_real_)
-  stats::uniroot(g, c(0, lam_max), tol = 1e-12)$root
+  if (is.null(grid)) {
+    if (g(lam_max) < 0) return(NA_real_)
+    return(stats::uniroot(g, c(0, lam_max), tol = 1e-12)$root)
+  }
+  if (is.null(values)) values <- vapply(grid, f, 0)
+  o <- order(grid); grid <- grid[o]; values <- values[o]
+  gv <- if (side == "upper") values - threshold else threshold - values
+  i <- which(gv >= 0)[1]
+  if (is.na(i)) return(NA_real_)
+  lo <- if (i == 1L) 0 else grid[i - 1L]        # g(0) < 0 is known
+  if (grid[i] <= lo) return(grid[i])
+  stats::uniroot(g, c(lo, grid[i]), tol = 1e-12)$root
 }
 
 check_inputs <- function(eta_obs, r) {

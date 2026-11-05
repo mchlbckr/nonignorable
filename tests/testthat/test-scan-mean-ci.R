@@ -208,3 +208,53 @@ test_that("per-row bounds come out of as.data.frame, as for shadow_scan_mean", {
   expect_equal(rows$upper, ref$upper)
   expect_equal(rows$lower, ref$lower)
 })
+
+test_that("a numeric outcome is required, with a message that says so", {
+  f <- mean_fixture
+  expect_error(shadow_scan_mean_ci(f$q, f$r, f$R, f$d$y > 0), "must be numeric")
+  expect_error(shadow_scan_mean_ci(f$q, f$r, f$R, factor(f$d$y > 0)), "must be numeric")
+})
+
+test_that("NA level or trim are refused by the package, not by base R", {
+  f <- mean_fixture
+  expect_error(shadow_scan_mean_ci(f$q, f$r, f$R, f$d$y, level = NA_real_), "`level`")
+  expect_error(shadow_scan_mean_ci(f$q, f$r, f$R, f$d$y, trim = NA_real_), "`trim`")
+})
+
+test_that("clipped and the tail count target rows, below the lower bound", {
+  f <- mean_fixture
+  r <- f$d$obs_rate
+  tg <- f$d$x1 > 0
+  k <- shadow_scan_mean_ci(f$q, r, f$R, f$d$y, target = tg, lambda = c(0, 1),
+                           r_bounds = c(0.05, 0.99))
+  expect_equal(k$clipped, sum(tg & (r < 0.05 | r > 0.99)))
+  expect_equal(k$tail[["target"]], sum(tg & r < 0.05))
+  expect_output(print(k), "r-hat < 0.05")
+})
+
+test_that("the print labels the outer band as plug-in", {
+  f <- mean_fixture
+  k <- shadow_scan_mean_ci(f$q, f$r, f$R, f$d$y, lambda = c(0, 1), threshold = 0)
+  expect_output(print(k), "outer band \\(plug-in\\)")
+})
+
+test_that("the range warning names the quantiles when r-hat is harmless", {
+  f <- mean_fixture
+  # quantiles squeezed to a tiny range around the mean, r-hat well inside (0, 1)
+  qq <- mean(f$d$y[f$R == 1]) + f$q * 1e-3
+  w <- tryCatch(shadow_scan_mean_ci(qq, rep(0.5, nrow(qq)), f$R, f$d$y,
+                                    lambda = c(0, 1)),
+                warning = conditionMessage)
+  expect_match(w, "do not cover the observed outcomes")
+  expect_no_match(w, "blown up")
+})
+
+test_that("crossfit_quantiles refuses a fractional K and non-numeric fits", {
+  d <- simulate_shadow(300, tilt = -1, outcome = "continuous", seed = 2)
+  fr <- function(train, newdata) rep(0.5, nrow(newdata))
+  fq <- function(train, newdata, tau) matrix(0, nrow(newdata), length(tau))
+  expect_error(crossfit_quantiles(d, "observed", fq, fr, K = 1.5), "`K`")
+  fq_chr <- function(train, newdata, tau) matrix("a", nrow(newdata), length(tau))
+  expect_error(crossfit_quantiles(d, "observed", fq_chr, fr, K = 5, seed = 1),
+               "numeric")
+})
