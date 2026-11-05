@@ -8,3 +8,6 @@
 ^HANDOFF-continuous\.md$
 ^\.superpowers$
 ^VIGNETTE-.*\.md$
+^MEAN-CI-DESIGN\.md$
+^MEAN-CI-PLAN\.md$
+^Rplots\.pdf$

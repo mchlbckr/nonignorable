@@ -35,6 +35,11 @@ First release.
   one. It reports the rows with small r-hat and warns when the
   inverse weights blow up; `crossfit_inputs()` warns when the response model
   separates observed rows.
+* `shadow_scan_mean_ci()` adds a debiased estimate and a confidence set for
+  the mean scan, for the mean over all rows or over a segment chosen by X.
+  Its score is Neyman-orthogonal in both regimes of the cap, so no margin
+  condition is needed. `crossfit_quantiles()` cross-fits the quantile grids
+  and r-hat for any learner.
 * `shadow_scan_contrast()` compares two disjoint portfolios chosen by X,
   such as treatment arms. It gives the sharp set for the difference of their
   rates, a confidence set, and the selection strength from which "no

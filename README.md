@@ -78,8 +78,9 @@ plot(ci)
 
 ![Sensitivity curve with confidence set](man/figures/scan_ci.png)
 
-The confidence set covers the identified set, pointwise in λ. There is no
-confidence set for the mean scan yet.
+The confidence set covers the identified set, pointwise in λ.
+`shadow_scan_mean_ci()` does the same for the mean of a non-binary outcome,
+with quantile grids cross-fitted by `crossfit_quantiles()`.
 
 To compare two portfolios chosen by X, such as the arms of a trial,
 `shadow_scan_contrast()` gives the sharp set for the difference of their rates

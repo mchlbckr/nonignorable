@@ -351,21 +351,10 @@ print.shadow_scan_ci <- function(x, digits = 3, ...) {
 #' @export
 crossfit_inputs <- function(data, response, fit_eta, fit_r, folds = 5L,
                             seed = NULL, clip = 1e-6) {
-  if (!is.data.frame(data)) stop("`data` must be a data frame.", call. = FALSE)
-  if (!response %in% names(data))
-    stop("Column `", response, "` not found.", call. = FALSE)
   if (!is.function(fit_eta) || !is.function(fit_r))
     stop("`fit_eta` and `fit_r` must be functions(train, newdata).", call. = FALSE)
-  n <- nrow(data)
-  folds <- as.integer(folds)
-  if (folds < 2L || folds > n) stop("`folds` must be between 2 and the number of rows.",
-                                    call. = FALSE)
-  rv <- data[[response]]
-  if (!(is.logical(rv) || (is.numeric(rv) && all(rv %in% c(0, 1)))) || anyNA(rv))
-    stop("Column `", response, "` must be 0/1 or logical, without NA.", call. = FALSE)
-  R <- as.integer(rv)
-  draw <- function() sample(rep_len(seq_len(folds), n))
-  fold <- if (is.null(seed)) draw() else with_seed(seed, draw())
+  cs <- crossfit_setup(data, response, folds, seed)
+  n <- cs$n; R <- cs$R; fold <- cs$fold; folds <- cs$folds
   eta <- r <- rep(NA_real_, n)
   for (k in seq_len(folds)) {
     tr <- data[fold != k, , drop = FALSE]
@@ -379,13 +368,89 @@ crossfit_inputs <- function(data, response, fit_eta, fit_r, folds = 5L,
   }
   if (anyNA(eta) || anyNA(r))
     stop("A fit function returned missing or too few predictions.", call. = FALSE)
-  n_clip <- sum(data[[response]] == 1 & r < clip)
+  warn_separation(R, r, clip)
+  list(eta_obs = pmin(pmax(eta, clip), 1 - clip),
+       r = pmin(pmax(r, clip), 1), fold = fold)
+}
+
+# Shared by crossfit_inputs() and crossfit_quantiles(): checks and folds.
+crossfit_setup <- function(data, response, folds, seed) {
+  if (!is.data.frame(data)) stop("`data` must be a data frame.", call. = FALSE)
+  if (!response %in% names(data))
+    stop("Column `", response, "` not found.", call. = FALSE)
+  n <- nrow(data)
+  folds <- as.integer(folds)
+  if (folds < 2L || folds > n) stop("`folds` must be between 2 and the number of rows.",
+                                    call. = FALSE)
+  rv <- data[[response]]
+  if (!(is.logical(rv) || (is.numeric(rv) && all(rv %in% c(0, 1)))) || anyNA(rv))
+    stop("Column `", response, "` must be 0/1 or logical, without NA.", call. = FALSE)
+  draw <- function() sample(rep_len(seq_len(folds), n))
+  fold <- if (is.null(seed)) draw() else with_seed(seed, draw())
+  list(n = n, R = as.integer(rv), fold = fold, folds = folds)
+}
+
+warn_separation <- function(R, r, clip) {
+  n_clip <- sum(R == 1 & r < clip)
   if (n_clip > 0)
     warning(sprintf(paste0(
       "%d observed row(s) got r-hat below `clip` = %g out of fold: the ",
       "response model separates them. Their inverse weights will dominate ",
       "the debiased estimate; use a less flexible or penalised response model."),
       n_clip, clip), call. = FALSE)
-  list(eta_obs = pmin(pmax(eta, clip), 1 - clip),
-       r = pmin(pmax(r, clip), 1), fold = fold)
+}
+
+#' Cross-fitted quantile grids for the debiased mean scan
+#'
+#' Splits the rows into folds and predicts, for each fold from models fitted
+#' on the other folds, a grid of conditional quantiles of \eqn{Y} given
+#' \eqn{R = 1} and \eqn{X}, and \eqn{\hat r}, as [shadow_scan_mean_ci()]
+#' requires. The learner is yours. `fit_q` receives only the observed rows of
+#' the training folds and the levels `tau` = \eqn{(k - 1/2)/K}.
+#'
+#' A smooth location and scale model is a good choice: fit
+#' \eqn{\mu(x)} and \eqn{\sigma(x)} (for instance with
+#' `mgcv::gam(..., family = mgcv::gaulss())`), and return
+#' \eqn{\hat\mu(x) + \hat\sigma(x) \hat F^{-1}(\tau)}, with
+#' \eqn{\hat F^{-1}} the quantiles of the standardised training residuals.
+#' [quantile_grid()] can be used inside `fit_q`.
+#'
+#' @inheritParams crossfit_inputs
+#' @param fit_q `function(train, newdata, tau)` returning a matrix with one
+#'   row per row of `newdata` and one column per level in `tau`; `train`
+#'   holds observed rows.
+#' @param K Number of quantile levels. Default 200.
+#' @param clip \eqn{\hat r} is clipped from below at `clip`. Default 1e-6.
+#' @return A list with `q` (an \eqn{n \times K} matrix), `r` and `fold`,
+#'   one per row of `data`.
+#' @seealso [shadow_scan_mean_ci()], [crossfit_inputs()]
+#' @export
+crossfit_quantiles <- function(data, response, fit_q, fit_r, K = 200L, folds = 5L,
+                               seed = NULL, clip = 1e-6) {
+  if (!is.function(fit_q) || !is.function(fit_r))
+    stop("`fit_q` must be a function(train, newdata, tau) and `fit_r` a ",
+         "function(train, newdata).", call. = FALSE)
+  K <- as.integer(K)
+  if (length(K) != 1L || is.na(K) || K < 1L) stop("`K` must be a positive integer.",
+                                                  call. = FALSE)
+  cs <- crossfit_setup(data, response, folds, seed)
+  n <- cs$n; R <- cs$R; fold <- cs$fold
+  tau <- (seq_len(K) - 0.5) / K
+  q <- matrix(NA_real_, n, K); r <- rep(NA_real_, n)
+  for (k in seq_len(cs$folds)) {
+    tr <- data[fold != k, , drop = FALSE]
+    te <- data[fold == k, , drop = FALSE]
+    pq <- fit_q(tr[R[fold != k] == 1, , drop = FALSE], te, tau)
+    if (is.null(dim(pq)) || nrow(pq) != nrow(te) || ncol(pq) != K)
+      stop("`fit_q` must return a matrix with one row per row of `newdata` ",
+           "and one column per level in `tau`.", call. = FALSE)
+    pr <- as.numeric(fit_r(tr, te))
+    if (length(pr) != nrow(te))
+      stop("`fit_r` must return one prediction per row of `newdata`.", call. = FALSE)
+    q[fold == k, ] <- as.matrix(pq); r[fold == k] <- pr
+  }
+  if (anyNA(q) || anyNA(r))
+    stop("A fit function returned missing predictions.", call. = FALSE)
+  warn_separation(R, r, clip)
+  list(q = q, r = pmin(pmax(r, clip), 1), fold = fold)
 }

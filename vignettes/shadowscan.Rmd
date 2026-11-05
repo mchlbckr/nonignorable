@@ -1,6 +1,8 @@
 ---
 title: "Getting started with shadowscan"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    math_method: mathml
 vignette: >
   %\VignetteIndexEntry{Getting started with shadowscan}
   %\VignetteEngine{knitr::rmarkdown}
@@ -210,6 +212,12 @@ q <- quantile_grid(function(tau, newdata)
 sm <- shadow_scan_mean(q, mis$obs_rate, threshold = 0.5)
 plot(sm)
 ```
+
+Like `shadow_scan()`, this treats its inputs as known. For a debiased
+estimate with a confidence set, for the mean over all rows or a segment
+chosen by $X$, use `shadow_scan_mean_ci()` with inputs from
+`crossfit_quantiles()`; the applications vignette shows it on the CD4 counts
+of a clinical trial.
 
 ## Further reading
 

@@ -97,19 +97,18 @@ off the tails: with heavy tails it underestimates \eqn{U(s)} for small
 observation rate, as in \code{\link[=shadow_scan]{shadow_scan()}}.
 }
 
-\section{Estimated inputs, no inference}{
+\section{Estimated inputs}{
 
 The set is an \emph{identified} set: it is what the data would permit if the
 observed-data law were known exactly. The scan plugs in
 the quantiles and \eqn{\hat r} as if they were the truth.
 Their estimation error is \strong{not} included, so the reported set is
-narrower than an honest statement about the population would be. No
-confidence set is offered. Inference for such sets is not routine: the
-endpoints are maxima and minima of estimated quantities, where the usual
-bootstrap can fail; a flexible learner needs more than a naive plug-in;
-and covering the set differs from covering the parameter inside it. Nor
-does resampling capture misspecification of the extrapolation to rows that
-are rarely observed.
+narrower than an honest statement about the population would be, and the
+plug-in is biased towards the inside of the set. For a debiased estimate
+with a confidence set, for the mean over all rows or over a segment chosen
+by \eqn{X}, use \code{\link[=shadow_scan_mean_ci]{shadow_scan_mean_ci()}} with inputs from
+\code{\link[=crossfit_quantiles]{crossfit_quantiles()}}. No resampling captures misspecification of the
+extrapolation to rows that are rarely observed.
 
 Estimate \eqn{\hat r(x)} flexibly. Unlike the binary scan, the set for a
 mean reacts to \eqn{\hat r} in first order: \eqn{\hat r} decides row by row

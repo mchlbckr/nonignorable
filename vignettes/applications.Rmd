@@ -1,6 +1,8 @@
 ---
 title: "Two applications: reject inference and trial dropout"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    math_method: mathml
 vignette: >
   %\VignetteIndexEntry{Two applications: reject inference and trial dropout}
   %\VignetteEngine{knitr::rmarkdown}
@@ -28,7 +30,7 @@ lc <- readRDS(system.file("extdata", "lc2014.rds", package = "shadowscan"))
 m <- lc$meta
 # ACTG 175 is computed live and needs two suggested packages
 ok <- requireNamespace("speff2trial", quietly = TRUE) &&
-  requireNamespace("quantreg", quietly = TRUE)
+  requireNamespace("mgcv", quietly = TRUE)
 # inline values are evaluated lazily, so they are skipped without the data
 iv <- function(x) if (ok) x else "?"
 ```
@@ -51,7 +53,7 @@ Each step below is run on both, side by side. `vignette("shadowscan")`
 explains the tools on simulated data.
 
 ```{r no-suggests, eval = !ok, echo = FALSE, results = "asis"}
-cat("**The ACTG 175 part needs the packages speff2trial and quantreg, which",
+cat("**The ACTG 175 part needs the packages speff2trial and mgcv, which",
     "are not installed. Its code is shown but not run, its numbers appear as",
     "?, and the text describes the result obtained with the data.**")
 ```
@@ -328,28 +330,53 @@ target depend on $R$, which the function does not cover.
 ## The mean of a continuous outcome
 
 For the CD4 count itself rather than the share below 200,
-`shadow_scan_mean()` scans the mean among the missing patients. It needs
-conditional quantiles of the count among the observed, which
-`quantile_grid()` obtains from a linear quantile regression.
+`shadow_scan_mean_ci()` scans the mean count at week 96 over all patients,
+with a debiased estimate and a confidence set. It needs, for every patient,
+a grid of conditional quantiles of the count among the observed, fitted out
+of fold. `crossfit_quantiles()` takes the learner as a function. Here it is a
+location-scale model from mgcv for the square root of the count, smooth in
+the two earlier CD4 counts, with the quantiles of its standardised residuals;
+squaring the quantiles brings them back to counts. The response model is the
+logistic regression from above.
 
 ```{r actg-mean, eval = ok}
-obs <- d[d$r == 1, ]
-mis <- d[d$r == 0, ]
-fq <- quantreg::rq(as.formula(paste("cd496 ~", rhs)), tau = 0.5, data = obs)
-q <- quantile_grid(fq, mis, K = 100)
-c(crossing = attr(q, "crossing"), shift = attr(q, "shift"))
-sm <- shadow_scan_mean(pmax(q, 0), inp$r[d$r == 0])
-sm
-plot(sm, ylab = "Mean CD4 count at week 96, missing patients")
+loc <- as.formula(paste("sqrt(cd496) ~",
+                        paste(c(base, "s(cd40)", "s(cd420)"), collapse = " + ")))
+fit_q <- function(train, new, tau) {
+  m <- mgcv::gam(list(loc, ~ s(cd420)), family = mgcv::gaulss(), data = train)
+  p_tr <- predict(m, train, type = "response")
+  p_new <- predict(m, new, type = "response")
+  e <- (sqrt(train$cd496) - p_tr[, 1]) * p_tr[, 2]   # standardised residuals
+  pmax(outer(p_new[, 1], rep(1, length(tau))) +
+       outer(1 / p_new[, 2], quantile(e, tau, names = FALSE)), 0)^2
+}
+cq <- crossfit_quantiles(d, "r", fit_q,
+  fit_r = function(train, new)
+    predict(glm(fr, binomial, data = train), new, type = "response"),
+  K = 200, seed = 175)
+baseline <- mean(d$cd40)
+km <- shadow_scan_mean_ci(cq$q, cq$r, d$r, d$cd496, threshold = baseline)
+km
+plot(km, ylab = "Mean CD4 count at week 96, all patients")
 ```
 
-In `r iv(round(100 * attr(q, "crossing")))`% of the rows the quantiles cross
-somewhere among the 100 levels. Crossing is the sampling noise of a quantile
-regression fitted level by level. The shift says how much sorting moved the
-quantiles: a median of `r iv(round(100 * attr(q, "shift"), 1))`% of each row's
-range, which
-`r iv(if (attr(q, "shift") < 0.05) "is small enough to ignore" else "is large enough to suggest that the quantile model fits poorly")`.
-Counts cannot be negative, so the grid is cut at zero.
+```{r actg-mean-numbers, include = FALSE, eval = ok}
+i1 <- which.min(abs(km$curve$lambda - 1))
+pl <- shadow_scan_mean(cq$q, cq$r, lambda = km$curve$lambda)
+```
+
+Under MAR the mean count at week 96 is `r iv(round(km$point))`, below the
+mean at baseline of `r iv(round(baseline))`. The threshold is that baseline
+mean: has the count fallen on average? The answer survives selection up to a
+propensity ratio of `r iv(f2(exp(km$flip[["sharp"]])))` in the estimate and
+`r iv(f2(exp(km$flip[["ci"]])))` in the confidence set. Beyond that, a
+dropout that hides the patients with high counts could carry the mean back
+to its starting level. At a ratio of $e^1$ the set is
+[`r iv(round(km$curve$lower[i1]))`, `r iv(round(km$curve$upper[i1]))`]. The
+plug-in, `shadow_scan_mean()` on the same inputs, gives
+[`r iv(round(pl$curve$lower[i1]))`, `r iv(round(pl$curve$upper[i1]))`]. It
+skips the correction terms, and here it
+`r iv(if (pl$curve$lower[i1] >= km$curve$lower[i1] && pl$curve$upper[i1] <= km$curve$upper[i1]) "lies inside the debiased set, the direction of its bias" else "does not lie inside the debiased set")`.
 
 ## The two side by side
 

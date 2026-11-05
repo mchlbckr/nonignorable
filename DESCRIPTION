@@ -17,14 +17,15 @@ Description: Two tools for an outcome that is missing not at random.
     answer different questions under different assumptions and are not two
     halves of one procedure. 'shadow_scan_ci()' and 'shadow_scan_contrast()'
     add debiased estimates and confidence sets for the binary scan, for one
-    portfolio and for the difference between two.
+    portfolio and for the difference between two; 'shadow_scan_mean_ci()'
+    does the same for the mean.
 URL: https://github.com/mchlbckr/shadowscan
 BugReports: https://github.com/mchlbckr/shadowscan/issues
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.1.0)
 Imports: graphics, grDevices, stats
-Suggests: knitr, quantreg, rmarkdown, speff2trial, testthat (>= 3.0.0)
+Suggests: knitr, mgcv, quantreg, rmarkdown, speff2trial, testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
