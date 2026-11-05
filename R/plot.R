@@ -213,10 +213,17 @@ plot.shadow_screen <- function(x, scale = c("log", "linear"), label = NULL,
                  main = main, bty = "l", col.lab = text_col,
                  col.main = text_col, fg = text_col, ...)
   if (scale == "log") {
-    at <- 10^seq(log10(lim[1]), log10(lim[2]))
-    labs_at <- parse(text = paste0("10^", log10(at)))
-    for (s in 1:2) graphics::axis(s, at = at, labels = labs_at, las = 1,
-                                  col = text_col, col.axis = text_col)
+    dec <- seq(log10(lim[1]), log10(lim[2]))
+    labs_all <- parse(text = paste0("10^", dec))
+    # ticks at every decade; labels only as densely as they fit
+    span <- diff(graphics::grconvertX(lim, "user", "inches"))
+    lw <- max(graphics::strwidth(labs_all, units = "inches", cex = graphics::par("cex.axis")))
+    keep <- dec %in% thin_decades(dec, span / max(1, length(dec) - 1), lw)
+    for (s in 1:2) {
+      graphics::axis(s, at = 10^dec, labels = FALSE, col = text_col)
+      graphics::axis(s, at = 10^dec[keep], labels = labs_all[keep], las = 1,
+                     col = text_col, col.axis = text_col, lwd = 0)
+    }
   } else {
     for (s in 1:2) graphics::axis(s, las = 1, col = text_col, col.axis = text_col)
   }
@@ -226,8 +233,13 @@ plot.shadow_screen <- function(x, scale = c("log", "linear"), label = NULL,
   graphics::segments(lim[1], lim[1], lim[2], lim[2], lty = 2, col = text_col)
   ux <- function(f) if (scale == "log") 10^(usr[1] + f * (usr[2] - usr[1])) else usr[1] + f * (usr[2] - usr[1])
   uy <- function(f) if (scale == "log") 10^(usr[3] + f * (usr[4] - usr[3])) else usr[3] + f * (usr[4] - usr[3])
-  graphics::text(ux(0.04), uy(0.96), "more relevance than violation",
+  ann <- "more relevance than violation"
+  graphics::text(ux(0.04), uy(0.96), ann,
                  adj = c(0, 1), col = text_col, cex = 0.8, font = 3)
+  ax0 <- graphics::grconvertX(ux(0.04), "user", "inches")
+  ay1 <- graphics::grconvertY(uy(0.96), "user", "inches")
+  ann_box <- c(ax0, ax0 + graphics::strwidth(ann, units = "inches", cex = 0.8, font = 3),
+               ay1 - graphics::strheight(ann, units = "inches", cex = 0.8, font = 3) * 1.3, ay1)
   # a ratio over an exclusion violation below its noise floor is not an
   # estimate: draw such points hollow and do not print their ratio
   readable <- if (is.null(x$ratio_readable)) rep(TRUE, nrow(x)) else x$ratio_readable
@@ -242,7 +254,7 @@ plot.shadow_screen <- function(x, scale = c("log", "linear"), label = NULL,
                    sprintf("%s (ratio %s)", x$candidate[i], format_ratio(x$ratio[i])),
                    sprintf("%s (ratio not readable)", x$candidate[i]))
     place_labels(ex[i], re[i], labs, px = ex, py = re, line = lim,
-                 col = text_col, cex = 0.8)
+                 col = text_col, cex = 0.8, obstacles = list(ann_box))
   }
   invisible(x)
 }
@@ -256,12 +268,15 @@ format_ratio <- function(r) {
   }, "")
 }
 
-# Greedy label placement: for each point, in order of position, try eight
-# positions around it and take the first whose text box overlaps neither a
-# label already placed, nor any point, nor the equality line from line[1] to
-# line[2], nor the plot border. Works in inches, so it is the same on linear
-# and log axes. If no position is free, the one with the least overlap is used.
-place_labels <- function(x, y, labels, px, py, line, col, cex) {
+# Greedy label placement: for each point, in order of position, try sixteen
+# positions around it (eight directions, near and far) and take the first
+# whose text box overlaps no label already placed, no point, no obstacle box
+# and not the equality line from line[1] to line[2], and whose leader line
+# crosses neither that line nor another label. Labels stay inside the axes at
+# left and bottom and inside the device at right and top. Works in inches, so
+# it is the same on linear and log axes. If no position is free, the one with
+# the least overlap is used.
+place_labels <- function(x, y, labels, px, py, line, col, cex, obstacles = list()) {
   ix <- graphics::grconvertX(x, "user", "inches")
   iy <- graphics::grconvertY(y, "user", "inches")
   pix <- graphics::grconvertX(px, "user", "inches")
@@ -271,6 +286,10 @@ place_labels <- function(x, y, labels, px, py, line, col, cex) {
   if (graphics::par("xlog")) bx <- graphics::grconvertX(10^usr[1:2], "user", "inches")
   by <- graphics::grconvertY(c(usr[3], usr[4]), "user", "inches")
   if (graphics::par("ylog")) by <- graphics::grconvertY(10^usr[3:4], "user", "inches")
+  # the axes are at the left and bottom only: to the right and top a label
+  # may run into the empty margin, up to a small gap before the device edge
+  bx[2] <- graphics::grconvertX(1, "ndc", "inches") - 0.05
+  by[2] <- graphics::grconvertY(1, "ndc", "inches") - 0.05
   w <- graphics::strwidth(labels, units = "inches", cex = cex)
   h <- graphics::strheight("Xg", units = "inches", cex = cex) * 1.25
   r <- 0.09                                    # point radius plus gap, inches
@@ -297,36 +316,69 @@ place_labels <- function(x, y, labels, px, py, line, col, cex) {
   ly <- graphics::grconvertY(lv, "user", "inches")
   e <- 0.015
   pts <- c(pts, lapply(seq_along(lx), function(j) c(lx[j] - e, lx[j] + e, ly[j] - e, ly[j] + e)))
-  placed <- list()
+  diag_seg <- c(lx[1], ly[1], lx[length(lx)], ly[length(ly)])
+  # leader from the point's edge to the nearest point of the box, or NULL
+  leader_of <- function(k, cd, b) {
+    if (cd$s == 1 && any(cd$d == 0)) return(NULL)
+    tx <- min(max(ix[k], b[1]), b[2]); ty <- min(max(iy[k], b[3]), b[4])
+    v <- c(tx - ix[k], ty - iy[k]); len <- sqrt(sum(v^2))
+    if (len <= r) return(NULL)
+    c(c(ix[k], iy[k]) + v / len * r * 0.6, tx, ty)
+  }
+  placed <- list(); leaders <- list()
   for (k in order(ix, iy)) {
     cost <- vapply(cand, function(cd) {
       b <- box_of(k, cd)
       out <- max(0, bx[1] - b[1]) + max(0, b[2] - bx[2]) +
              max(0, by[1] - b[3]) + max(0, b[4] - by[2])
-      sum(vapply(c(placed, pts), function(o) overlap(b, o), 0)) +
-        10 * out + 1e-4 * (cd$s - 1)          # prefer the near ring on a tie
+      ld <- leader_of(k, cd, b)
+      cross <- !is.null(ld) && (segments_cross(ld, diag_seg) ||
+        any(vapply(c(placed, obstacles), function(o) runs_through(ld, o), TRUE)))
+      cut <- any(vapply(leaders, function(l) runs_through(l, b), TRUE))
+      sum(vapply(c(placed, pts, obstacles), function(o) overlap(b, o), 0)) +
+        10 * out + 1 * (cross + cut) + 1e-4 * (cd$s - 1)  # near ring on a tie
     }, 0)
     cd <- cand[[which.min(cost)]]             # first minimum = preferred order
     b <- box_of(k, cd)
     placed[[length(placed) + 1L]] <- b
-    if (cd$s > 1 || all(cd$d != 0)) {
-      # leader from the point's edge to the nearest point of the box
-      tx <- min(max(ix[k], b[1]), b[2]); ty <- min(max(iy[k], b[3]), b[4])
-      v <- c(tx - ix[k], ty - iy[k]); len <- sqrt(sum(v^2))
-      if (len > r) {
-        p0 <- c(ix[k], iy[k]) + v / len * r * 0.6
-        graphics::segments(graphics::grconvertX(p0[1], "inches", "user"),
-                           graphics::grconvertY(p0[2], "inches", "user"),
-                           graphics::grconvertX(tx, "inches", "user"),
-                           graphics::grconvertY(ty, "inches", "user"),
-                           col = col, lwd = 0.6, xpd = NA)
-      }
+    ld <- leader_of(k, cd, b)
+    if (!is.null(ld)) {
+      leaders[[length(leaders) + 1L]] <- ld
+      graphics::segments(graphics::grconvertX(ld[1], "inches", "user"),
+                         graphics::grconvertY(ld[2], "inches", "user"),
+                         graphics::grconvertX(ld[3], "inches", "user"),
+                         graphics::grconvertY(ld[4], "inches", "user"),
+                         col = col, lwd = 0.6, xpd = NA)
     }
     graphics::text(graphics::grconvertX(mean(b[1:2]), "inches", "user"),
                    graphics::grconvertY(mean(b[3:4]), "inches", "user"),
                    labels[k], col = col, cex = cex, xpd = NA)
   }
-  invisible(NULL)
+  # everything in inches, for tests
+  invisible(list(boxes = placed, leaders = leaders, obstacles = obstacles,
+                 line = diag_seg))
+}
+
+# Proper intersection of two segments, each given as c(x0, y0, x1, y1).
+segments_cross <- function(a, b) {
+  o <- function(p, q, s) sign((q[1] - p[1]) * (s[2] - p[2]) - (q[2] - p[2]) * (s[1] - p[1]))
+  o(a[1:2], a[3:4], b[1:2]) * o(a[1:2], a[3:4], b[3:4]) < 0 &&
+    o(b[1:2], b[3:4], a[1:2]) * o(b[1:2], b[3:4], a[3:4]) < 0
+}
+
+# Whether segment c(x0, y0, x1, y1) passes through the inside of box
+# c(left, right, bottom, top); touching an edge does not count.
+runs_through <- function(l, b) {
+  t <- seq(0, 1, length.out = 50)
+  x <- l[1] + t * (l[3] - l[1]); y <- l[2] + t * (l[4] - l[2])
+  any(x > b[1] & x < b[2] & y > b[3] & y < b[4])
+}
+
+# Which decades of a log axis get a label: every step-th, counted from the
+# top decade, with step the smallest that leaves 20% room between labels.
+thin_decades <- function(decades, inch_per_decade, label_width) {
+  step <- max(1L, ceiling(1.2 * label_width / inch_per_decade))
+  decades[(max(decades) - decades) %% step == 0]
 }
 
 surface_col <- function() {
