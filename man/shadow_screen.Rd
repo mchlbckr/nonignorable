@@ -136,9 +136,11 @@ threshold that only defines the population does not. Whether classes are
 well defined is answered by the mass on single values (\code{heaping}, reported
 for \code{numeric = "classes"} and by \code{\link[=screen_classes]{screen_classes()}}). Classes
 are cut only between distinct values, so heavy atoms give classes of
-unequal mass, not arbitrary ones; but a characteristic with no gap in
-support and heavy atoms, such as a loan amount in round numbers, is
-usually better left linear. For other cut-offs or class counts
+unequal mass, not arbitrary ones. A loan amount in round numbers shows
+both: no gap in support, so a linear term suffices; where an analysis
+codes it in classes all the same, for instance to compare two codings
+that differ in nothing else, the heaping shows whether that result is
+well defined. For other cut-offs or class counts
 per characteristic, code the columns yourself with \code{\link[=screen_classes]{screen_classes()}} and
 pass factors.
 }
