@@ -26,7 +26,9 @@
 #' every \eqn{t}; the curves are the pointwise envelope. Likewise the
 #' confidence sets hold pointwise in \eqn{t}; bands uniform in \eqn{t} are not
 #' offered, because the rows where the two pieces of a bound cross move with
-#' \eqn{t}.
+#' \eqn{t}. To cover the set at a few values of \eqn{t} at once, pass only
+#' those values and `level = 1 - (1 - a) / k` for \eqn{k} values and joint
+#' level `a` (Bonferroni); this is valid and conservative.
 #'
 #' @section Inference and the margin condition:
 #' Each endpoint is the mean of a minimum (or maximum) of two pieces that
