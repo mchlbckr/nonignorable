@@ -119,7 +119,9 @@ even when it is validly excluded; the screen is a screen, not a test of the
 restriction. The ratio therefore counts only together with the relevance
 requirement, never on its own: the stronger the selection on the outcome
 and the association, the closer a validly excluded candidate moves to the
-equality line, and for a candidate without relevance the ratio is noise
+equality line (Bücker 2026, section "The screen when the outcome is
+continuous", measures this on a design where exclusion holds exactly), and
+for a candidate without relevance the ratio is noise
 that shifts with the coding. The equality line is not the border between
 usable and unusable candidates; a ratio near one does not by itself show a
 violation, a ratio well below one does.
@@ -136,7 +138,10 @@ classes get finer while \eqn{\chi^2}/df rises towards the continuous
 association: compare candidates under one coding only, and read
 \eqn{\chi^2}/df, not \eqn{\Delta R^2}, across codings. Five classes is a
 choice for the stability of the ordinal model (few cut points, the
-proportional-odds assumption over few cuts), not an optimum.
+proportional-odds assumption over few cuts), not an optimum. Bücker (2026),
+section "The screen when the outcome is continuous", derives the behaviour
+of both measures in the number of classes and checks the screen against a
+known truth.
 
 The screen \strong{measures relevance; it does not certify identification}.
 Identification with a shadow variable needs more than dependence of
@@ -204,6 +209,9 @@ dc$y[dc$observed == 0] <- NA
 shadow_screen(dc, "y", "observed", c("x1", "x2"), c("z_shadow", "z_policy"))
 }
 \references{
+Bücker, M. (2026). The price of a weak shadow variable: inference under
+nonignorable missingness as relevance vanishes. \doi{10.48550/arXiv.2610.14695}
+
 Beppu, K. and Morikawa, K. (2024). Verifiable identification condition for
 nonignorable nonresponse data with categorical instrumental variables.
 \emph{Statistical Theory and Related Fields}, 8, 40--50.
