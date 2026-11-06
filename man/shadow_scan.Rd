@@ -185,7 +185,9 @@ reported in \verb{$binding}. Because the range is set by the most extreme
 rows, with \emph{estimated} inputs it inherits their estimation error, at
 exactly the rows where \eqn{\hat r} is least reliable. Inspect the
 binding rows before reading a plateau as information. This is why it is
-not the default.
+not the default. It is a sensitivity calculation: no confidence set is
+offered for it, since its bound is an extremum over rows of an estimated
+function, set by the rows where the estimate is least reliable.
 }
 }
 

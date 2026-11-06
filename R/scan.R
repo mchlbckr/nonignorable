@@ -107,7 +107,9 @@
 #'   rows, with *estimated* inputs it inherits their estimation error, at
 #'   exactly the rows where \eqn{\hat r} is least reliable. Inspect the
 #'   binding rows before reading a plateau as information. This is why it is
-#'   not the default.
+#'   not the default. It is a sensitivity calculation: no confidence set is
+#'   offered for it, since its bound is an extremum over rows of an estimated
+#'   function, set by the rows where the estimate is least reliable.
 #'
 #' @param eta_obs Numeric vector of \eqn{\hat\eta_{\mathrm{obs}}(x)}, in (0, 1).
 #' @param r Numeric vector of \eqn{\hat r(x)}, in (0, 1], same length.

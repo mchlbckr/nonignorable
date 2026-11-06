@@ -78,7 +78,12 @@ signal of the chosen piece, not its plug-in value. This removes the bias of
 the plug-in, which takes in every row the smaller of two noisy pieces and
 so lies inside the set, most of all where many rows are near the switch
 between band and bound. The confidence set uses the normal approximation
-that Semenova's theory gives.
+that Semenova's theory gives. That theory needs a margin condition: few
+rows may sit close to the switch between band and bound, where the binding
+piece changes (for the upper end, where \eqn{r(1 + \kappa\eta_{\mathrm{obs}})
+= 1} with \eqn{\kappa = e^\lambda - 1}). Unlike the mean scan, whose score
+is orthogonal in both regimes, the rate scan relies on it; with many rows
+near the switch the normal approximation can be poor.
 }
 \section{Inputs}{
 
