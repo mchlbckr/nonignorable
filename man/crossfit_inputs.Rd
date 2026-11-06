@@ -36,10 +36,10 @@ A list with \code{eta_obs}, \code{r} (one per row of \code{data}) and \code{fold
 \description{
 Splits the rows into folds and predicts \eqn{\hat\eta_{\mathrm{obs}}} and
 \eqn{\hat r} for each fold from models fitted on the other folds, as
-\code{\link[=shadow_scan_ci]{shadow_scan_ci()}} requires. The learner is yours: \code{fit_eta} and \code{fit_r}
+\code{\link[=sharp_scan_ci]{sharp_scan_ci()}} requires. The learner is yours: \code{fit_eta} and \code{fit_r}
 are functions that fit on a training frame and return probabilities for
 new rows. \code{fit_eta} receives only the observed rows of the training folds.
 }
 \seealso{
-\code{\link[=shadow_scan_ci]{shadow_scan_ci()}}
+\code{\link[=sharp_scan_ci]{sharp_scan_ci()}}
 }

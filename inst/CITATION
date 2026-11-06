@@ -1,11 +1,11 @@
 bibentry(
   bibtype = "Manual",
-  title = "shadowscan: Shadow-Variable Screens and Sharp Sensitivity Scans for Nonignorable Missing Outcomes",
+  title = "nonignorable: Shadow-Variable Screens and Sharp Sensitivity Scans for Nonignorable Missing Outcomes",
   author = person("Michael", "Bücker"),
   year = "2026",
   note = paste("R package version", meta$Version),
-  url = "https://github.com/mchlbckr/shadowscan",
-  textVersion = paste0("Bücker, M. (2026). shadowscan: Shadow-Variable Screens ",
+  url = "https://github.com/mchlbckr/nonignorable",
+  textVersion = paste0("Bücker, M. (2026). nonignorable: Shadow-Variable Screens ",
                        "and Sharp Sensitivity Scans for Nonignorable Missing Outcomes. ",
                        "R package version ", meta$Version, ".")
 )

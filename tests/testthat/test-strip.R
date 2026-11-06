@@ -1,8 +1,8 @@
 test_that("stripped scans print and plot", {
   d <- simulate_shadow(2000, tilt = -1, seed = 5)
   rej <- d[d$observed == 0, ]
-  s1 <- shadow_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35)
-  s2 <- shadow_scan_ci(pmin(pmax(d$eta_obs, 0.01), 0.99), d$obs_rate, d$observed, d$y,
+  s1 <- sharp_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35)
+  s2 <- sharp_scan_ci(pmin(pmax(d$eta_obs, 0.01), 0.99), d$obs_rate, d$observed, d$y,
                        threshold = 0.35)
   for (s in list(s1, s2)) {
     st <- strip_scan(s)

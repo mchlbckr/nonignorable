@@ -2,7 +2,7 @@
 #'
 #' `quantile_grid()` produces the \eqn{n \times K} matrix of conditional
 #' quantiles of \eqn{Y} given \eqn{R = 1, X = x_i} at the levels
-#' \eqn{(k - 1/2)/K} that [shadow_scan_mean()] takes as `q`. It is a
+#' \eqn{(k - 1/2)/K} that [sharp_scan_mean()] takes as `q`. It is a
 #' convenience like [scan_inputs()], not a commitment to a learner, and
 #' accepts three kinds of `fit`:
 #'
@@ -37,7 +37,7 @@
 #' Chernozhukov, V., Fernández-Val, I. and Galichon, A. (2010). Quantile and
 #' probability curves without crossing. *Econometrica*, 78(3), 1093--1125.
 #' \doi{10.3982/ECTA7880}
-#' @seealso [shadow_scan_mean()]
+#' @seealso [sharp_scan_mean()]
 #' @export
 #' @examples
 #' dc <- simulate_shadow(3000, tilt = -1, outcome = "continuous", seed = 1)
@@ -49,7 +49,7 @@
 #' q <- quantile_grid(function(tau, newdata)
 #'   outer(predict(m, newdata), quantile(res, tau, names = FALSE), "+"),
 #'   rej, K = 100)
-#' sm <- shadow_scan_mean(q, rej$obs_rate, threshold = 0.5)
+#' sm <- sharp_scan_mean(q, rej$obs_rate, threshold = 0.5)
 #' sm
 #' if (requireNamespace("quantreg", quietly = TRUE)) {
 #'   fq <- quantreg::rq(y ~ x1 + x2 + z_shadow + z_policy + z_score,

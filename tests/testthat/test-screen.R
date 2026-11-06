@@ -104,7 +104,7 @@ test_that("the screen print fits 80 columns and formats each number on its own",
 })
 
 test_that("internal helpers are not exported", {
-  expect_false("verdict_text" %in% getNamespaceExports("shadowscan"))
+  expect_false("verdict_text" %in% getNamespaceExports("nonignorable"))
 })
 
 # --- continuous outcome: ordinal relevance on outcome classes ---------------

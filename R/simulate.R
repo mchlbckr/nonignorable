@@ -34,7 +34,7 @@
 #' function of \eqn{Y} given \eqn{R = 1, X = x} is \eqn{\mu(x) +
 #' \Phi^{-1}[\log\{1 + p(e^{b} - 1)\}/b]}, all in closed form. Truth: `mu`
 #' \eqn{= E(Y \mid x)}, `mean_obs` \eqn{= E(Y \mid R = 1, x)}, `obs_rate`;
-#' [obs_quantiles()] returns the quantile grid that [shadow_scan_mean()]
+#' [obs_quantiles()] returns the quantile grid that [sharp_scan_mean()]
 #' takes.
 #'
 #' @param n Number of rows.

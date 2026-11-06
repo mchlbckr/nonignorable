@@ -41,7 +41,7 @@ one per row of \code{data}.
 \description{
 Splits the rows into folds and predicts, for each fold from models fitted
 on the other folds, a grid of conditional quantiles of \eqn{Y} given
-\eqn{R = 1} and \eqn{X}, and \eqn{\hat r}, as \code{\link[=shadow_scan_mean_ci]{shadow_scan_mean_ci()}}
+\eqn{R = 1} and \eqn{X}, and \eqn{\hat r}, as \code{\link[=sharp_scan_mean_ci]{sharp_scan_mean_ci()}}
 requires. The learner is yours. \code{fit_q} receives only the observed rows of
 the training folds and the levels \code{tau} = \eqn{(k - 1/2)/K}.
 }
@@ -54,5 +54,5 @@ A smooth location and scale model is a good choice: fit
 \code{\link[=quantile_grid]{quantile_grid()}} can be used inside \code{fit_q}.
 }
 \seealso{
-\code{\link[=shadow_scan_mean_ci]{shadow_scan_mean_ci()}}, \code{\link[=crossfit_inputs]{crossfit_inputs()}}
+\code{\link[=sharp_scan_mean_ci]{sharp_scan_mean_ci()}}, \code{\link[=crossfit_inputs]{crossfit_inputs()}}
 }

@@ -1,4 +1,4 @@
-# shadowscan 0.1.0
+# nonignorable 0.1.0
 
 First release.
 
@@ -25,38 +25,38 @@ First release.
   screen measures relevance; it does not certify identification.
 * `print()` shows the verdict and its reasons in one column and fits 80
   columns; `plot()` draws rejected candidates grey and labels them.
-* `citation("shadowscan")` lists the package and the two papers behind it.
+* `citation("nonignorable")` lists the package and the two papers behind it.
 
 ## Scan
 
-* `shadow_scan()` gives the sharp identified set for the rate of a binary
+* `sharp_scan()` gives the sharp identified set for the rate of a binary
   outcome among the unobserved rows when the propensity ratio is at most
   `exp(lambda)`. Rows are aggregated by `"union"` by default; `"common"` is
   available as an option.
-* `shadow_scan_mean()` gives the same for the mean of a non-binary outcome,
+* `sharp_scan_mean()` gives the same for the mean of a non-binary outcome,
   taking a grid of conditional quantiles. `quantile_grid()` builds that grid
   from a `quantreg::rq` fit, from any quantile function, or from draws.
-* `shadow_scan_ci()` adds a debiased estimate and a confidence set for the
+* `sharp_scan_ci()` adds a debiased estimate and a confidence set for the
   binary scan, with cross-fitted inputs from `crossfit_inputs()`. The
   standard error defaults to the larger of an empirical and a conditional
   one. It reports the rows with small r-hat and warns when the
   inverse weights blow up; `crossfit_inputs()` warns when the response model
   separates observed rows.
-* `shadow_scan_mean_ci()` adds a debiased estimate and a confidence set for
+* `sharp_scan_mean_ci()` adds a debiased estimate and a confidence set for
   the mean scan, for the mean over all rows or over a segment chosen by X.
   Its score is Neyman-orthogonal in both regimes of the cap, so no margin
   condition is needed. `crossfit_quantiles()` cross-fits the quantile grids
   and r-hat for any learner.
-* `shadow_scan_contrast()` compares two disjoint portfolios chosen by X,
+* `sharp_scan_contrast()` compares two disjoint portfolios chosen by X,
   such as treatment arms. It gives the sharp set for the difference of their
   rates, a confidence set, and the selection strength from which "no
   difference" is no longer ruled out.
-* `shadow_scan_contrast(among = "unobserved")` compares the unobserved rows
+* `sharp_scan_contrast(among = "unobserved")` compares the unobserved rows
   of two segments, such as the rejected applicants of two regions;
-  `shadow_scan_ci()` takes a `segment` for that target.
-* `shadow_scan_mean_contrast()` does the same for the difference of two
+  `sharp_scan_ci()` takes a `segment` for that target.
+* `sharp_scan_mean_contrast()` does the same for the difference of two
   portfolio means.
-* `shadow_scan_ci()` and `shadow_scan_mean_ci()` both target all rows by
+* `sharp_scan_ci()` and `sharp_scan_mean_ci()` both target all rows by
   default; set `target = "unobserved"` for the rows whose outcome is missing,
   such as rejected applications.
 * Debiased bounds and confidence sets are kept monotone in lambda.
@@ -64,7 +64,7 @@ First release.
   (`naive_*` columns). Scans report the share of target rows where the cap
   binds and, for rates, the lambda from which it holds a bound flat; the
   plot notes such a bound in its legend, which it places clear of the
-  curves. `shadow_scan_mean_ci()` counts rows with r-hat clipped below and
+  curves. `sharp_scan_mean_ci()` counts rows with r-hat clipped below and
   above apart.
 * `simulate_shadow()`, `obs_quantiles()` and `scan_inputs()` provide data and
   inputs for examples and tests.

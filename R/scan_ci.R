@@ -1,6 +1,6 @@
 #' Confidence set for the binary scan, by debiased estimation
 #'
-#' `shadow_scan_ci()` estimates the sharp set of [shadow_scan()] with its
+#' `sharp_scan_ci()` estimates the sharp set of [sharp_scan()] with its
 #' sampling error and returns, at each \eqn{\lambda}, a confidence set that
 #' covers the identified set. It follows Semenova (2025): each endpoint is a
 #' mean over rows of the minimum (or maximum) of two pieces, the band and the
@@ -18,7 +18,7 @@
 #' near the switch the normal approximation can be poor.
 #'
 #' @section Inputs:
-#' Unlike [shadow_scan()], the inputs are given for **all** rows, observed and
+#' Unlike [sharp_scan()], the inputs are given for **all** rows, observed and
 #' unobserved, together with the response indicator and the outcome:
 #' the signals use \eqn{RY} and \eqn{R(Y - \hat\eta_{\mathrm{obs}})/\hat r}.
 #' `eta_obs` and `r` must be **cross-fitted**: the prediction for a row comes
@@ -80,7 +80,7 @@
 #' with their correction terms. That changes the target to the rows with
 #' \eqn{\hat r \ge} `trim`, and the output says how many rows left it. Rows
 #' with \eqn{\hat r} at zero, where the selection was deterministic, have to
-#' leave the target in any case, as for [shadow_scan()].
+#' leave the target in any case, as for [sharp_scan()].
 #'
 #' For the whole sample (`target = "all"`), where the weight does not depend
 #' on \eqn{r}, both standard errors covered 0.88 to 0.92 from 1,000 rows on.
@@ -89,7 +89,7 @@
 #'
 #' Only the union aggregation is covered: the common-tilt set is bounded by an
 #' extreme over rows, for which this theory does not hold. For a non-binary
-#' outcome, see [shadow_scan_mean()], for which no inference is offered.
+#' outcome, see [sharp_scan_mean()], for which no inference is offered.
 #'
 #' @param eta_obs Cross-fitted \eqn{\hat\eta_{\mathrm{obs}}(x_i)} for every row,
 #'   in (0, 1).
@@ -100,25 +100,25 @@
 #'   restricts a target of `"unobserved"` (or `"all"`) rows to one segment,
 #'   such as the rejected applications of one region. The segment is a
 #'   function of \eqn{X}; the target within it may depend on \eqn{R}.
-#' @param target `"all"` (default, as in [shadow_scan_mean_ci()]),
+#' @param target `"all"` (default, as in [sharp_scan_mean_ci()]),
 #'   `"unobserved"` (the rows whose outcome is missing, such as rejected
 #'   applications), or a logical vector selecting the rows of the portfolio
 #'   by \eqn{X}.
-#' @param lambda,threshold As in [shadow_scan()].
+#' @param lambda,threshold As in [sharp_scan()].
 #' @param weights Optional non-negative row weights, a function of \eqn{X}.
 #' @param level Confidence level. Default 0.9.
 #' @param trim Rows with \eqn{\hat r <} `trim` leave the target. Default 0.
 #'   See the section on what is covered.
 #' @param se_type `"max"` (default), `"conditional"` or `"empirical"`; see the section
 #'   on what is covered.
-#' @return An object of class `c("shadow_scan_ci", "shadow_scan")`, as from
-#'   [shadow_scan()], whose `curve` holds the debiased estimates `lower`,
+#' @return An object of class `c("sharp_scan_ci", "sharp_scan")`, as from
+#'   [sharp_scan()], whose `curve` holds the debiased estimates `lower`,
 #'   `upper`, their standard errors `se_lower`, `se_upper`, the confidence set
 #'   `ci_lower`, `ci_upper`, and the plug-in outer band of the target rows.
 #'   `flip` adds `ci`: the smallest \eqn{\lambda} at which the confidence set
 #'   reaches the threshold, the point from which the data no longer rule out
 #'   the other decision. `capped` and `held` say where the cap
-#'   \eqn{\pi \le 1} binds among the target rows, as in [shadow_scan()],
+#'   \eqn{\pi \le 1} binds among the target rows, as in [sharp_scan()],
 #'   computed from the nuisance estimates.
 #'   The estimates and the confidence set are kept monotone in \eqn{\lambda}
 #'   (running minimum of the lower ends, running maximum of the upper ends):
@@ -129,7 +129,7 @@
 #' Semenova, V. (2025). Debiased machine learning of aggregated intersection
 #' bounds and other causal parameters. Working paper, SSRN 5134514.
 #' \doi{10.2139/ssrn.5134514}
-#' @seealso [crossfit_inputs()], [shadow_scan()]
+#' @seealso [crossfit_inputs()], [sharp_scan()]
 #' @export
 #' @examples
 #' d <- simulate_shadow(3000, tilt = -1, seed = 3)
@@ -141,11 +141,11 @@
 #'                                          new, type = "response"),
 #'   seed = 1)
 #' # the rejected applications: the rows whose outcome is missing
-#' s <- shadow_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, target = "unobserved",
+#' s <- sharp_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, target = "unobserved",
 #'                     threshold = 0.35)
 #' s
 #' plot(s)
-shadow_scan_ci <- function(eta_obs, r, response, outcome,
+sharp_scan_ci <- function(eta_obs, r, response, outcome,
                            target = "all",
                            lambda = seq(0, 2, length.out = 81),
                            weights = NULL, threshold = NULL, level = 0.9,
@@ -328,7 +328,7 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
              min_r_observed = min(r[R == 1])),
     eta_obs = eta_obs, r = r, weights = weights, n = n,
     n_target = sum(s > 0)
-  ), class = c("shadow_scan_ci", "shadow_scan"))
+  ), class = c("sharp_scan_ci", "sharp_scan"))
 }
 
 outcome_or0 <- function(outcome, R) ifelse(R == 1, outcome, 0)
@@ -346,10 +346,10 @@ monotone_curve <- function(out) {
 }
 
 #' @export
-print.shadow_scan_ci <- function(x, digits = 3, ...) {
+print.sharp_scan_ci <- function(x, digits = 3, ...) {
   cv <- x$curve
   last <- nrow(cv)
-  cat("<shadow_scan_ci> sharp set for a rate, debiased, with",
+  cat("<sharp_scan_ci> sharp set for a rate, debiased, with",
       sprintf("%g%% confidence set\n", 100 * x$level))
   cat("  rows:", x$n, "  target:", x$target, sprintf("(%d rows)\n", x$n_target))
   if (x$trim > 0)
@@ -386,7 +386,7 @@ print.shadow_scan_ci <- function(x, digits = 3, ...) {
 #'
 #' Splits the rows into folds and predicts \eqn{\hat\eta_{\mathrm{obs}}} and
 #' \eqn{\hat r} for each fold from models fitted on the other folds, as
-#' [shadow_scan_ci()] requires. The learner is yours: `fit_eta` and `fit_r`
+#' [sharp_scan_ci()] requires. The learner is yours: `fit_eta` and `fit_r`
 #' are functions that fit on a training frame and return probabilities for
 #' new rows. `fit_eta` receives only the observed rows of the training folds.
 #'
@@ -399,7 +399,7 @@ print.shadow_scan_ci <- function(x, digits = 3, ...) {
 #' @param seed Optional seed for the fold assignment.
 #' @param clip Predictions are clipped to `[clip, 1 - clip]`. Default 1e-6.
 #' @return A list with `eta_obs`, `r` (one per row of `data`) and `fold`.
-#' @seealso [shadow_scan_ci()]
+#' @seealso [sharp_scan_ci()]
 #' @export
 crossfit_inputs <- function(data, response, fit_eta, fit_r, folds = 5L,
                             seed = NULL, clip = 1e-6) {
@@ -456,7 +456,7 @@ warn_separation <- function(R, r, clip) {
 #'
 #' Splits the rows into folds and predicts, for each fold from models fitted
 #' on the other folds, a grid of conditional quantiles of \eqn{Y} given
-#' \eqn{R = 1} and \eqn{X}, and \eqn{\hat r}, as [shadow_scan_mean_ci()]
+#' \eqn{R = 1} and \eqn{X}, and \eqn{\hat r}, as [sharp_scan_mean_ci()]
 #' requires. The learner is yours. `fit_q` receives only the observed rows of
 #' the training folds and the levels `tau` = \eqn{(k - 1/2)/K}.
 #'
@@ -475,7 +475,7 @@ warn_separation <- function(R, r, clip) {
 #' @param clip \eqn{\hat r} is clipped from below at `clip`. Default 1e-6.
 #' @return A list with `q` (an \eqn{n \times K} matrix), `r` and `fold`,
 #'   one per row of `data`.
-#' @seealso [shadow_scan_mean_ci()], [crossfit_inputs()]
+#' @seealso [sharp_scan_mean_ci()], [crossfit_inputs()]
 #' @export
 crossfit_quantiles <- function(data, response, fit_q, fit_r, K = 200L, folds = 5L,
                                seed = NULL, clip = 1e-6) {

@@ -4,10 +4,10 @@ test_that("plot methods run and return their input", {
   d <- simulate_shadow(2000, tilt = -1, seed = 31)
   rej <- d[d$observed == 0, ]
   for (thr in list(NULL, 0.3, 0.99)) {
-    s <- shadow_scan(rej$eta_obs, rej$obs_rate, threshold = thr)
+    s <- sharp_scan(rej$eta_obs, rej$obs_rate, threshold = thr)
     expect_identical(plot(s), s)
   }
-  s <- shadow_scan(rej$eta_obs, rej$obs_rate, aggregate = "union", threshold = 0.4)
+  s <- sharp_scan(rej$eta_obs, rej$obs_rate, aggregate = "union", threshold = 0.4)
   expect_identical(plot(s, scale = "log"), s)
   sc <- shadow_screen(d, "y", "observed", c("x1", "x2"),
                       c("z_shadow", "z_policy", "z_score"))
@@ -70,7 +70,7 @@ test_that("screen labels avoid the annotation and leaders do not cross the line"
   png(tempfile(fileext = ".png"), width = 7, height = 4.5, units = "in", res = 96)
   on.exit(dev.off())                     # the device knitr draws vignettes on
   got <- NULL
-  orig <- shadowscan:::place_labels
+  orig <- nonignorable:::place_labels
   local_mocked_bindings(place_labels = function(...) { got <<- orig(...); got })
   plot(actg_like())
   expect_false(is.null(got$obstacles))
@@ -82,18 +82,18 @@ test_that("screen labels avoid the annotation and leaders do not cross the line"
 
 test_that("decade labels are thinned when they would collide", {
   # ten decades on 3 inches, labels 0.35 inches wide: every second one
-  keep <- shadowscan:::thin_decades(-9:0, inch_per_decade = 0.3, label_width = 0.35)
+  keep <- nonignorable:::thin_decades(-9:0, inch_per_decade = 0.3, label_width = 0.35)
   expect_equal(keep, seq(0, -9, by = -2)[order(seq(0, -9, by = -2))])
   expect_true(0 %in% keep)
   # ample room: all of them
-  expect_equal(shadowscan:::thin_decades(-3:0, 1, 0.35), -3:0)
+  expect_equal(nonignorable:::thin_decades(-3:0, 1, 0.35), -3:0)
 })
 
 test_that("screen labels do not overlap and leaders do not run through them", {
   png(tempfile(fileext = ".png"), width = 7, height = 4.5, units = "in", res = 96)
   on.exit(dev.off())                     # the device knitr draws vignettes on
   got <- NULL
-  orig <- shadowscan:::place_labels
+  orig <- nonignorable:::place_labels
   local_mocked_bindings(place_labels = function(...) { got <<- orig(...); got })
   plot(actg_like())
   through <- function(l, b) {
@@ -121,7 +121,7 @@ test_that("the screen plot shows the verdict: rejected candidates grey and label
   plot(sc)
   expect_no_match(txt[1], "rejected")
   expect_match(txt[2], "rejected")
-  st <- shadowscan:::screen_point_style(c("pass", "reject", "pass", "reject"),
+  st <- nonignorable:::screen_point_style(c("pass", "reject", "pass", "reject"),
                                         c(TRUE, TRUE, FALSE, FALSE), col = "blue")
   expect_equal(st$border[1:2], c("white", "white"))      # filled: border is surface
   expect_equal(st$bg[1], "blue"); expect_equal(st$bg[2], "grey60")
@@ -132,7 +132,7 @@ test_that("the screen plot shows the verdict: rejected candidates grey and label
 
 capture_legend <- function(expr) {
   got <- NULL
-  orig <- shadowscan:::draw_scan_legend
+  orig <- nonignorable:::draw_scan_legend
   local_mocked_bindings(draw_scan_legend = function(...) { got <<- list(args = list(...), rect = orig(...)); got$rect })
   force(expr)
   got$usr <- par("usr")
@@ -158,12 +158,12 @@ test_that("the scan legend avoids every curve", {
   d <- simulate_shadow(3000, tilt = -1, seed = 31)
   rej <- d[d$observed == 0, ]
   for (thr in list(NULL, 0.3)) {
-    s <- shadow_scan(rej$eta_obs, rej$obs_rate, threshold = thr)
+    s <- sharp_scan(rej$eta_obs, rej$obs_rate, threshold = thr)
     got <- capture_legend(plot(s))
     expect_false(legend_hits_ink(s, got$rect$rect))
   }
   # a band that fills the top left: the legend has to go elsewhere
-  s <- shadow_scan(rep(0.5, 50), rep(0.2, 50))
+  s <- sharp_scan(rep(0.5, 50), rep(0.2, 50))
   got <- capture_legend(plot(s))
   expect_false(legend_hits_ink(s, got$rect$rect))
 })
@@ -172,15 +172,15 @@ test_that("the legend spot prefers a free corner and grows the top when none is 
   usr <- c(0, 10, 0, 1)
   xs <- 0:10
   # ink high on the left, low on the right: top right and bottom left are free
-  sp <- shadowscan:::scan_legend_spot(3, 0.3, usr, xs, lo = seq(0.6, 0.0, length.out = 11),
+  sp <- nonignorable:::scan_legend_spot(3, 0.3, usr, xs, lo = seq(0.6, 0.0, length.out = 11),
                                       hi = seq(0.99, 0.4, length.out = 11))
   expect_identical(sp$corner, "topright")
   # ink everywhere from 0.05 to 0.95: no corner free, the top has to grow
-  sp <- shadowscan:::scan_legend_spot(3, 0.3, usr, xs, lo = rep(0.05, 11), hi = rep(0.95, 11))
+  sp <- nonignorable:::scan_legend_spot(3, 0.3, usr, xs, lo = rep(0.05, 11), hi = rep(0.95, 11))
   expect_identical(sp$corner, "topleft")
   expect_gt(sp$grow_to, 1)
   # an obstacle (the threshold line) rules a corner out
-  sp <- shadowscan:::scan_legend_spot(3, 0.3, usr, xs, lo = rep(0.4, 11), hi = rep(0.5, 11),
+  sp <- nonignorable:::scan_legend_spot(3, 0.3, usr, xs, lo = rep(0.4, 11), hi = rep(0.5, 11),
                                       obstacles = list(c(0, 10, 0.85, 0.85)))
   expect_false(sp$corner %in% c("topleft", "topright"))
 })
@@ -190,7 +190,7 @@ test_that("plots name the outer band, never a naive one", {
   on.exit(dev.off())
   d <- simulate_shadow(2000, tilt = -1, seed = 31)
   rej <- d[d$observed == 0, ]
-  s <- shadow_scan(rej$eta_obs, rej$obs_rate, threshold = 0.99)
+  s <- sharp_scan(rej$eta_obs, rej$obs_rate, threshold = 0.99)
   got <- capture_legend(plot(s))
   labs <- vapply(as.list(got$args$legend), function(e) paste(deparse(e), collapse = ""), "")
   expect_true(any(grepl("Outer band", labs)))
@@ -202,7 +202,7 @@ test_that("a bound held by the cap is noted in print and legend", {
   on.exit(dev.off())
   # r = 0.92 everywhere: the lower bound r * eta binds from
   # lambda = logit(eta) - logit(r * eta), here about 0.086
-  s <- shadow_scan(rep(0.04, 100), rep(0.92, 100))
+  s <- sharp_scan(rep(0.04, 100), rep(0.92, 100))
   expect_equal(s$held[["lower"]], qlogis(0.04) - qlogis(0.92 * 0.04), tolerance = 1e-8)
   expect_equal(s$held[["upper"]], qlogis(0.92 * 0.04 + 0.08) - qlogis(0.04), tolerance = 1e-8)
   expect_equal(s$capped[["lower"]], 1)
@@ -213,7 +213,7 @@ test_that("a bound held by the cap is noted in print and legend", {
   # nothing held: no note
   d <- simulate_shadow(2000, tilt = -1, seed = 31)
   rej <- d[d$observed == 0, ]
-  s2 <- shadow_scan(rej$eta_obs, rej$obs_rate)
+  s2 <- sharp_scan(rej$eta_obs, rej$obs_rate)
   expect_true(all(is.na(s2$held)))
   expect_no_match(paste(capture.output(print(s2)), collapse = "\n"), "held by")
 })

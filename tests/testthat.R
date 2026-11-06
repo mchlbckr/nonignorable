@@ -1,4 +1,4 @@
 library(testthat)
-library(shadowscan)
+library(nonignorable)
 
-test_check("shadowscan")
+test_check("nonignorable")

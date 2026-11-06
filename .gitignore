@@ -3,7 +3,7 @@
 .RData
 .DS_Store
 *.tar.gz
-shadowscan.Rcheck/
+nonignorable.Rcheck/
 Rplots.pdf
 DESIGN.md
 HANDOFF*.md

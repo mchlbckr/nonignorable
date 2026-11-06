@@ -1,10 +1,10 @@
 bounds1 <- function(q, r, lam, cap = TRUE) {
   q <- matrix(q, nrow = 1)
-  unlist(shadowscan:::mean_bounds(shadowscan:::mean_prep(q), r, lam, cap))
+  unlist(nonignorable:::mean_bounds(nonignorable:::mean_prep(q), r, lam, cap))
 }
 qnorm_grid <- function(K) qnorm(((1:K) - 0.5) / K)
 
-test_that("1. binary quantile rows reproduce the closed form of shadow_scan", {
+test_that("1. binary quantile rows reproduce the closed form of sharp_scan", {
   K <- 1000
   worst <- 0
   for (eta in c(0.05, 0.2, 0.5, 0.8)) for (r in c(0.1, 0.4, 0.7, 0.95))
@@ -12,7 +12,7 @@ test_that("1. binary quantile rows reproduce the closed form of shadow_scan", {
       n1 <- round(K * eta)
       q <- c(rep(0, K - n1), rep(1, n1))
       got <- bounds1(q, r, lam)
-      cf <- shadowscan:::sharp_bounds(eta, r, lam)
+      cf <- nonignorable:::sharp_bounds(eta, r, lam)
       worst <- max(worst, abs(got - c(cf$lower, cf$upper)))
     }
   expect_lt(worst, 1e-12)
@@ -37,7 +37,7 @@ test_that("2. lambda = 0 gives the observed mean; monotone in lambda", {
   set.seed(41)
   q <- t(apply(matrix(rexp(50 * 100), 50), 1, sort))
   r <- runif(50, 0.05, 1)
-  s <- shadow_scan_mean(q, r, lambda = seq(0, 3, by = 0.1))
+  s <- sharp_scan_mean(q, r, lambda = seq(0, 3, by = 0.1))
   expect_equal(s$curve$lower[1], mean(q))
   expect_equal(s$curve$upper[1], mean(q))
   expect_equal(s$point, mean(q))
@@ -53,8 +53,8 @@ test_that("3. never wider than the outer band; equal when the cap is slack", {
   q <- t(apply(matrix(rnorm(40 * 200) * runif(40, .5, 3), 40), 1, sort))
   r <- runif(40, 0.02, 1)
   for (lam in c(0.3, 1, 2.5)) {
-    b <- shadowscan:::mean_bounds(shadowscan:::mean_prep(q), r, lam, TRUE)
-    o <- shadowscan:::mean_bounds(shadowscan:::mean_prep(q), r, lam, FALSE)
+    b <- nonignorable:::mean_bounds(nonignorable:::mean_prep(q), r, lam, TRUE)
+    o <- nonignorable:::mean_bounds(nonignorable:::mean_prep(q), r, lam, FALSE)
     expect_true(all(b$upper <= o$upper + 1e-12 & b$lower >= o$lower - 1e-12))
     # s_circ: the maximiser over [0, 1]; cap slack iff sbar >= s_circ
     K <- ncol(q); kap <- expm1(lam)
@@ -138,7 +138,7 @@ test_that("7. truth on the simulator is inside from lambda = |tilt| on", {
     q <- obs_quantiles(d, K = 1000)
     expect_equal(rowMeans(q), d$mean_obs, tolerance = 1e-3)
     rej <- d$observed == 0
-    s <- shadow_scan_mean(q[rej, ], d$obs_rate[rej],
+    s <- sharp_scan_mean(q[rej, ], d$obs_rate[rej],
                           lambda = abs(tilt) + c(0, 0.5))
     truth <- mean(d$mu[rej])
     expect_true(all(truth >= s$curve$lower & truth <= s$curve$upper))
@@ -163,27 +163,27 @@ test_that("flip, print, as.data.frame and validation", {
   d <- simulate_shadow(2000, tilt = -1, outcome = "continuous", seed = 45)
   q <- obs_quantiles(d, K = 200)
   rej <- d$observed == 0
-  s <- shadow_scan_mean(q[rej, ], d$obs_rate[rej], threshold = 0.5)
-  expect_s3_class(s, c("shadow_scan_mean", "shadow_scan"))
+  s <- sharp_scan_mean(q[rej, ], d$obs_rate[rej], threshold = 0.5)
+  expect_s3_class(s, c("sharp_scan_mean", "sharp_scan"))
   expect_false(is.na(s$flip[["sharp"]]))
-  at <- shadow_scan_mean(q[rej, ], d$obs_rate[rej], lambda = s$flip[["sharp"]])
+  at <- sharp_scan_mean(q[rej, ], d$obs_rate[rej], lambda = s$flip[["sharp"]])
   expect_equal(at$curve$upper, 0.5, tolerance = 1e-8)
   expect_gte(s$flip[["sharp"]], s$flip[["naive"]] - 1e-9)
   expect_output(print(s), "outer band")
   expect_equal(nrow(as.data.frame(s, lambda = 1)), sum(rej))
   w <- runif(sum(rej))
-  sw <- shadow_scan_mean(q[rej, ], d$obs_rate[rej], lambda = 0, weights = w)
+  sw <- sharp_scan_mean(q[rej, ], d$obs_rate[rej], lambda = 0, weights = w)
   expect_equal(sw$point, sum(w * rowMeans(q[rej, ])) / sum(w))
-  expect_error(shadow_scan_mean(q, d$obs_rate[1:2]), "one value per row")
-  expect_error(shadow_scan_mean(q[1:2, ], c(0, 1)), "overlap")
-  expect_error(shadow_scan_mean(q[1:2, ], c(1, 1), lambda = -1), "non-negative")
+  expect_error(sharp_scan_mean(q, d$obs_rate[1:2]), "one value per row")
+  expect_error(sharp_scan_mean(q[1:2, ], c(0, 1)), "overlap")
+  expect_error(sharp_scan_mean(q[1:2, ], c(1, 1), lambda = -1), "non-negative")
   qq <- q[1:2, ]; qq[1, 1] <- NA
-  expect_error(shadow_scan_mean(qq, c(1, 1)), "finite")
+  expect_error(sharp_scan_mean(qq, c(1, 1)), "finite")
   # r = 1 pins the set to the observed mean
   b <- bounds1(qnorm_grid(100), 1, 3)
   expect_equal(unname(b), rep(mean(qnorm_grid(100)), 2), tolerance = 1e-12)
   # a vector is a single row
-  expect_equal(shadow_scan_mean(qnorm_grid(10), 0.5, lambda = 1)$n, 1L)
+  expect_equal(sharp_scan_mean(qnorm_grid(10), 0.5, lambda = 1)$n, 1L)
   pdf(NULL); on.exit(dev.off())
   expect_identical(plot(s), s)
 })

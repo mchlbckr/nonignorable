@@ -12,13 +12,13 @@ contrast_fixture <- function() {
 fx <- contrast_fixture()
 lam <- seq(0, 2, length.out = 41)
 k_ab <- function(a = fx$A, b = fx$B, ...)
-  shadow_scan_contrast(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y,
+  sharp_scan_contrast(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y,
                        target_a = a, target_b = b, lambda = lam, ...)
 
 test_that("contrast endpoints are differences of the arm scans", {
   k <- k_ab()
-  ca <- shadow_scan_ci(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y, target = fx$A, lambda = lam)
-  cb <- shadow_scan_ci(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y, target = fx$B, lambda = lam)
+  ca <- sharp_scan_ci(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y, target = fx$A, lambda = lam)
+  cb <- sharp_scan_ci(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y, target = fx$B, lambda = lam)
   expect_equal(k$curve$upper, ca$curve$upper - cb$curve$lower)
   expect_equal(k$curve$lower, ca$curve$lower - cb$curve$upper)
   expect_equal(k$curve$naive_upper, ca$curve$naive_upper - cb$curve$naive_lower)
@@ -27,8 +27,8 @@ test_that("contrast endpoints are differences of the arm scans", {
 
 test_that("contrast se is the root sum of squares", {
   k <- k_ab()
-  ca <- shadow_scan_ci(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y, target = fx$A, lambda = lam)
-  cb <- shadow_scan_ci(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y, target = fx$B, lambda = lam)
+  ca <- sharp_scan_ci(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y, target = fx$A, lambda = lam)
+  cb <- sharp_scan_ci(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y, target = fx$B, lambda = lam)
   expect_equal(k$curve$se_upper, sqrt(ca$curve$se_upper^2 + cb$curve$se_lower^2))
   expect_equal(k$curve$se_lower, sqrt(ca$curve$se_lower^2 + cb$curve$se_upper^2))
   z <- qnorm(0.95)
@@ -48,20 +48,20 @@ test_that("contrast validates targets", {
   expect_error(k_ab(fx$A, fx$A | fx$B), "disjoint")
   expect_error(k_ab(fx$A, rep(FALSE, length(fx$A))), "empty")
   expect_error(k_ab(as.numeric(fx$A), fx$B), "logical")
-  expect_error(shadow_scan_contrast(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y,
+  expect_error(sharp_scan_contrast(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y,
                                     fx$A, fx$B, lambda = c(0.5, 1)), "lambda = 0")
 })
 
 test_that("contrast prints and plots", {
   k <- k_ab()
-  expect_s3_class(k, c("shadow_scan_contrast", "shadow_scan_ci", "shadow_scan"))
+  expect_s3_class(k, c("sharp_scan_contrast", "sharp_scan_ci", "sharp_scan"))
   expect_output(print(k), "difference")
   pdf(NULL); on.exit(dev.off())
   expect_no_error(plot(k))
 })
 
 test_that("contrast needs a grid of at least two lambdas", {
-  expect_error(shadow_scan_contrast(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y,
+  expect_error(sharp_scan_contrast(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y,
                                     fx$A, fx$B, lambda = 0), "at least two")
 })
 
@@ -71,7 +71,7 @@ test_that("contrast labels the warnings of each arm", {
   r[bad] <- 1e-5; eta[bad] <- 0.01
   w <- character()
   withCallingHandlers(
-    shadow_scan_contrast(eta, r, fx$d$observed, fx$d$y, fx$A, fx$B,
+    sharp_scan_contrast(eta, r, fx$d$observed, fx$d$y, fx$A, fx$B,
                          lambda = c(0, 1), labels = c("arm one", "arm two")),
     warning = function(cnd) { w <<- c(w, conditionMessage(cnd)); invokeRestart("muffleWarning") })
   expect_true(any(grepl("^arm one: ", w)))
@@ -81,7 +81,7 @@ test_that("contrast labels the warnings of each arm", {
 test_that("the contrast print names the outer band", {
   d <- simulate_shadow(1500, tilt = -1, seed = 71)
   arm <- d$x1 > 0
-  k <- shadow_scan_contrast(rep(0.3, nrow(d)), rep(0.6, nrow(d)), d$observed, d$y,
+  k <- sharp_scan_contrast(rep(0.3, nrow(d)), rep(0.6, nrow(d)), d$observed, d$y,
                             target_a = arm, target_b = !arm)
   out <- paste(capture.output(print(k)), collapse = "\n")
   expect_match(out, "outer band \\(plug-in\\)")
@@ -90,7 +90,7 @@ test_that("the contrast print names the outer band", {
 
 test_that("the contrast can compare the unobserved rows of two segments", {
   k <- k_ab(among = "unobserved")
-  arm <- function(tg) shadow_scan_ci(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y,
+  arm <- function(tg) sharp_scan_ci(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y,
                                      target = "unobserved", segment = tg, lambda = lam)$curve
   ca <- arm(fx$A); cb <- arm(fx$B)
   expect_equal(k$curve$upper, cummax(ca$upper - cb$lower))

@@ -78,7 +78,7 @@ most \eqn{e^{|b|}}, \eqn{r(x) = c(x)(e^{b} - 1)/b}, and the quantile
 function of \eqn{Y} given \eqn{R = 1, X = x} is \eqn{\mu(x) +
 \Phi^{-1}[\log\{1 + p(e^{b} - 1)\}/b]}, all in closed form. Truth: \code{mu}
 \eqn{= E(Y \mid x)}, \code{mean_obs} \eqn{= E(Y \mid R = 1, x)}, \code{obs_rate};
-\code{\link[=obs_quantiles]{obs_quantiles()}} returns the quantile grid that \code{\link[=shadow_scan_mean]{shadow_scan_mean()}}
+\code{\link[=obs_quantiles]{obs_quantiles()}} returns the quantile grid that \code{\link[=sharp_scan_mean]{sharp_scan_mean()}}
 takes.
 }
 \examples{

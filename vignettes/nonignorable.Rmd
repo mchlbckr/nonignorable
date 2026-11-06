@@ -1,10 +1,10 @@
 ---
-title: "Getting started with shadowscan"
+title: "Getting started with nonignorable"
 output:
   rmarkdown::html_vignette:
     math_method: mathml
 vignette: >
-  %\VignetteIndexEntry{Getting started with shadowscan}
+  %\VignetteIndexEntry{Getting started with nonignorable}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -12,7 +12,7 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
                       fig.height = 4.5, out.width = "100%", dpi = 96)
-library(shadowscan)
+library(nonignorable)
 f2 <- function(v) formatC(v, digits = 2, format = "f")
 f3 <- function(v) formatC(v, digits = 3, format = "f")
 ```
@@ -26,14 +26,14 @@ trial, so their final measurement is never taken. A model fitted to the
 observed rows then answers a question about the observed rows. Carrying its
 answer over to the missing rows assumes the data are missing at random (MAR).
 
-shadowscan asks two separate questions about such data.
+The package asks two separate questions about such data.
 
 1. **Is there a shadow variable?** A shadow variable predicts $Y$ but has no
    effect of its own on whether $Y$ is observed. With one, the missing-data
    mechanism can be identified. `shadow_screen()` reports, for each
    candidate, how strongly it predicts the outcome and how strongly it
    violates that exclusion restriction, on a common scale.
-2. **How far can the answer move?** `shadow_scan()` drops identification and
+2. **How far can the answer move?** `sharp_scan()` drops identification and
    asks how much the conclusion can change if selection on $Y$ has a given
    strength. That strength is a bound $e^\lambda$ on the ratio of the
    response propensities of two rows with the same $X$ and different $Y$:
@@ -107,7 +107,7 @@ Here we take the truth, to separate the logic of the scan from estimation.
 
 ```{r scan}
 rej <- d[d$observed == 0, ]
-s <- shadow_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35)
+s <- sharp_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35)
 s
 plot(s)
 ```
@@ -151,8 +151,8 @@ c(lower = mean(b$lower), upper = mean(b$upper))
 
 ## Sampling error
 
-`shadow_scan()` treats its inputs as known. With estimated inputs, use
-`shadow_scan_ci()`. It needs inputs for all rows, fitted out of fold, and the
+`sharp_scan()` treats its inputs as known. With estimated inputs, use
+`sharp_scan_ci()`. It needs inputs for all rows, fitted out of fold, and the
 observed outcomes. `crossfit_inputs()` produces them for any learner passed
 as a function of a training frame and new rows.
 
@@ -164,7 +164,7 @@ inp <- crossfit_inputs(d, "observed",
   fit_r   = function(train, new) predict(glm(update(f, observed ~ .), binomial, train),
                                          new, type = "response"),
   seed = 1)
-ci <- shadow_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, threshold = 0.35)
+ci <- sharp_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, threshold = 0.35)
 ci
 plot(ci)
 ```
@@ -186,13 +186,13 @@ Two lines of the output deserve attention.
 
 ## Comparing two portfolios
 
-`shadow_scan_contrast()` scans the difference of rates between two
+`sharp_scan_contrast()` scans the difference of rates between two
 portfolios chosen by $X$, such as two treatment arms or two regions. Each
 portfolio is a whole segment of rows, observed and unobserved alike. Its
 threshold is 0, no difference.
 
 ```{r contrast}
-k <- shadow_scan_contrast(inp$eta_obs, inp$r, d$observed, d$y,
+k <- sharp_scan_contrast(inp$eta_obs, inp$r, d$observed, d$y,
                           target_a = d$x1 > 0, target_b = d$x1 <= 0,
                           labels = c("x1 > 0", "x1 <= 0"))
 k
@@ -200,7 +200,7 @@ k
 
 ## A mean instead of a rate
 
-For an outcome that is not binary, `shadow_scan_mean()` takes, per row, a
+For an outcome that is not binary, `sharp_scan_mean()` takes, per row, a
 grid of conditional quantiles of $Y$ given $R = 1$ and $X$. `quantile_grid()`
 builds it from a `quantreg::rq` fit, from any function of the levels, or from
 draws.
@@ -213,19 +213,19 @@ m <- lm(y ~ x1 + x2 + z_shadow + z_policy + z_score, data = obs)
 q <- quantile_grid(function(tau, newdata)
   outer(predict(m, newdata), quantile(residuals(m), tau, names = FALSE), "+"),
   mis, K = 100)
-sm <- shadow_scan_mean(q, mis$obs_rate, threshold = 0.5)
+sm <- sharp_scan_mean(q, mis$obs_rate, threshold = 0.5)
 plot(sm)
 ```
 
-Like `shadow_scan()`, this treats its inputs as known. For a debiased
+Like `sharp_scan()`, this treats its inputs as known. For a debiased
 estimate with a confidence set, for the mean over all rows or a segment
-chosen by $X$, use `shadow_scan_mean_ci()` with inputs from
+chosen by $X$, use `sharp_scan_mean_ci()` with inputs from
 `crossfit_quantiles()`; the applications vignette shows it on the CD4 counts
 of a clinical trial.
 
 ## Further reading
 
-`vignette("applications", package = "shadowscan")` applies the tools to two
+`vignette("applications", package = "nonignorable")` applies the tools to two
 real cases side by side. On Lending Club 2014 the coding of the screen
 matters, and the main finding does not survive MAR once sampling error is
 counted. In the ACTG 175 trial a comparison of treatment arms survives

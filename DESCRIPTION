@@ -1,4 +1,4 @@
-Package: shadowscan
+Package: nonignorable
 Title: Shadow-Variable Screens and Sharp Sensitivity Scans for Nonignorable Missing Outcomes
 Version: 0.1.0
 Authors@R:
@@ -8,19 +8,19 @@ Description: Two tools for an outcome that is missing not at random.
     'shadow_screen()' asks whether a candidate variable can serve as a shadow
     variable, reporting its relevance for the outcome and its violation of the
     exclusion restriction on a common scale (incremental McFadden R-squared).
-    'shadow_scan()' asks how far the answer can move: given the observed-data
+    'sharp_scan()' asks how far the answer can move: given the observed-data
     outcome probability and the conditional observation rate, it returns the
     sharp identified set under a bound on the ratio of response propensities
     between outcome values, in closed form for a binary outcome
-    ('shadow_scan()') and for the mean of any outcome with a finite mean
-    ('shadow_scan_mean()'), pointwise and aggregated over a portfolio. The two tools
+    ('sharp_scan()') and for the mean of any outcome with a finite mean
+    ('sharp_scan_mean()'), pointwise and aggregated over a portfolio. The two tools
     answer different questions under different assumptions and are not two
-    halves of one procedure. 'shadow_scan_ci()' and 'shadow_scan_contrast()'
+    halves of one procedure. 'sharp_scan_ci()' and 'sharp_scan_contrast()'
     add debiased estimates and confidence sets for the binary scan, for one
-    portfolio and for the difference between two; 'shadow_scan_mean_ci()'
+    portfolio and for the difference between two; 'sharp_scan_mean_ci()'
     does the same for the mean.
-URL: https://github.com/mchlbckr/shadowscan
-BugReports: https://github.com/mchlbckr/shadowscan/issues
+URL: https://github.com/mchlbckr/nonignorable
+BugReports: https://github.com/mchlbckr/nonignorable/issues
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.1.0)

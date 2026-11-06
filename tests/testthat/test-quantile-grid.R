@@ -38,6 +38,6 @@ test_that("an rq fit is refitted at the grid and feeds the mean scan", {
   # close to the true observed-data quantiles of the simulator
   qt <- obs_quantiles(dc, K = 40)[dc$observed == 0, ]
   expect_lt(abs(mean(q) - mean(qt)), 0.05)
-  sm <- shadow_scan_mean(q, rej$obs_rate, lambda = c(0, 1))
-  expect_s3_class(sm, "shadow_scan_mean")
+  sm <- sharp_scan_mean(q, rej$obs_rate, lambda = c(0, 1))
+  expect_s3_class(sm, "sharp_scan_mean")
 })

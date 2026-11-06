@@ -1,17 +1,17 @@
 #' Sharp identified set for a mean under a bounded ratio of response propensities
 #'
-#' `shadow_scan_mean()` is the scan of [shadow_scan()] for an outcome that is
+#' `sharp_scan_mean()` is the scan of [sharp_scan()] for an outcome that is
 #' not binary: continuous, count or anything with a finite mean. It answers
 #' the same question -- how far can the answer move if the outcome is missing
 #' not at random -- under literally the same assumption, without restriction
-#' to two outcome values. Like [shadow_scan()] it needs no shadow variable.
+#' to two outcome values. Like [sharp_scan()] it needs no shadow variable.
 #'
 #' @section The assumption:
 #' With \eqn{\pi(y,x) = P(R=1 \mid Y=y, X=x)}, assume pointwise in \eqn{x}
 #' \deqn{\pi(y,x) \le 1, \qquad \sup_y \pi(y,x) \le e^{\lambda}\,\inf_y \pi(y,x).}
 #' \eqn{e^\lambda} bounds the ratio of response propensities between any two
 #' outcome values: a **risk ratio**, not an odds ratio. For binary \eqn{Y} it
-#' is exactly the assumption \eqn{|b(x)| \le \lambda} of [shadow_scan()]. It
+#' is exactly the assumption \eqn{|b(x)| \le \lambda} of [sharp_scan()]. It
 #' is a member of the class of assumptions of Manski (2016, Sect. 4.2), with
 #' the ratio taken between outcomes rather than relative to the response rate.
 #'
@@ -33,7 +33,7 @@
 #' large \eqn{\lambda}; for small \eqn{r} sharp set and outer band coincide.
 #'
 #' For binary \eqn{Y} the formula reduces to the closed form of
-#' [shadow_scan()], the outer band intersected with the bounds of Manski
+#' [sharp_scan()], the outer band intersected with the bounds of Manski
 #' (1989). As \eqn{\lambda \to \infty} the set grows to those bounds,
 #' \eqn{[rm + (1-r)\inf Y,\; rm + (1-r)\sup Y]}, reaching them only in the
 #' limit for a continuous outcome. For every finite \eqn{\lambda} it is
@@ -52,7 +52,7 @@
 #' internally, so crossing quantile curves do no harm. A quantile grid cuts
 #' off the tails: with heavy tails it underestimates \eqn{U(s)} for small
 #' \eqn{s}, and therefore the width of the set. `r` is the *conditional*
-#' observation rate, as in [shadow_scan()].
+#' observation rate, as in [sharp_scan()].
 #'
 #' @section Estimated inputs:
 #' The set is an *identified* set: it is what the data would permit if the
@@ -63,7 +63,7 @@
 #' simulations the plug-in was typically biased towards the inside of the
 #' set. For a debiased estimate
 #' with a confidence set, for the mean over all rows or over a segment chosen
-#' by \eqn{X}, use [shadow_scan_mean_ci()] with inputs from
+#' by \eqn{X}, use [sharp_scan_mean_ci()] with inputs from
 #' [crossfit_quantiles()]. No resampling captures misspecification of the
 #' extrapolation to rows that are rarely observed.
 #'
@@ -82,7 +82,7 @@
 #'
 #' @section Aggregation:
 #' Only the average of the pointwise endpoints (`"union"`, the default of
-#' [shadow_scan()]). Because the assumption is pointwise and both the
+#' [sharp_scan()]). Because the assumption is pointwise and both the
 #' normalisation and the ratio bound separate across \eqn{x}, this is the
 #' sharp set for the portfolio mean. The `"common"` aggregation of the binary
 #' scan has no counterpart here: it fixes one tilt for all rows, which
@@ -101,8 +101,8 @@
 #'   reaches it is found by root finding. Both bounds are monotone in
 #'   \eqn{\lambda}.
 #'
-#' @return An object of class `c("shadow_scan_mean", "shadow_scan")` with the
-#'   same structure as [shadow_scan()]: `curve` (`lambda`, `lower`, `upper`,
+#' @return An object of class `c("sharp_scan_mean", "sharp_scan")` with the
+#'   same structure as [sharp_scan()]: `curve` (`lambda`, `lower`, `upper`,
 #'   and `naive_lower`, `naive_upper` for the outer band without the cap),
 #'   `point`, `threshold`, `flip`. `as.data.frame(x, lambda = )` returns the
 #'   pointwise sets.
@@ -118,18 +118,18 @@
 #' Manski, C. F. (2016). Credible interval estimates for official statistics
 #' with survey nonresponse. *Journal of Econometrics*, 191(2), 293--301.
 #' \doi{10.1016/j.jeconom.2015.12.002}
-#' @seealso [shadow_scan()] for a binary outcome, with the optional
+#' @seealso [sharp_scan()] for a binary outcome, with the optional
 #'   common-tilt aggregation; [obs_quantiles()] for simulated input.
 #' @export
 #' @examples
 #' d <- simulate_shadow(3000, tilt = -1, outcome = "continuous", seed = 1)
 #' q <- obs_quantiles(d, K = 200)
 #' rej <- d$observed == 0
-#' s <- shadow_scan_mean(q[rej, ], d$obs_rate[rej], threshold = 0.5)
+#' s <- sharp_scan_mean(q[rej, ], d$obs_rate[rej], threshold = 0.5)
 #' s
 #' mean(d$mu[rej])     # the truth, inside the set from lambda = 1 on
 #' plot(s)
-shadow_scan_mean <- function(q, r, lambda = seq(0, 2, length.out = 81),
+sharp_scan_mean <- function(q, r, lambda = seq(0, 2, length.out = 81),
                              weights = NULL, threshold = NULL) {
   if (is.null(dim(q))) q <- matrix(q, nrow = 1L)
   q <- as.matrix(q)
@@ -181,7 +181,7 @@ shadow_scan_mean <- function(q, r, lambda = seq(0, 2, length.out = 81),
     curve = out, point = point, threshold = threshold, flip = flip,
     aggregate = "union", binding = NULL,
     q = q, r = r, weights = weights, n = nrow(q)
-  ), class = c("shadow_scan_mean", "shadow_scan"))
+  ), class = c("sharp_scan_mean", "sharp_scan"))
 }
 
 # Sort each row once; both sides and every lambda reuse it.
@@ -228,7 +228,7 @@ mean_bounds <- function(prep, r, lam, cap = TRUE) {
 }
 
 #' @export
-as.data.frame.shadow_scan_mean <- function(x, row.names = NULL,
+as.data.frame.sharp_scan_mean <- function(x, row.names = NULL,
                                            optional = FALSE, ...,
                                            lambda = NULL) {
   if (is.null(lambda)) return(x$curve)

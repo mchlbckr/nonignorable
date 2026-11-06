@@ -29,5 +29,5 @@ f <- ~ x1 + x2 + z_shadow + z_policy + z_score
 m_eta <- glm(update(f, y ~ .), binomial, data = d[d$observed == 1, ])
 m_r <- glm(update(f, observed ~ .), binomial, data = d)
 inp <- scan_inputs(m_eta, m_r, d[d$observed == 0, ])
-shadow_scan(inp$eta_obs, inp$r)
+sharp_scan(inp$eta_obs, inp$r)
 }

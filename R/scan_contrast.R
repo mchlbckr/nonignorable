@@ -1,8 +1,8 @@
 #' Debiased scan for the difference between two portfolios
 #'
-#' `shadow_scan_contrast()` compares two disjoint portfolios chosen by
+#' `sharp_scan_contrast()` compares two disjoint portfolios chosen by
 #' \eqn{X} -- treatment arms of a trial, or two segments such as two regions --
-#' under the same assumption as [shadow_scan()]: in every row the ratio of the
+#' under the same assumption as [sharp_scan()]: in every row the ratio of the
 #' response propensities is at most \eqn{e^\lambda}. It answers the question
 #' a comparison is run for: up to which strength of selection does the
 #' finding "A differs from B" survive?
@@ -11,7 +11,7 @@
 #' portfolios may sit at opposite ends at once, and the sharp set for the
 #' difference of rates \eqn{A - B} is
 #' \eqn{[\mathrm{lower}_A - \mathrm{upper}_B,\ \mathrm{upper}_A - \mathrm{lower}_B]}.
-#' Each endpoint is estimated by [shadow_scan_ci()]. Because the two targets
+#' Each endpoint is estimated by [sharp_scan_ci()]. Because the two targets
 #' are disjoint, the influence functions of the two endpoints are non-zero on
 #' different rows and have mean zero, so they are uncorrelated and the
 #' standard error of the difference is the root of the sum of the squared
@@ -25,7 +25,7 @@
 #' linear interpolation on the `lambda` grid, so a fine grid gives a precise
 #' flip.
 #'
-#' @inheritParams shadow_scan_ci
+#' @inheritParams sharp_scan_ci
 #' @param target_a,target_b Logical vectors, one per row, selecting the two
 #'   portfolios by \eqn{X}. They must be disjoint and non-empty.
 #' @param lambda Grid of \eqn{\lambda} values; must include 0.
@@ -34,14 +34,14 @@
 #' @param among `"all"` (default): each target is a whole segment, observed
 #'   and unobserved rows alike. `"unobserved"`: only the unobserved rows of
 #'   each segment, such as the rejected applications of two regions; see the
-#'   `segment` argument of [shadow_scan_ci()]. The targets stay disjoint, so
+#'   `segment` argument of [sharp_scan_ci()]. The targets stay disjoint, so
 #'   the standard errors still add in squares.
 #' @return An object of class
-#'   `c("shadow_scan_contrast", "shadow_scan_ci", "shadow_scan")` whose
-#'   `curve` has the columns of [shadow_scan_ci()] for the difference
+#'   `c("sharp_scan_contrast", "sharp_scan_ci", "sharp_scan")` whose
+#'   `curve` has the columns of [sharp_scan_ci()] for the difference
 #'   \eqn{A - B}, with `point` the difference at \eqn{\lambda = 0} and `flip`
 #'   the flip points of the set, the outer band and the confidence set.
-#' @seealso [shadow_scan_ci()]
+#' @seealso [sharp_scan_ci()]
 #' @export
 #' @examples
 #' d <- simulate_shadow(3000, tilt = -1, seed = 3)
@@ -52,12 +52,12 @@
 #'   fit_r   = function(train, new) predict(glm(update(f, observed ~ .), binomial, train),
 #'                                          new, type = "response"),
 #'   seed = 1)
-#' k <- shadow_scan_contrast(inp$eta_obs, inp$r, d$observed, d$y,
+#' k <- sharp_scan_contrast(inp$eta_obs, inp$r, d$observed, d$y,
 #'                           target_a = d$x1 > 0, target_b = d$x1 <= 0,
 #'                           labels = c("x1 > 0", "x1 <= 0"))
 #' k
 #' plot(k)
-shadow_scan_contrast <- function(eta_obs, r, response, outcome,
+sharp_scan_contrast <- function(eta_obs, r, response, outcome,
                                  target_a, target_b,
                                  lambda = seq(0, 2, length.out = 81),
                                  weights = NULL, threshold = 0, level = 0.9,
@@ -73,11 +73,11 @@ shadow_scan_contrast <- function(eta_obs, r, response, outcome,
     stop("`threshold` must be a single number in (-1, 1).", call. = FALSE)
   arm <- function(tg, label) relabel_warnings(label,
     if (among == "all")
-      shadow_scan_ci(eta_obs, r, response, outcome, target = tg,
+      sharp_scan_ci(eta_obs, r, response, outcome, target = tg,
                      lambda = lambda, weights = weights,
                      level = level, trim = trim, se_type = se_type)
     else
-      shadow_scan_ci(eta_obs, r, response, outcome, target = "unobserved",
+      sharp_scan_ci(eta_obs, r, response, outcome, target = "unobserved",
                      segment = tg, lambda = lambda, weights = weights,
                      level = level, trim = trim, se_type = se_type))
   a <- arm(target_a, labels[1]); b <- arm(target_b, labels[2])
@@ -89,38 +89,38 @@ shadow_scan_contrast <- function(eta_obs, r, response, outcome,
 
 #' Debiased scan for the difference of two portfolio means
 #'
-#' `shadow_scan_mean_contrast()` is [shadow_scan_contrast()] for an outcome
+#' `sharp_scan_mean_contrast()` is [sharp_scan_contrast()] for an outcome
 #' that is not binary: it compares the means of two disjoint portfolios chosen
-#' by \eqn{X} under the assumption of [shadow_scan_mean()], with each
-#' endpoint estimated by [shadow_scan_mean_ci()]. The sharp set for
+#' by \eqn{X} under the assumption of [sharp_scan_mean()], with each
+#' endpoint estimated by [sharp_scan_mean_ci()]. The sharp set for
 #' \eqn{A - B} is \eqn{[\mathrm{lower}_A - \mathrm{upper}_B,\
 #' \mathrm{upper}_A - \mathrm{lower}_B]}; because the targets are disjoint,
 #' the standard error of each endpoint is the root of the sum of the squared
 #' standard errors of the arms. Each target is a whole segment of rows,
 #' observed and unobserved alike.
 #'
-#' @inheritParams shadow_scan_mean_ci
+#' @inheritParams sharp_scan_mean_ci
 #' @param target_a,target_b Logical vectors, one per row, selecting the two
 #'   portfolios by \eqn{X}. They must be disjoint and non-empty.
 #' @param lambda Grid of \eqn{\lambda} values; must include 0.
 #' @param threshold The difference at which the decision changes. Default 0.
 #' @param labels Names of the two portfolios, for printing and plotting.
 #' @return An object of class
-#'   `c("shadow_scan_contrast", "shadow_scan_ci", "shadow_scan")` as from
-#'   [shadow_scan_contrast()], with `of_means = TRUE`.
-#' @seealso [shadow_scan_contrast()], [shadow_scan_mean_ci()],
+#'   `c("sharp_scan_contrast", "sharp_scan_ci", "sharp_scan")` as from
+#'   [sharp_scan_contrast()], with `of_means = TRUE`.
+#' @seealso [sharp_scan_contrast()], [sharp_scan_mean_ci()],
 #'   [crossfit_quantiles()]
 #' @export
 #' @examples
 #' d <- simulate_shadow(3000, tilt = -1, outcome = "continuous", seed = 3)
 #' q <- obs_quantiles(d, K = 50)   # the true quantile grids of the simulation
-#' k <- shadow_scan_mean_contrast(q, d$obs_rate, d$observed, d$y,
+#' k <- sharp_scan_mean_contrast(q, d$obs_rate, d$observed, d$y,
 #'                                target_a = d$x1 > 0, target_b = d$x1 <= 0,
 #'                                lambda = seq(0, 2, length.out = 21),
 #'                                labels = c("x1 > 0", "x1 <= 0"))
 #' k
 #' plot(k)
-shadow_scan_mean_contrast <- function(q, r, response, outcome, target_a, target_b,
+sharp_scan_mean_contrast <- function(q, r, response, outcome, target_a, target_b,
                                       lambda = seq(0, 2, length.out = 81),
                                       weights = NULL, threshold = 0, level = 0.9,
                                       trim = 0, r_bounds = c(0.01, 0.99),
@@ -130,7 +130,7 @@ shadow_scan_mean_contrast <- function(q, r, response, outcome, target_a, target_
   if (!is.numeric(threshold) || length(threshold) != 1L || !is.finite(threshold))
     stop("`threshold` must be a single finite number.", call. = FALSE)
   arm <- function(tg, label) relabel_warnings(label,
-    shadow_scan_mean_ci(q, r, response, outcome, target = tg, lambda = lambda,
+    sharp_scan_mean_ci(q, r, response, outcome, target = tg, lambda = lambda,
                         weights = weights, level = level, trim = trim,
                         r_bounds = r_bounds))
   a <- arm(target_a, labels[1]); b <- arm(target_b, labels[2])
@@ -196,14 +196,14 @@ contrast_from_arms <- function(a, b, threshold, level, labels, n, range) {
              observed = a$tail[["observed"]],
              min_r_observed = a$tail[["min_r_observed"]]),
     arms = list(a = a$curve, b = b$curve)
-  ), class = c("shadow_scan_contrast", "shadow_scan_ci", "shadow_scan"))
+  ), class = c("sharp_scan_contrast", "sharp_scan_ci", "sharp_scan"))
 }
 
 #' @export
-print.shadow_scan_contrast <- function(x, digits = 3, ...) {
+print.sharp_scan_contrast <- function(x, digits = 3, ...) {
   cv <- x$curve; last <- nrow(cv); i0 <- which(cv$lambda == 0)
   f <- function(v) format(v, digits = digits)
-  cat(sprintf("<shadow_scan_contrast> difference of %s %s - %s, debiased, with %g%% confidence set\n",
+  cat(sprintf("<sharp_scan_contrast> difference of %s %s - %s, debiased, with %g%% confidence set\n",
               if (isTRUE(x$of_means)) "means" else "rates",
               x$labels[1], x$labels[2], 100 * x$level))
   cat(sprintf("  rows: %d   %s: %d %srows   %s: %d %srows\n", x$n, x$labels[1], x$n_a,

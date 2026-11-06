@@ -2,7 +2,7 @@ scan_colors <- c(sharp = "#2a78d6", naive = "#eb6834")
 
 #' Sensitivity curve of a scan
 #'
-#' Plots the portfolio rate (or mean, for [shadow_scan_mean()]) against
+#' Plots the portfolio rate (or mean, for [sharp_scan_mean()]) against
 #' selection strength: the sharp identified set as a filled band with solid
 #' edges, the outer band, the bounds without the cap \eqn{\pi \le 1} (for a
 #' rate \eqn{\mathrm{expit}(\ell \pm \lambda)}), dashed and lighter, the point that a
@@ -12,15 +12,15 @@ scan_colors <- c(sharp = "#2a78d6", naive = "#eb6834")
 #' shows at which strength of selection the decision flips.
 #'
 #' Where \eqn{\hat r} is small, as for rejected applications, the upper edge of
-#' the sharp set coincides with the outer one; see [shadow_scan()].
+#' the sharp set coincides with the outer one; see [sharp_scan()].
 #'
 #' The legend goes into the first corner, from top left, that no curve, band
 #' or annotation touches; if none is free, the vertical axis is extended
 #' upwards to make room. Where the cap \eqn{\pi \le 1} binds in every target
 #' row from some \eqn{\lambda} on, that edge of the set stays flat from there,
-#' and the legend says from where (see `held` in [shadow_scan()]).
+#' and the legend says from where (see `held` in [sharp_scan()]).
 #'
-#' @param x A `"shadow_scan"` or `"shadow_scan_mean"` object.
+#' @param x A `"sharp_scan"` or `"sharp_scan_mean"` object.
 #' @param scale `"ratio"` (default) puts \eqn{e^\lambda}, the largest
 #'   admissible ratio of response propensities, on the horizontal axis,
 #'   starting at 1; `"log"` puts \eqn{\lambda}.
@@ -36,16 +36,16 @@ scan_colors <- c(sharp = "#2a78d6", naive = "#eb6834")
 #' @examples
 #' d <- simulate_shadow(5000, tilt = -1, seed = 1)
 #' rej <- d[d$observed == 0, ]
-#' plot(shadow_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35))
-plot.shadow_scan <- function(x, scale = c("ratio", "log"),
+#' plot(sharp_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35))
+plot.sharp_scan <- function(x, scale = c("ratio", "log"),
                              colors = scan_colors, text_col = "grey20",
                              xlab = NULL, ylab = NULL, main = NULL,
                              ...) {
   scale <- match.arg(scale)
   cv <- x$curve
-  is_mean <- inherits(x, "shadow_scan_mean")
-  is_contrast <- inherits(x, "shadow_scan_contrast")
-  is_ci <- inherits(x, "shadow_scan_ci") || inherits(x, "shadow_scan_mean_ci") || is_contrast
+  is_mean <- inherits(x, "sharp_scan_mean")
+  is_contrast <- inherits(x, "sharp_scan_contrast")
+  is_ci <- inherits(x, "sharp_scan_ci") || inherits(x, "sharp_scan_mean_ci") || is_contrast
   if (is.null(ylab)) ylab <- if (is_mean) "Portfolio mean"
     else if (is_contrast) sprintf("Difference of %s, %s - %s",
                                   if (isTRUE(x$of_means)) "means" else "rates",

@@ -34,17 +34,17 @@ mean_score <- function(side, m, r, Y, R, lam) {
 
 #' Debiased scan for the mean of a non-binary outcome, with a confidence set
 #'
-#' `shadow_scan_mean_ci()` estimates the sharp identified set of
-#' [shadow_scan_mean()] -- the mean of an outcome that may be missing not at
+#' `sharp_scan_mean_ci()` estimates the sharp identified set of
+#' [sharp_scan_mean()] -- the mean of an outcome that may be missing not at
 #' random, when the ratio of the response propensities of any two outcome
 #' values is at most \eqn{e^\lambda} -- with a debiased estimator and a
-#' confidence set. It is the counterpart of [shadow_scan_ci()] for an outcome
+#' confidence set. It is the counterpart of [sharp_scan_ci()] for an outcome
 #' that is not binary.
 #'
 #' @section The estimator:
 #' Each endpoint of the set is a mean over rows of \eqn{\mu^\pm(x)}, which
 #' depends on \eqn{r(x)} and on the quantile function of \eqn{Y} given
-#' \eqn{R = 1, X = x}. The plug-in, [shadow_scan_mean()], inherits the
+#' \eqn{R = 1, X = x}. The plug-in, [sharp_scan_mean()], inherits the
 #' first-order error of both estimates; in simulations it was typically biased
 #' towards the inside of the set. The estimator here adds to each row a correction term that
 #' removes that first-order error: an inverse-probability weighted residual
@@ -57,7 +57,7 @@ mean_score <- function(side, m, r, Y, R, lam) {
 #' the Wald interval from the empirical standard deviation of the score.
 #'
 #' The quantiles enter as a grid of \eqn{K} levels \eqn{(k - 1/2)/K}, as in
-#' [shadow_scan_mean()]. An estimator that uses the full empirical
+#' [sharp_scan_mean()]. An estimator that uses the full empirical
 #' distribution of residuals instead differs from this one by
 #' \eqn{O(1/K)}.
 #'
@@ -114,18 +114,18 @@ mean_score <- function(side, m, r, Y, R, lam) {
 #'   \eqn{\pi \le 1} for rows that are almost always observed, clipping at the
 #'   bottom limits inverse weights.
 #' @return An object of class
-#'   `c("shadow_scan_mean_ci", "shadow_scan_ci", "shadow_scan_mean",
-#'   "shadow_scan")` with `curve` (columns `lambda`, `lower`, `upper`,
+#'   `c("sharp_scan_mean_ci", "sharp_scan_ci", "sharp_scan_mean",
+#'   "sharp_scan")` with `curve` (columns `lambda`, `lower`, `upper`,
 #'   `se_lower`, `se_upper`, `ci_lower`, `ci_upper`, `naive_lower`,
 #'   `naive_upper`; the naive columns are the plug-in outer band), `point`
 #'   (the estimate at \eqn{\lambda = 0}), `flip` (`sharp`, `ci`, `naive`),
 #'   `trimmed`, `clipped`, `capped` (the weighted share of target rows in
 #'   which the cap \eqn{\pi \le 1} binds at the largest \eqn{\lambda}, per
 #'   bound), `tail`, `n` and `n_target`. Estimates and confidence set are kept
-#'   monotone in \eqn{\lambda}, as in [shadow_scan_ci()]. `as.data.frame(x,
+#'   monotone in \eqn{\lambda}, as in [sharp_scan_ci()]. `as.data.frame(x,
 #'   lambda = )` gives the plug-in bounds per row, with \eqn{\hat r} clipped
 #'   into `r_bounds`; they carry no correction and no confidence statement.
-#' @seealso [shadow_scan_mean()], [crossfit_quantiles()], [shadow_scan_ci()]
+#' @seealso [sharp_scan_mean()], [crossfit_quantiles()], [sharp_scan_ci()]
 #' @export
 #' @examples
 #' d <- simulate_shadow(1000, tilt = -1, outcome = "continuous", seed = 4)
@@ -148,11 +148,11 @@ mean_score <- function(side, m, r, Y, R, lam) {
 #'   }
 #'   cf <- crossfit_quantiles(d, "observed", fit_q, fit_r, K = 100, folds = 3,
 #'                            seed = 1)
-#'   k <- shadow_scan_mean_ci(cf$q, cf$r, d$observed, d$y, threshold = 0.5)
+#'   k <- sharp_scan_mean_ci(cf$q, cf$r, d$observed, d$y, threshold = 0.5)
 #'   print(k)
 #'   plot(k)
 #' }
-shadow_scan_mean_ci <- function(q, r, response, outcome, target = "all",
+sharp_scan_mean_ci <- function(q, r, response, outcome, target = "all",
                                 lambda = seq(0, 2, length.out = 81),
                                 weights = NULL, threshold = NULL, level = 0.9,
                                 trim = 0, r_bounds = c(0.01, 0.99)) {
@@ -174,7 +174,7 @@ shadow_scan_mean_ci <- function(q, r, response, outcome, target = "all",
     stop("`outcome` must have one value per row.", call. = FALSE)
   if (!is.numeric(outcome))
     stop("`outcome` must be numeric. Convert a logical or factor outcome to ",
-         "numbers first; for a binary outcome, shadow_scan_ci() is the direct ",
+         "numbers first; for a binary outcome, sharp_scan_ci() is the direct ",
          "route.", call. = FALSE)
   R <- response
   if (!any(R == 1)) stop("No observed rows.", call. = FALSE)
@@ -206,7 +206,7 @@ shadow_scan_mean_ci <- function(q, r, response, outcome, target = "all",
     if (!identical(target, "all"))
       stop("Only target = \"all\" or a logical vector chosen by X is covered; ",
            "the mean over the unobserved rows alone is not covered by this ",
-           "theory. See ?shadow_scan_mean_ci.", call. = FALSE)
+           "theory. See ?sharp_scan_mean_ci.", call. = FALSE)
     s <- rep(1, n); target_label <- "all"
   } else {
     if (!is.logical(target) || length(target) != n || anyNA(target))
@@ -306,15 +306,15 @@ shadow_scan_mean_ci <- function(q, r, response, outcome, target = "all",
     n = n, n_target = sum(s > 0),
     # for per-row plug-in bounds via as.data.frame(x, lambda = )
     q = q, r = rc, weights = weights
-  ), class = c("shadow_scan_mean_ci", "shadow_scan_ci", "shadow_scan_mean",
-               "shadow_scan"))
+  ), class = c("sharp_scan_mean_ci", "sharp_scan_ci", "sharp_scan_mean",
+               "sharp_scan"))
 }
 
 #' @export
-print.shadow_scan_mean_ci <- function(x, digits = 3, ...) {
+print.sharp_scan_mean_ci <- function(x, digits = 3, ...) {
   cv <- x$curve; last <- nrow(cv)
   f <- function(v) format(v, digits = digits)
-  cat(sprintf("<shadow_scan_mean_ci> sharp set for a mean, debiased, with %g%% confidence set\n",
+  cat(sprintf("<sharp_scan_mean_ci> sharp set for a mean, debiased, with %g%% confidence set\n",
               100 * x$level))
   cat(sprintf("  rows: %d   target: %s (%d rows)\n", x$n, x$target, x$n_target))
   if (x$trim > 0)

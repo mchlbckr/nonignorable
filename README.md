@@ -1,14 +1,14 @@
-# shadowscan
+# nonignorable
 
 If a binary outcome is missing not at random, as defaults are for rejected
 credit applications, every model fitted on the observed rows silently asserts
 *one* value for how observability depends on the outcome. Nothing in the data
-selects it. `shadowscan` provides two tools for two different questions:
+selects it. `nonignorable` provides two tools for two different questions:
 
 - **`shadow_screen()`**: *is this variable fit to serve as a shadow variable?*
   It puts relevance for the outcome against violation of the exclusion
   restriction, both as incremental McFadden R², on one scale.
-- **`shadow_scan()`** and **`shadow_scan_mean()`**: *how far can the answer
+- **`sharp_scan()`** and **`sharp_scan_mean()`**: *how far can the answer
   move?* They return the sharp identified set under a bound e^λ on the ratio
   of response propensities between outcome values (a risk ratio, not an odds
   ratio), with no shadow variable needed. The first handles a binary outcome
@@ -22,7 +22,7 @@ procedure.
 
 ```r
 # install.packages("remotes")
-remotes::install_github("mchlbckr/shadowscan")
+remotes::install_github("mchlbckr/nonignorable")
 ```
 
 ## The scan
@@ -36,10 +36,10 @@ $$\mathcal H_\lambda(x) = \big[\max\{\mathrm{expit}(\ell-\lambda),\, r\eta_{\mat
 the outer band intersected with the worst-case bounds.
 
 ```r
-library(shadowscan)
+library(nonignorable)
 d   <- simulate_shadow(5000, tilt = -1, seed = 1)
 rej <- d[d$observed == 0, ]
-s   <- shadow_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35)
+s   <- sharp_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35)
 s
 plot(s)
 ```
@@ -56,7 +56,7 @@ it inherits their estimation error. The help page explains how to read it.
 
 ## Sampling error
 
-`shadow_scan()` treats its inputs as known. `shadow_scan_ci()` adds a
+`sharp_scan()` treats its inputs as known. `sharp_scan_ci()` adds a
 confidence set for the binary scan, after Semenova (2025): the binding piece
 of each row is chosen from models fitted without it, and an orthogonal signal
 of that piece is averaged instead of its plug-in value, which is biased
@@ -72,7 +72,7 @@ inp <- crossfit_inputs(d, "observed",
   fit_r   = function(train, new) predict(glm(update(f, observed ~ .), binomial, train),
                                          new, type = "response"),
   seed = 1)
-ci  <- shadow_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, target = "unobserved",
+ci  <- sharp_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, target = "unobserved",
                       threshold = 0.35)
 plot(ci)
 ```
@@ -80,32 +80,32 @@ plot(ci)
 ![Sensitivity curve with confidence set](man/figures/scan_ci.png)
 
 The confidence set covers the identified set, pointwise in λ.
-`shadow_scan_mean_ci()` does the same for the mean of a non-binary outcome,
+`sharp_scan_mean_ci()` does the same for the mean of a non-binary outcome,
 with quantile grids cross-fitted by `crossfit_quantiles()`.
 
 To compare two portfolios chosen by X, such as the arms of a trial,
-`shadow_scan_contrast()` gives the sharp set for the difference of their rates
+`sharp_scan_contrast()` gives the sharp set for the difference of their rates
 with a confidence set. It also reports the selection strength from which "no
-difference" can no longer be ruled out. `shadow_scan_mean_contrast()` does the
+difference" can no longer be ruled out. `sharp_scan_mean_contrast()` does the
 same for the difference of two means.
 
 ```r
-k <- shadow_scan_contrast(inp$eta_obs, inp$r, d$observed, d$y,
+k <- sharp_scan_contrast(inp$eta_obs, inp$r, d$observed, d$y,
                           target_a = d$x1 > 0, target_b = d$x1 <= 0)
 ```
 
 ## The scan for a mean
 
-For an outcome that is not binary, `shadow_scan_mean()` takes, per row, a grid
+For an outcome that is not binary, `sharp_scan_mean()` takes, per row, a grid
 of conditional quantiles of Y given R = 1 and X, together with r̂(x). It
 returns the sharp set for the mean under the same assumption. Binary input
-reproduces `shadow_scan()` exactly.
+reproduces `sharp_scan()` exactly.
 
 ```r
 dc  <- simulate_shadow(3000, tilt = -1, outcome = "continuous", seed = 1)
 q   <- obs_quantiles(dc, K = 200)       # n x K, levels (k - 1/2)/K
 rej <- dc$observed == 0
-sm  <- shadow_scan_mean(q[rej, ], dc$obs_rate[rej], threshold = 0.5)
+sm  <- sharp_scan_mean(q[rej, ], dc$obs_rate[rej], threshold = 0.5)
 plot(sm)
 ```
 
@@ -155,11 +155,11 @@ known cut-offs or other class counts and pass factors.
 
 ## Vignettes
 
-- `vignette("shadowscan")`: the tools on simulated data with a known truth,
+- `vignette("nonignorable")`: the tools on simulated data with a known truth,
   and how to read their output.
 - `vignette("applications")`: reject inference on Lending Club 2014 and
   dropout in the ACTG 175 trial, side by side, including a comparison of
-  treatment arms with `shadow_scan_contrast()`.
+  treatment arms with `sharp_scan_contrast()`.
 
 ## Scope
 
@@ -169,8 +169,8 @@ distribution. The screen takes a binary outcome directly, a numeric one
 through an ordinal model on classes and a categorical one through an ordinal
 or multinomial model; it measures relevance and does not
 certify identification. Covariates, learners and sample size are
-unrestricted. The package fits neither η_obs nor r: `shadow_scan()` and
-`shadow_scan_mean()` treat them as known, and the `_ci` functions take
+unrestricted. The package fits neither η_obs nor r: `sharp_scan()` and
+`sharp_scan_mean()` treat them as known, and the `_ci` functions take
 cross-fitted predictions from your own learner. It ships no outside data:
 examples and tests run on `simulate_shadow()`.
 

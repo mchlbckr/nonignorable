@@ -1,6 +1,6 @@
-#' shadowscan: screens and sharp scans for nonignorable binary outcomes
+#' nonignorable: shadow-variable screens and sharp sensitivity scans
 #'
-#' If a binary outcome is missing not at random, every model fitted on the
+#' If an outcome is missing not at random, every model fitted on the
 #' observed rows silently asserts *one* value for how observability depends on
 #' the outcome: none. Nothing in the data selects that value. The package
 #' offers two tools for two different questions.
@@ -8,7 +8,7 @@
 #' * [shadow_screen()]: *is this variable fit to serve as a shadow variable?*
 #'   Relevance for the outcome against violation of the exclusion restriction,
 #'   on one scale. This belongs to a point-identified shadow-variable model.
-#' * [shadow_scan()] and [shadow_scan_mean()]: *how far can the answer move?*
+#' * [sharp_scan()] and [sharp_scan_mean()]: *how far can the answer move?*
 #'   The sharp identified set under a bound on the ratio of response
 #'   propensities between outcome values, with no shadow variable at all; for
 #'   a binary outcome and for the mean of any outcome.

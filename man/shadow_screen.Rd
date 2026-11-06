@@ -77,7 +77,7 @@ number \code{requested} and the number of \code{distinct} observed values.
 \strong{shadow variable} for an outcome \eqn{Y} that is missing not at
 random, binary, categorical or numeric: relevant for \eqn{Y} given \eqn{X}, and excluded from the response
 model given \eqn{X} and \eqn{Y}. It is a different tool from
-\code{\link[=shadow_scan]{shadow_scan()}}: the screen presupposes a shadow-variable model that
+\code{\link[=sharp_scan]{sharp_scan()}}: the screen presupposes a shadow-variable model that
 point-identifies the selection parameter; the scan needs no shadow variable
 and returns an identified set. Do not read the two as one procedure.
 }

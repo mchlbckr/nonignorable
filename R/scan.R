@@ -1,6 +1,6 @@
 #' Sharp identified set for a binary outcome under a bounded ratio of response propensities
 #'
-#' `shadow_scan()` answers *how far the answer can move* if the outcome is
+#' `sharp_scan()` answers *how far the answer can move* if the outcome is
 #' missing not at random. It assumes nothing but a bound \eqn{|b(x)| \le
 #' \lambda} on the log ratio of the response propensities of the two outcome
 #' values and needs **no shadow variable**. It is a different tool from [shadow_screen()], which asks
@@ -22,7 +22,7 @@
 #' \eqn{\Lambda} of the marginal sensitivity model. The assumption is a member
 #' of the class of Manski (2016, Sect. 4.2), with the ratio taken between
 #' outcome values rather than relative to the response rate; for a
-#' non-binary outcome see [shadow_scan_mean()]. With \eqn{\ell = \mathrm{logit}\,
+#' non-binary outcome see [sharp_scan_mean()]. With \eqn{\ell = \mathrm{logit}\,
 #' \eta_{\mathrm{obs}}} and \eqn{\eta_t = \mathrm{expit}(\ell - t)}, the
 #' identified set is
 #' \deqn{\mathcal H_\lambda(x) = \{\eta_t : |t| \le \lambda,\; c_t \in (0,1],\;
@@ -70,7 +70,7 @@
 #' \eqn{\hat\eta_{\mathrm{obs}}} and \eqn{\hat r} as if they were the truth.
 #' Their estimation error is **not** included, so the reported set is
 #' narrower than an honest statement about the population would be. For a
-#' confidence set use [shadow_scan_ci()], which needs cross-fitted inputs for
+#' confidence set use [sharp_scan_ci()], which needs cross-fitted inputs for
 #' all rows and the observed outcomes. Inference for such sets is not routine: the
 #' endpoints are maxima and minima of estimated quantities, where the usual
 #' bootstrap can fail; a flexible learner needs more than a naive plug-in;
@@ -122,7 +122,7 @@
 #'   given, the smallest \eqn{\lambda} at which the sharp set (and the outer
 #'   band) reaches it is computed exactly, by root finding on the closed form.
 #'
-#' @return An object of class `"shadow_scan"`, a list with
+#' @return An object of class `"sharp_scan"`, a list with
 #'   * `curve`: data frame with `lambda`, `lower`, `upper` (sharp set of the
 #'     portfolio rate) and `naive_lower`, `naive_upper`;
 #'   * `point`: the portfolio rate at \eqn{\lambda = 0};
@@ -159,19 +159,19 @@
 #' Vansteelandt, S., Goetghebeur, E., Kenward, M. G. and Molenberghs, G.
 #' (2006). Ignorance and uncertainty regions as inferential tools in a
 #' sensitivity analysis. *Statistica Sinica*, 16(3), 953--979.
-#' @seealso [plot.shadow_scan()], [shadow_scan_mean()] for a non-binary
+#' @seealso [plot.sharp_scan()], [sharp_scan_mean()] for a non-binary
 #'   outcome, [shadow_screen()] for the other question.
 #' @export
 #' @examples
 #' d <- simulate_shadow(5000, tilt = -1, seed = 1)
 #' rej <- d[d$observed == 0, ]
-#' s <- shadow_scan(rej$eta_obs, rej$obs_rate, lambda = seq(0, 2, by = 0.05),
+#' s <- sharp_scan(rej$eta_obs, rej$obs_rate, lambda = seq(0, 2, by = 0.05),
 #'                  threshold = 0.35)
 #' s
 #' mean(rej$eta)            # the truth, inside the set at lambda = 1
 #' plot(s)
 #' head(as.data.frame(s, lambda = 1))
-shadow_scan <- function(eta_obs, r, lambda = seq(0, 2, length.out = 81),
+sharp_scan <- function(eta_obs, r, lambda = seq(0, 2, length.out = 81),
                         aggregate = c("union", "common"), weights = NULL,
                         threshold = NULL) {
   aggregate <- match.arg(aggregate)
@@ -257,7 +257,7 @@ shadow_scan <- function(eta_obs, r, lambda = seq(0, 2, length.out = 81),
     aggregate = aggregate, held = cap$held, capped = cap$capped,
     binding = if (aggregate == "common") binding else NULL,
     eta_obs = eta_obs, r = r, weights = weights, n = length(eta_obs)
-  ), class = "shadow_scan")
+  ), class = "sharp_scan")
 }
 
 # Where the cap pi <= 1 binds. Row i's lower bound is r * eta_obs, not the
@@ -294,7 +294,7 @@ cap_lines <- function(x, digits = 3) {
 
 #' Pointwise sharp bounds
 #'
-#' Internal workhorse, exposed through `as.data.frame.shadow_scan()`.
+#' Internal workhorse, exposed through `as.data.frame.sharp_scan()`.
 #' @noRd
 sharp_bounds <- function(eta_obs, r, lambda) {
   ell <- stats::qlogis(eta_obs)
@@ -358,14 +358,14 @@ check_weights <- function(weights, n) {
 
 wmean <- function(x, w) if (is.null(w)) mean(x) else sum(w * x) / sum(w)
 
-#' @rdname shadow_scan
-#' @param x A `"shadow_scan"` object.
+#' @rdname sharp_scan
+#' @param x A `"sharp_scan"` object.
 #' @param row.names,optional Ignored.
 #' @param ... Ignored.
 #' @return `as.data.frame()`: the portfolio curve, or, if `lambda` is a single
 #'   value, the pointwise sharp set and outer band for every row.
 #' @export
-as.data.frame.shadow_scan <- function(x, row.names = NULL, optional = FALSE,
+as.data.frame.sharp_scan <- function(x, row.names = NULL, optional = FALSE,
                                       ..., lambda = NULL) {
   if (is.null(lambda)) return(x$curve)
   if (!is.numeric(lambda) || length(lambda) != 1L || !is.finite(lambda) ||
@@ -375,12 +375,12 @@ as.data.frame.shadow_scan <- function(x, row.names = NULL, optional = FALSE,
 }
 
 #' @export
-print.shadow_scan <- function(x, digits = 3, ...) {
+print.sharp_scan <- function(x, digits = 3, ...) {
   cv <- x$curve
   last <- nrow(cv)
-  is_mean <- inherits(x, "shadow_scan_mean")
-  cat(if (is_mean) "<shadow_scan_mean> sharp identified set for a mean"
-      else "<shadow_scan> sharp identified set for a rate",
+  is_mean <- inherits(x, "sharp_scan_mean")
+  cat(if (is_mean) "<sharp_scan_mean> sharp identified set for a mean"
+      else "<sharp_scan> sharp identified set for a rate",
       "under a propensity ratio <= exp(lambda)\n")
   outer <- "outer"
   cat("  rows:", x$n, "  aggregation:", x$aggregate, "\n")
@@ -424,7 +424,7 @@ print.shadow_scan <- function(x, digits = 3, ...) {
 #' m_eta <- glm(update(f, y ~ .), binomial, data = d[d$observed == 1, ])
 #' m_r <- glm(update(f, observed ~ .), binomial, data = d)
 #' inp <- scan_inputs(m_eta, m_r, d[d$observed == 0, ])
-#' shadow_scan(inp$eta_obs, inp$r)
+#' sharp_scan(inp$eta_obs, inp$r)
 scan_inputs <- function(eta_model, r_model, newdata) {
   list(eta_obs = response_prob(eta_model, newdata),
        r = response_prob(r_model, newdata))
