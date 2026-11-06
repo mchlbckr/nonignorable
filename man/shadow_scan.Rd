@@ -30,7 +30,7 @@ not an odds ratio). Sorted and de-duplicated.}
 \item{weights}{Optional non-negative row weights for the portfolio mean.}
 
 \item{threshold}{Optional decision threshold on the portfolio rate. If
-given, the smallest \eqn{\lambda} at which the sharp set (and the naive
+given, the smallest \eqn{\lambda} at which the sharp set (and the outer
 band) reaches it is computed exactly, by root finding on the closed form.}
 
 \item{x}{A \code{"shadow_scan"} object.}
@@ -46,16 +46,26 @@ An object of class \code{"shadow_scan"}, a list with
 portfolio rate) and \code{naive_lower}, \code{naive_upper};
 \item \code{point}: the portfolio rate at \eqn{\lambda = 0};
 \item \code{threshold}, \code{flip}: the threshold and the \eqn{\lambda} at which the
-sharp set and the naive band first reach it (\code{NA} if not within the
+sharp set and the outer band first reach it (\code{NA} if not within the
 scanned range);
 \item \code{binding}: for \code{"common"}, the row indices that bind the lower and the
-upper end at each \eqn{\lambda} (\code{NA} where the naive bound binds);
+upper end at each \eqn{\lambda} (\code{NA} where the outer bound binds);
+\item \code{capped}: for \code{"union"}, the weighted share of rows in which the cap
+\eqn{\pi \le 1} (the worst-case bound) binds at the largest
+\eqn{\lambda}, for the \code{lower} and the \code{upper} bound;
+\item \code{held}: for \code{"union"}, the \eqn{\lambda} from which the cap binds in
+every row, so that this bound stays flat (\code{NA} if not within the
+scanned range). With \eqn{\hat r} near one this comes early: the lower
+bound \eqn{r\eta_{\mathrm{obs}}} binds from
+\eqn{\lambda = \mathrm{logit}\,\eta_{\mathrm{obs}} -
+    \mathrm{logit}(r\eta_{\mathrm{obs}})}, about \eqn{-\log r} for rare
+events. That flat edge is the identified set, not a defect;
 \item the inputs, so that \code{as.data.frame(x, lambda = )} can return the
 pointwise sets.
 }
 
 \code{as.data.frame()}: the portfolio curve, or, if \code{lambda} is a single
-value, the pointwise sharp set and naive band for every row.
+value, the pointwise sharp set and outer band for every row.
 }
 \description{
 \code{shadow_scan()} answers \emph{how far the answer can move} if the outcome is
@@ -92,7 +102,7 @@ constraints gives the closed form
 \deqn{\mathcal H_\lambda(x) = \big[\max\{\mathrm{expit}(\ell-\lambda),\;
   r\eta_{\mathrm{obs}}\},\; \min\{\mathrm{expit}(\ell+\lambda),\;
   r\eta_{\mathrm{obs}} + 1 - r\}\big],}
-the naive band \eqn{[\mathrm{expit}(\ell-\lambda),
+the outer band \eqn{[\mathrm{expit}(\ell-\lambda),
 \mathrm{expit}(\ell+\lambda)]} intersected with the worst-case (Manski)
 bounds of Manski (1989). Both endpoints are attained, and at \eqn{\lambda = 0} the set is
 \eqn{\{\eta_{\mathrm{obs}}\}}: the value any model fitted on the observed
@@ -101,13 +111,13 @@ rows asserts.
 
 \section{When the sharp set is narrower, and when it is not}{
 
-It is never wider than the naive band. It is strictly narrower exactly where
+It is never wider than the outer band. It is strictly narrower exactly where
 a worst-case bound cuts the band: the lower end moves when \eqn{r >
 \mathrm{expit}(\ell-\lambda)/\eta_{\mathrm{obs}}}, the upper end when
 \eqn{r > \{1-\mathrm{expit}(\ell+\lambda)\}/(1-\eta_{\mathrm{obs}})}. For
 \eqn{r \le e^{-\lambda}} neither moves. In reject inference the rows of
 interest are the \emph{rejected} applications, whose observation rate is
-typically small, so the \strong{upper} end there often coincides with the naive
+typically small, so the \strong{upper} end there often coincides with the outer
 one. Ignoring \eqn{r} is never wrong, only wasteful where \eqn{r} is
 large: it gives an outer set, not a sharp one, as Dorn and Guo (2023)
 observe for the marginal sensitivity model.

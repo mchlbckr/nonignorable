@@ -1,8 +1,8 @@
 #' Screen candidate shadow variables
 #'
 #' `shadow_screen()` asks whether a variable \eqn{Z} is fit to serve as a
-#' **shadow variable** for a binary outcome \eqn{Y} that is missing not at
-#' random: relevant for \eqn{Y} given \eqn{X}, and excluded from the response
+#' **shadow variable** for an outcome \eqn{Y} that is missing not at
+#' random, binary or numeric: relevant for \eqn{Y} given \eqn{X}, and excluded from the response
 #' model given \eqn{X} and \eqn{Y}. It is a different tool from
 #' [shadow_scan()]: the screen presupposes a shadow-variable model that
 #' point-identifies the selection parameter; the scan needs no shadow variable
@@ -32,7 +32,9 @@
 #' The same holds for the denominator of the ratio: where the exclusion
 #' \eqn{\chi^2}/df is below 1, the violation is not told apart from noise and
 #' the ratio is a division by noise. Such ratios are flagged in
-#' `ratio_readable`, by `print()` and by hollow points in the plot. In large
+#' `ratio_readable`, reported by `print()` as a "violation at noise level"
+#' and drawn as hollow points in the plot. For the candidate this is good news:
+#' no violation is measured. Only the ratio is not an estimate. In large
 #' samples every violation is significant, so exclusion should be read as an
 #' effect size, not a test.
 #'
@@ -41,6 +43,31 @@
 #' a relevant \eqn{Z} therefore shows some exclusion signal through \eqn{Y}
 #' even when it is validly excluded; the screen is a screen, not a test of the
 #' restriction.
+#'
+#' **A numeric outcome.** When the observed outcome is numeric with more than
+#' two values and `family` is left at its binomial default, relevance comes
+#' from a proportional-odds model ([MASS::polr()]) on `outcome_classes`
+#' classes of about equal mass of the observed outcome, or on its values if
+#' it has no more; exclusion is unchanged, and is fitted once per candidate.
+#' Adding \eqn{Z} costs its own degrees of freedom whatever the number of
+#' classes, while the null deviance, twice \eqn{n} times the entropy of the
+#' class shares, grows with it (up to \eqn{2n\log k} for \eqn{k} classes). So \eqn{\Delta R^2} *falls* as the
+#' classes get finer while \eqn{\chi^2}/df rises towards the continuous
+#' association: compare candidates under one coding only, and read
+#' \eqn{\chi^2}/df, not \eqn{\Delta R^2}, across codings. Five classes is a
+#' choice for the stability of the ordinal model (few cut points, the
+#' proportional-odds assumption over few cuts), not an optimum.
+#'
+#' The screen **measures relevance; it does not certify identification**.
+#' Identification with a shadow variable needs more than dependence of
+#' \eqn{Z} on \eqn{Y} given \eqn{X}: in a parametric tilt model a rank
+#' condition, in a nonparametric one completeness, which can fail in simple
+#' models once the outcome or the candidate is continuous; Beppu and Morikawa
+#' (2024) give a condition for categorical candidates that can be checked on
+#' the observed data. The screen checks neither. And under selection on the
+#' outcome a relevant candidate shows exclusion signal through \eqn{Y} even
+#' when it is validly excluded, the more so the stronger the selection and
+#' the association.
 #'
 #' **Numeric characteristics.** With `numeric = "linear"` (the default) a
 #' numeric column enters linearly. Where the selection decision uses a
@@ -89,9 +116,10 @@
 #' @param candidates Character vector of candidate names \eqn{Z}. Factors are
 #'   allowed and enter with their degrees of freedom.
 #' @param family Family of the outcome model, passed to `glm()`. The response
-#'   model is always binomial. The McFadden measure presumes a likelihood
-#'   model for discrete outcomes; for a continuous outcome another effect-size
-#'   measure would be needed.
+#'   model is always binomial. With the binomial default a numeric outcome
+#'   with more than two values is screened by an ordinal model on classes; see
+#'   the section on a numeric outcome. Another family (say `poisson()` for
+#'   counts) fits that `glm` instead.
 #' @param min_relevance Minimum relevance \eqn{\chi^2} per degree of freedom
 #'   for a candidate to pass. Default 10.
 #' @param min_ratio Minimum ratio of relevance to exclusion for a candidate to
@@ -99,6 +127,11 @@
 #' @param numeric `"linear"` (default) or `"classes"`; see the section on
 #'   numeric characteristics.
 #' @param k Target number of classes for `numeric = "classes"`. Default 10.
+#' @param outcome_classes Number of classes of about equal mass for a
+#'   numeric outcome, cut only between distinct values as in
+#'   [screen_classes()]. Default 5. An outcome with at most this many distinct
+#'   values (a count, a rating) uses them as its levels; heavy atoms can leave
+#'   fewer classes than asked, and `print()` says so.
 #'
 #' @return A data frame of class `"shadow_screen"`, one row per candidate,
 #'   with `candidate`, `relevance`, `exclusion`, `ratio`, `relevance_chisq_df`,
@@ -110,7 +143,13 @@
 #'   `"reject"`) and `reason`. Attribute `"coding"`: one row per numeric
 #'   characteristic with its treatment, the number of classes, the share of
 #'   rows outside the range seen among the observed rows, and, for classes,
-#'   the heaping share of [screen_classes()].
+#'   the heaping share of [screen_classes()]. Attribute `"outcome_coding"`:
+#'   `model` (`"glm"` or `"ordinal"`), the number of outcome `classes`, the
+#'   number `requested` and the number of `distinct` observed values.
+#' @references
+#' Beppu, K. and Morikawa, K. (2024). Verifiable identification condition for
+#' nonignorable nonresponse data with categorical instrumental variables.
+#' *Statistical Theory and Related Fields*, 8, 40--50.
 #' @seealso [plot.shadow_screen()], [screen_classes()]
 #' @export
 #' @examples
@@ -123,10 +162,15 @@
 #' # numeric characteristics as classes, robust to threshold rules
 #' shadow_screen(d, "y", "observed", c("x1", "x2"), "z_score",
 #'               numeric = "classes")
+#' # a continuous outcome: relevance from an ordinal model on five classes
+#' dc <- simulate_shadow(3000, tilt = -1, outcome = "continuous", seed = 1)
+#' dc$y[dc$observed == 0] <- NA
+#' shadow_screen(dc, "y", "observed", c("x1", "x2"), c("z_shadow", "z_policy"))
 shadow_screen <- function(data, outcome, response, covariates = character(),
                           candidates, family = stats::binomial(),
                           min_relevance = 10, min_ratio = 1,
-                          numeric = c("linear", "classes"), k = 10) {
+                          numeric = c("linear", "classes"), k = 10,
+                          outcome_classes = 5) {
   numeric <- match.arg(numeric)
   if (!is.data.frame(data)) stop("`data` must be a data frame.", call. = FALSE)
   if (missing(candidates) || length(candidates) == 0L)
@@ -147,6 +191,31 @@ shadow_screen <- function(data, outcome, response, covariates = character(),
     stop("The outcome is missing for some rows marked as observed.",
          call. = FALSE)
 
+  # a numeric outcome with more than two values, under the default binomial
+  # family: relevance from an ordinal model on classes of the outcome
+  y_obs <- data[[outcome]][rv == 1 & !is.na(rv)]
+  ordinal <- is.numeric(y_obs) && length(unique(y_obs)) > 2L &&
+    identical(family$family, "binomial")
+  outcome_coding <- list(model = "glm", classes = NA_integer_)
+  if (ordinal) {
+    if (!is.numeric(outcome_classes) || length(outcome_classes) != 1L ||
+        is.na(outcome_classes) || outcome_classes < 2 ||
+        outcome_classes != round(outcome_classes))
+      stop("`outcome_classes` must be a single whole number >= 2.", call. = FALSE)
+    # few distinct values: they are already ordinal levels; otherwise classes
+    # of about equal mass, cut only between distinct values, so that an atom
+    # (a count of 0, a rounded score) is never merged with its neighbour
+    yv <- data[[outcome]]
+    yv[rv != 1 | is.na(rv)] <- NA
+    vals <- sort(unique(y_obs))
+    yc <- if (length(vals) <= outcome_classes) factor(yv, levels = vals)
+          else screen_classes(yv, k = outcome_classes, support = range(y_obs))
+    data[[outcome]] <- factor(yc, levels = levels(yc), ordered = TRUE)
+    outcome_coding <- list(model = "ordinal", classes = nlevels(data[[outcome]]),
+                           requested = as.integer(outcome_classes),
+                           distinct = length(vals))
+  }
+
   coded <- code_numeric(data, response, c(covariates, candidates), numeric, k)
   data <- coded$data
 
@@ -156,7 +225,8 @@ shadow_screen <- function(data, outcome, response, covariates = character(),
     pooled <- data[stats::complete.cases(data[cols]), c(outcome, cols),
                    drop = FALSE]
     obs <- pooled[pooled[[response]] == 1, , drop = FALSE]
-    rel <- incr_fit(obs, outcome, covariates, z, family)
+    rel <- if (ordinal) incr_polr(obs, outcome, covariates, z)
+           else incr_fit(obs, outcome, covariates, z, family)
     exc <- incr_fit(pooled, response, covariates, z, stats::binomial())
     data.frame(
       candidate = z,
@@ -190,6 +260,7 @@ shadow_screen <- function(data, outcome, response, covariates = character(),
   attr(out, "settings") <- list(min_relevance = min_relevance,
                                 min_ratio = min_ratio, numeric = numeric, k = k)
   attr(out, "coding") <- coded$coding
+  attr(out, "outcome_coding") <- outcome_coding
   class(out) <- c("shadow_screen", "data.frame")
   out
 }
@@ -266,12 +337,48 @@ incr_fit <- function(d, lhs, covariates, z, family) {
   list(r2 = chisq / red[["null"]], chisq = chisq, df = df, epp = epp)
 }
 
+# Incremental McFadden R^2 of z in a proportional-odds model for an ordered
+# outcome. The null deviance is that of the class shares, 2 n log k for k
+# classes of equal mass; df counts the columns z adds, whatever the number of
+# classes, since the k - 1 cut points sit in both models.
+incr_polr <- function(d, lhs, covariates, z) {
+  d[[lhs]] <- droplevels(d[[lhs]])
+  tab <- table(d[[lhs]]); tab <- tab[tab > 0]
+  null <- -2 * sum(tab * log(tab / sum(tab)))
+  rank_of <- function(vars) if (!length(vars)) 1L else
+    qr(stats::model.matrix(stats::reformulate(vars), d))$rank
+  dev_of <- function(vars) if (!length(vars)) null else
+    MASS::polr(stats::reformulate(vars, lhs), data = d)$deviance
+  df <- rank_of(c(covariates, z)) - rank_of(covariates)
+  if (df < 1)
+    stop("Candidate `", z, "` adds no degrees of freedom (constant or ",
+         "collinear with the covariates).", call. = FALSE)
+  chisq <- max(dev_of(covariates) - dev_of(c(covariates, z)), 0)
+  list(r2 = chisq / null, chisq = chisq, df = df, epp = NA_real_)
+}
+
+# "pass", or "reject: " and the reasons in short form, for one column of print
+verdict_text <- function(verdict, reason) {
+  short <- gsub("violates exclusion", "exclusion", gsub(" and ", ", ", reason))
+  ifelse(verdict == "reject" & nzchar(short), paste0("reject: ", short), verdict)
+}
+
 #' @export
 print.shadow_screen <- function(x, digits = 3, ...) {
   s <- attr(x, "settings")
   cat("<shadow_screen> relevance vs exclusion violation, incremental McFadden R^2\n")
   cat(sprintf("  pass: relevance chi2/df >= %s and ratio > %s\n",
               format(s$min_relevance), format(s$min_ratio)))
+  oc <- attr(x, "outcome_coding")
+  if (identical(oc$model, "ordinal"))
+    cat(strwrap(sprintf(paste0("relevance: ordinal model on %d classes of the observed ",
+                               "outcome%s; R^2 falls as classes get finer, so compare chi2/df ",
+                               "across codings"),
+                        oc$classes,
+                        if (oc$distinct <= oc$requested) " (its distinct values)"
+                        else if (oc$classes != oc$requested)
+                          sprintf(" (%d requested; atoms are not split)", oc$requested)
+                        else ""), indent = 2, exdent = 4), sep = "\n")
   cd <- attr(x, "coding")
   if (!is.null(cd) && nrow(cd)) {
     if (all(cd$coding == "classes")) {
@@ -283,15 +390,21 @@ print.shadow_screen <- function(x, digits = 3, ...) {
     }
   }
   df <- as.data.frame(unclass(x), stringsAsFactors = FALSE)
-  attr(df, "settings") <- NULL
-  show <- df[c("candidate", "relevance", "exclusion", "ratio",
-               "relevance_chisq_df", "verdict", "reason")]
-  num <- vapply(show, is.numeric, logical(1))
-  show[num] <- lapply(show[num], signif, digits = digits)
-  print(show, row.names = FALSE)
+  # each number formatted on its own, so that one large value does not pad
+  # the whole column with zeros; short header, so the table fits 80 columns
+  num <- list(relevance = df$relevance, exclusion = df$exclusion, ratio = df$ratio,
+              "chi2/df" = df$relevance_chisq_df)
+  num <- lapply(num, function(v) vapply(v, function(z) format(z, digits = digits), ""))
+  wd <- pmax(nchar(names(num)), vapply(num, function(v) max(nchar(v)), 1L))
+  show <- data.frame(df$candidate, Map(formatC, num, width = wd),
+                     verdict_text(df$verdict, df$reason),
+                     check.names = FALSE, stringsAsFactors = FALSE)
+  names(show) <- c("candidate", mapply(formatC, names(num), width = wd), "verdict")
+  print(show, row.names = FALSE, right = FALSE)
   if (!is.null(x$ratio_readable) && any(!x$ratio_readable))
-    cat(sprintf(paste0("  ratio not readable (exclusion chi2/df below 1, so the ",
-                       "violation is not told apart from noise): %s\n"),
-                paste(x$candidate[!x$ratio_readable], collapse = ", ")))
+    cat(strwrap(sprintf(paste0("violation at noise level (exclusion chi2/df below 1; ",
+                               "the ratio divides by noise): %s"),
+                        paste(x$candidate[!x$ratio_readable], collapse = ", ")),
+                indent = 2, exdent = 4), sep = "\n")
   invisible(x)
 }

@@ -14,7 +14,8 @@ shadow_screen(
   min_relevance = 10,
   min_ratio = 1,
   numeric = c("linear", "classes"),
-  k = 10
+  k = 10,
+  outcome_classes = 5
 )
 }
 \arguments{
@@ -31,9 +32,10 @@ shadow_screen(
 allowed and enter with their degrees of freedom.}
 
 \item{family}{Family of the outcome model, passed to \code{glm()}. The response
-model is always binomial. The McFadden measure presumes a likelihood
-model for discrete outcomes; for a continuous outcome another effect-size
-measure would be needed.}
+model is always binomial. With the binomial default a numeric outcome
+with more than two values is screened by an ordinal model on classes; see
+the section on a numeric outcome. Another family (say \code{poisson()} for
+counts) fits that \code{glm} instead.}
 
 \item{min_relevance}{Minimum relevance \eqn{\chi^2} per degree of freedom
 for a candidate to pass. Default 10.}
@@ -45,6 +47,12 @@ pass. Default 1, the equality line.}
 numeric characteristics.}
 
 \item{k}{Target number of classes for \code{numeric = "classes"}. Default 10.}
+
+\item{outcome_classes}{Number of classes of about equal mass for a
+numeric outcome, cut only between distinct values as in
+\code{\link[=screen_classes]{screen_classes()}}. Default 5. An outcome with at most this many distinct
+values (a count, a rating) uses them as its levels; heavy atoms can leave
+fewer classes than asked, and \code{print()} says so.}
 }
 \value{
 A data frame of class \code{"shadow_screen"}, one row per candidate,
@@ -57,12 +65,14 @@ and of the response model; \code{NA} for a target that is not binary),
 \code{"reject"}) and \code{reason}. Attribute \code{"coding"}: one row per numeric
 characteristic with its treatment, the number of classes, the share of
 rows outside the range seen among the observed rows, and, for classes,
-the heaping share of \code{\link[=screen_classes]{screen_classes()}}.
+the heaping share of \code{\link[=screen_classes]{screen_classes()}}. Attribute \code{"outcome_coding"}:
+\code{model} (\code{"glm"} or \code{"ordinal"}), the number of outcome \code{classes}, the
+number \code{requested} and the number of \code{distinct} observed values.
 }
 \description{
 \code{shadow_screen()} asks whether a variable \eqn{Z} is fit to serve as a
-\strong{shadow variable} for a binary outcome \eqn{Y} that is missing not at
-random: relevant for \eqn{Y} given \eqn{X}, and excluded from the response
+\strong{shadow variable} for an outcome \eqn{Y} that is missing not at
+random, binary or numeric: relevant for \eqn{Y} given \eqn{X}, and excluded from the response
 model given \eqn{X} and \eqn{Y}. It is a different tool from
 \code{\link[=shadow_scan]{shadow_scan()}}: the screen presupposes a shadow-variable model that
 point-identifies the selection parameter; the scan needs no shadow variable
@@ -95,7 +105,9 @@ finer coding raises \eqn{\Delta R^2} by itself; \eqn{\chi^2}/df does not.
 The same holds for the denominator of the ratio: where the exclusion
 \eqn{\chi^2}/df is below 1, the violation is not told apart from noise and
 the ratio is a division by noise. Such ratios are flagged in
-\code{ratio_readable}, by \code{print()} and by hollow points in the plot. In large
+\code{ratio_readable}, reported by \code{print()} as a "violation at noise level"
+and drawn as hollow points in the plot. For the candidate this is good news:
+no violation is measured. Only the ratio is not an estimate. In large
 samples every violation is significant, so exclusion should be read as an
 effect size, not a test.
 
@@ -104,6 +116,31 @@ cannot condition on an outcome that is missing. Under nonignorable selection
 a relevant \eqn{Z} therefore shows some exclusion signal through \eqn{Y}
 even when it is validly excluded; the screen is a screen, not a test of the
 restriction.
+
+\strong{A numeric outcome.} When the observed outcome is numeric with more than
+two values and \code{family} is left at its binomial default, relevance comes
+from a proportional-odds model (\code{\link[MASS:polr]{MASS::polr()}}) on \code{outcome_classes}
+classes of about equal mass of the observed outcome, or on its values if
+it has no more; exclusion is unchanged, and is fitted once per candidate.
+Adding \eqn{Z} costs its own degrees of freedom whatever the number of
+classes, while the null deviance, twice \eqn{n} times the entropy of the
+class shares, grows with it (up to \eqn{2n\log k} for \eqn{k} classes). So \eqn{\Delta R^2} \emph{falls} as the
+classes get finer while \eqn{\chi^2}/df rises towards the continuous
+association: compare candidates under one coding only, and read
+\eqn{\chi^2}/df, not \eqn{\Delta R^2}, across codings. Five classes is a
+choice for the stability of the ordinal model (few cut points, the
+proportional-odds assumption over few cuts), not an optimum.
+
+The screen \strong{measures relevance; it does not certify identification}.
+Identification with a shadow variable needs more than dependence of
+\eqn{Z} on \eqn{Y} given \eqn{X}: in a parametric tilt model a rank
+condition, in a nonparametric one completeness, which can fail in simple
+models once the outcome or the candidate is continuous; Beppu and Morikawa
+(2024) give a condition for categorical candidates that can be checked on
+the observed data. The screen checks neither. And under selection on the
+outcome a relevant candidate shows exclusion signal through \eqn{Y} even
+when it is validly excluded, the more so the stronger the selection and
+the association.
 
 \strong{Numeric characteristics.} With \code{numeric = "linear"} (the default) a
 numeric column enters linearly. Where the selection decision uses a
@@ -154,6 +191,15 @@ plot(sc)
 # numeric characteristics as classes, robust to threshold rules
 shadow_screen(d, "y", "observed", c("x1", "x2"), "z_score",
               numeric = "classes")
+# a continuous outcome: relevance from an ordinal model on five classes
+dc <- simulate_shadow(3000, tilt = -1, outcome = "continuous", seed = 1)
+dc$y[dc$observed == 0] <- NA
+shadow_screen(dc, "y", "observed", c("x1", "x2"), c("z_shadow", "z_policy"))
+}
+\references{
+Beppu, K. and Morikawa, K. (2024). Verifiable identification condition for
+nonignorable nonresponse data with categorical instrumental variables.
+\emph{Statistical Theory and Related Fields}, 8, 40--50.
 }
 \seealso{
 \code{\link[=plot.shadow_screen]{plot.shadow_screen()}}, \code{\link[=screen_classes]{screen_classes()}}

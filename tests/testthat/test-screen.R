@@ -80,6 +80,90 @@ test_that("a ratio over an exclusion below its noise floor is marked unreadable"
   sc <- shadow_screen(d, "y", "observed", c("x1", "x2"), c("z_shadow", "noise"))
   expect_equal(sc$ratio_readable, sc$exclusion_chisq_df >= 1)
   expect_identical(sc$ratio_readable, c(TRUE, FALSE))
-  expect_output(print(sc), "ratio not readable.*noise")
-  expect_false(any(grepl("not readable.*z_shadow", capture.output(print(sc)))))
+  expect_output(print(sc), "violation at noise level.*noise")
+  expect_false(any(grepl("noise level.*z_shadow", capture.output(print(sc)))))
+  expect_false(any(grepl("not readable", capture.output(print(sc)))))
+})
+
+test_that("the screen print fits 80 columns and formats each number on its own", {
+  d <- simulate_shadow(3000, tilt = -1, seed = 4)
+  d$noise <- with_seed(9, rnorm(nrow(d)))
+  sc <- shadow_screen(d, "y", "observed", c("x1", "x2"),
+                      c("z_shadow", "z_policy", "z_score", "noise"))
+  out <- capture.output(print(sc))
+  expect_true(all(nchar(out) <= 80))
+  expect_true(any(grepl("chi2/df", out)))
+  # one line per candidate, with its verdict on the same line
+  for (cand in sc$candidate) {
+    ln <- grep(paste0("^ *", cand, " "), out, value = TRUE)
+    expect_length(ln, 1)
+    expect_match(ln, sc$verdict[sc$candidate == cand])
+  }
+  # no padding zeros from formatting a whole column alike
+  expect_false(any(grepl("[0-9]\\.[0-9]*000\\b", out)))
+})
+
+test_that("internal helpers are not exported", {
+  expect_false("verdict_text" %in% getNamespaceExports("shadowscan"))
+})
+
+# --- continuous outcome: ordinal relevance on outcome classes ---------------
+
+cont <- local({
+  d <- simulate_shadow(4000, tilt = -1, outcome = "continuous", seed = 21)
+  d$y[d$observed == 0] <- NA
+  d
+})
+
+test_that("a continuous outcome is screened by an ordinal model on outcome classes", {
+  sc <- shadow_screen(cont, "y", "observed", c("x1", "x2"), c("z_shadow", "z_policy"))
+  oc <- attr(sc, "outcome_coding")
+  expect_identical(oc$model, "ordinal")
+  expect_identical(oc$classes, 5L)
+  expect_identical(sc$verdict[sc$candidate == "z_shadow"], "pass")
+  # relevance by hand: polr on five classes of about equal mass of the
+  # observed y, cut between distinct values as screen_classes() does
+  obs <- cont[cont$observed == 1, ]
+  yc <- screen_classes(obs$y, k = 5, support = range(obs$y))
+  yc <- factor(yc, levels = levels(yc), ordered = TRUE)
+  expect_equal(as.vector(table(yc)), c(323, 323, 323, 323, 321))
+  f0 <- MASS::polr(yc ~ x1 + x2, data = obs)
+  f1 <- MASS::polr(yc ~ x1 + x2 + z_shadow, data = obs)
+  d0 <- -2 * sum(table(yc) * log(prop.table(table(yc))))
+  expect_equal(sc$relevance[1], (deviance(f0) - deviance(f1)) / d0, tolerance = 1e-5)
+  expect_equal(sc$relevance_chisq_df[1], deviance(f0) - deviance(f1), tolerance = 1e-5)
+  expect_true(is.na(sc$epp_relevance[1]))
+  expect_output(print(sc), "ordinal model on 5 classes")
+})
+
+test_that("outcome classes can be set and are checked", {
+  sc <- shadow_screen(cont, "y", "observed", "x1", "z_shadow", outcome_classes = 3)
+  expect_identical(attr(sc, "outcome_coding")$classes, 3L)
+  expect_error(shadow_screen(cont, "y", "observed", "x1", "z_shadow", outcome_classes = 1),
+               "outcome_classes")
+  # no covariates: the reduced model is the null model
+  sc0 <- shadow_screen(cont, "y", "observed", character(), "z_shadow")
+  expect_gt(sc0$relevance, 0)
+})
+
+test_that("a binary outcome keeps the logistic screen", {
+  d <- simulate_shadow(2000, tilt = -1, seed = 2)
+  sc <- shadow_screen(d, "y", "observed", c("x1", "x2"), "z_shadow")
+  expect_identical(attr(sc, "outcome_coding")$model, "glm")
+  expect_no_match(paste(capture.output(print(sc)), collapse = ""), "ordinal")
+})
+
+test_that("a heaped outcome is classed between distinct values, never merged silently", {
+  d <- cont
+  set.seed(4)
+  d$y <- ifelse(d$observed == 1, rpois(nrow(d), exp(0.2 + 0.4 * d$z_shadow)), NA)
+  sc <- shadow_screen(d, "y", "observed", "x1", "z_shadow")
+  yo <- d$y[d$observed == 1]
+  # 0 and 1 hold most of the mass: each must stay a class of its own
+  expect_gte(attr(sc, "outcome_coding")$classes, 4L)
+  expect_output(print(sc), "classes")
+  # few distinct values: the values themselves are the levels
+  d$y <- ifelse(d$observed == 1, pmin(rpois(nrow(d), 1), 3), NA)
+  sc3 <- shadow_screen(d, "y", "observed", "x1", "z_shadow")
+  expect_identical(attr(sc3, "outcome_coding")$classes, 4L)
 })

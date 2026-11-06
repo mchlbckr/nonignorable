@@ -24,7 +24,7 @@ BugReports: https://github.com/mchlbckr/shadowscan/issues
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.1.0)
-Imports: graphics, grDevices, stats
+Imports: graphics, grDevices, MASS, stats
 Suggests: knitr, mgcv, quantreg, rmarkdown, speff2trial, testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3

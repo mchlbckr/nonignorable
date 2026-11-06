@@ -18,6 +18,12 @@ First release.
 * A ratio whose exclusion chi2/df is below 1 divides by noise. The screen
   flags it in `ratio_readable`; `print()` names such candidates and `plot()`
   draws them hollow without a ratio.
+* A numeric outcome with more than two values is screened too: relevance
+  comes from a proportional-odds model (`MASS::polr`) on `outcome_classes`
+  classes of equal mass, five by default. The screen measures relevance; it
+  does not certify identification.
+* `print()` shows the verdict and its reasons in one column and fits 80
+  columns; `plot()` draws rejected candidates grey and labels them.
 * `citation("shadowscan")` lists the package and the two papers behind it.
 
 ## Scan
@@ -44,5 +50,17 @@ First release.
   such as treatment arms. It gives the sharp set for the difference of their
   rates, a confidence set, and the selection strength from which "no
   difference" is no longer ruled out.
+* `shadow_scan_mean_contrast()` does the same for the difference of two
+  portfolio means.
+* `shadow_scan_ci()` and `shadow_scan_mean_ci()` both target all rows by
+  default; set `target = "unobserved"` for the rows whose outcome is missing,
+  such as rejected applications.
+* Debiased bounds and confidence sets are kept monotone in lambda.
+* The bounds without the cap pi <= 1 are called the outer band throughout
+  (`naive_*` columns). Scans report the share of target rows where the cap
+  binds and, for rates, the lambda from which it holds a bound flat; the
+  plot notes such a bound in its legend, which it places clear of the
+  curves. `shadow_scan_mean_ci()` counts rows with r-hat clipped below and
+  above apart.
 * `simulate_shadow()`, `obs_quantiles()` and `scan_inputs()` provide data and
   inputs for examples and tests.

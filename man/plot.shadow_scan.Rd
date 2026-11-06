@@ -39,8 +39,8 @@ in a series colour.}
 \description{
 Plots the portfolio rate (or mean, for \code{\link[=shadow_scan_mean]{shadow_scan_mean()}}) against
 selection strength: the sharp identified set as a filled band with solid
-edges, the naive band \eqn{\mathrm{expit}(\ell \pm \lambda)} (for a mean:
-the outer band without the cap \eqn{\pi \le 1}) dashed and lighter, the point that a
+edges, the outer band, the bounds without the cap \eqn{\pi \le 1} (for a
+rate \eqn{\mathrm{expit}(\ell \pm \lambda)}), dashed and lighter, the point that a
 model on the observed rows asserts (\eqn{\lambda = 0}) marked, and, if the
 scan has a \code{threshold}, the decision threshold with a drop line where the
 sharp set first reaches it. That crossing is the reason to run the scan: it
@@ -48,7 +48,13 @@ shows at which strength of selection the decision flips.
 }
 \details{
 Where \eqn{\hat r} is small, as for rejected applications, the upper edge of
-the sharp set coincides with the naive one; see \code{\link[=shadow_scan]{shadow_scan()}}.
+the sharp set coincides with the outer one; see \code{\link[=shadow_scan]{shadow_scan()}}.
+
+The legend goes into the first corner, from top left, that no curve, band
+or annotation touches; if none is free, the vertical axis is extended
+upwards to make room. Where the cap \eqn{\pi \le 1} binds in every target
+row from some \eqn{\lambda} on, that edge of the set stays flat from there,
+and the legend says from where (see \code{held} in \code{\link[=shadow_scan]{shadow_scan()}}).
 }
 \examples{
 d <- simulate_shadow(5000, tilt = -1, seed = 1)

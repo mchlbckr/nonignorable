@@ -43,7 +43,10 @@ the portfolio by \eqn{X}.}
 \item{trim}{Rows with \eqn{\hat r <} \code{trim} leave the target. Default 0.}
 
 \item{r_bounds}{\eqn{\hat r} is clipped into this range before use.
-Default \code{c(0.01, 0.99)}. The number of clipped rows is reported.}
+Default \code{c(0.01, 0.99)}. The number of clipped target rows is reported,
+below and above apart: clipping at the top only stabilises the cap
+\eqn{\pi \le 1} for rows that are almost always observed, clipping at the
+bottom limits inverse weights.}
 }
 \value{
 An object of class
@@ -51,7 +54,10 @@ An object of class
 \code{se_lower}, \code{se_upper}, \code{ci_lower}, \code{ci_upper}, \code{naive_lower},
 \code{naive_upper}; the naive columns are the plug-in outer band), \code{point}
 (the estimate at \eqn{\lambda = 0}), \code{flip} (\code{sharp}, \code{ci}, \code{naive}),
-\code{trimmed}, \code{clipped}, \code{tail}, \code{n} and \code{n_target}. \code{as.data.frame(x, lambda = )} gives the plug-in bounds per row, with \eqn{\hat r} clipped
+\code{trimmed}, \code{clipped}, \code{capped} (the weighted share of target rows in
+which the cap \eqn{\pi \le 1} binds at the largest \eqn{\lambda}, per
+bound), \code{tail}, \code{n} and \code{n_target}. Estimates and confidence set are kept
+monotone in \eqn{\lambda}, as in \code{\link[=shadow_scan_ci]{shadow_scan_ci()}}. \code{as.data.frame(x, lambda = )} gives the plug-in bounds per row, with \eqn{\hat r} clipped
 into \code{r_bounds}; they carry no correction and no confidence statement.
 }
 \description{

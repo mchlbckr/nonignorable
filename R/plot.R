@@ -4,15 +4,21 @@ scan_colors <- c(sharp = "#2a78d6", naive = "#eb6834")
 #'
 #' Plots the portfolio rate (or mean, for [shadow_scan_mean()]) against
 #' selection strength: the sharp identified set as a filled band with solid
-#' edges, the naive band \eqn{\mathrm{expit}(\ell \pm \lambda)} (for a mean:
-#' the outer band without the cap \eqn{\pi \le 1}) dashed and lighter, the point that a
+#' edges, the outer band, the bounds without the cap \eqn{\pi \le 1} (for a
+#' rate \eqn{\mathrm{expit}(\ell \pm \lambda)}), dashed and lighter, the point that a
 #' model on the observed rows asserts (\eqn{\lambda = 0}) marked, and, if the
 #' scan has a `threshold`, the decision threshold with a drop line where the
 #' sharp set first reaches it. That crossing is the reason to run the scan: it
 #' shows at which strength of selection the decision flips.
 #'
 #' Where \eqn{\hat r} is small, as for rejected applications, the upper edge of
-#' the sharp set coincides with the naive one; see [shadow_scan()].
+#' the sharp set coincides with the outer one; see [shadow_scan()].
+#'
+#' The legend goes into the first corner, from top left, that no curve, band
+#' or annotation touches; if none is free, the vertical axis is extended
+#' upwards to make room. Where the cap \eqn{\pi \le 1} binds in every target
+#' row from some \eqn{\lambda} on, that edge of the set stays flat from there,
+#' and the legend says from where (see `held` in [shadow_scan()]).
 #'
 #' @param x A `"shadow_scan"` or `"shadow_scan_mean"` object.
 #' @param scale `"ratio"` (default) puts \eqn{e^\lambda}, the largest
@@ -39,8 +45,11 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
   cv <- x$curve
   is_mean <- inherits(x, "shadow_scan_mean")
   is_contrast <- inherits(x, "shadow_scan_contrast")
+  is_ci <- inherits(x, "shadow_scan_ci") || inherits(x, "shadow_scan_mean_ci") || is_contrast
   if (is.null(ylab)) ylab <- if (is_mean) "Portfolio mean"
-    else if (is_contrast) sprintf("Difference of rates, %s - %s", x$labels[1], x$labels[2])
+    else if (is_contrast) sprintf("Difference of %s, %s - %s",
+                                  if (isTRUE(x$of_means)) "means" else "rates",
+                                  x$labels[1], x$labels[2])
     else "Portfolio rate"
   tx <- function(l) if (scale == "ratio") exp(l) else l
   xs <- tx(cv$lambda)
@@ -50,86 +59,27 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
   ylim <- range(cv$naive_lower, cv$naive_upper, cv$ci_lower, cv$ci_upper,
                 x$threshold)
   ylim <- ylim + c(-0.04, 0.04) * diff(ylim)
-
-  graphics::plot(xs, cv$upper, type = "n", ylim = ylim, xlab = xlab,
-                 ylab = ylab, main = main, las = 1, bty = "l",
-                 col.axis = text_col, col.lab = text_col, col.main = text_col,
-                 fg = text_col, ...)
-  graphics::polygon(c(xs, rev(xs)), c(cv$lower, rev(cv$upper)),
-                    col = grDevices::adjustcolor(colors[["sharp"]], 0.18),
-                    border = NA)
   naive_col <- grDevices::adjustcolor(colors[["naive"]], 0.75)
-  graphics::lines(xs, cv$naive_upper, lty = 2, lwd = 1.5, col = naive_col)
-  graphics::lines(xs, cv$naive_lower, lty = 2, lwd = 1.5, col = naive_col)
-  graphics::lines(xs, cv$upper, lwd = 2, col = colors[["sharp"]])
-  graphics::lines(xs, cv$lower, lwd = 2, col = colors[["sharp"]])
   has_ci <- !is.null(cv$ci_lower)
-  if (has_ci) {
-    graphics::lines(xs, cv$ci_upper, lwd = 1.3, lty = 3, col = colors[["sharp"]])
-    graphics::lines(xs, cv$ci_lower, lwd = 1.3, lty = 3, col = colors[["sharp"]])
-  }
-
-  # The lambda = 0 point is explained in the legend, not by a label next to it:
-  # when the decision flips near lambda = 0, the flip marker, its drop line and
-  # the threshold all sit beside that point and any label there collides.
   has_point <- min(cv$lambda) == 0
-  if (has_point)
-    graphics::points(tx(0), x$point, pch = 21, cex = 1.4, lwd = 2,
-                     bg = colors[["sharp"]], col = surface_col())
-  if (!is.null(x$threshold)) {
-    usr <- graphics::par("usr")
-    graphics::abline(h = x$threshold, lty = 2, col = text_col)
-    graphics::text(usr[2], x$threshold,
-                   if (is_contrast && x$threshold == 0) "no difference" else "decision threshold",
-                   adj = c(1, 1.6),
-                   col = text_col, cex = 0.8)
-    fs <- x$flip[["sharp"]]; fn <- x$flip[["naive"]]
-    sym <- if (scale == "ratio") "e^lambda" else "lambda"
-    lab <- function(v) bquote(.(as.name("flips at")) ~ .(parse(text = sym)[[1]]) %~~% .(sprintf("%.1f", tx(v))))
-    # label to the right of the drop line, or to its left near the right edge
-    flip_adj <- function(v, pad) {
-      if (tx(v) > usr[1] + 0.7 * (usr[2] - usr[1])) c(1 + pad, -0.6) else c(-pad, -0.6)
-    }
-    if (!is.na(fs)) {
-      graphics::segments(tx(fs), usr[3], tx(fs), x$threshold, lty = 3,
-                         col = text_col)
-      graphics::points(tx(fs), x$threshold, pch = 21, cex = 1.3, lwd = 2,
-                       bg = surface_col(), col = colors[["sharp"]])
-      graphics::text(tx(fs), usr[3], lab(fs), adj = flip_adj(fs, 0.08),
-                     col = text_col, cex = 0.85)
-    } else if (!is.na(fn)) {
-      graphics::segments(tx(fn), usr[3], tx(fn), x$threshold, lty = 3,
-                         col = text_col)
-      graphics::points(tx(fn), x$threshold, pch = 21, cex = 1.1, lwd = 2,
-                       bg = surface_col(), col = colors[["naive"]])
-      graphics::text(tx(fn), usr[3],
-                     sprintf("%s band flips at %.1f; sharp set never",
-                             if (is_mean) "outer" else "naive", tx(fn)),
-                     adj = flip_adj(fn, 0.05), col = text_col, cex = 0.8)
-    }
-    fc <- if (inherits(x, "shadow_scan_ci")) x$flip[["ci"]] else NA_real_
-    if (!is.na(fc)) {
-      # where the confidence set reaches the threshold: from there on the data
-      # no longer rule out the other decision
-      graphics::segments(tx(fc), usr[3], tx(fc), x$threshold, lty = 3,
-                         col = text_col)
-      graphics::points(tx(fc), x$threshold, pch = 21, cex = 0.9, lwd = 1.5,
-                       bg = surface_col(), col = colors[["sharp"]])
-      graphics::text(tx(fc), usr[3],
-                     bquote("confidence set at" ~ .(parse(text = sym)[[1]]) %~~%
-                              .(sprintf("%.1f", tx(fc)))),
-                     adj = c(flip_adj(fc, 0.08)[1], -2.2), col = text_col, cex = 0.8)
-    }
-  }
-  items <- list(
-    list(lab = if (inherits(x, "shadow_scan_ci")) quote("Sharp identified set, estimated")
-               else if (!is_mean && x$aggregate == "common") quote("Sharp identified set (common tilt)")
+  sym <- if (scale == "ratio") "e^lambda" else "lambda"
+  sym_e <- parse(text = sym)[[1]]
+
+  # the legend, assembled first: its size decides where it goes
+  held <- x$held
+  held_items <- if (!is.null(held)) lapply(names(held)[!is.na(held)], function(side)
+    list(lab = bquote(.(paste(if (side == "lower") "Lower" else "Upper",
+                              "edge held by")) ~ pi <= 1 ~ "from" ~ .(sym_e) %~~%
+                        .(sprintf("%.2f", tx(held[[side]])))),
+         fill = NA, border = NA, lty = NA, lwd = NA, pch = NA, pt.bg = NA, col = NA))
+  items <- c(list(
+    list(lab = if (is_ci) quote("Sharp identified set, estimated")
+               else if (!is_mean && identical(x$aggregate, "common")) quote("Sharp identified set (common tilt)")
                else quote("Sharp identified set"),
          fill = grDevices::adjustcolor(colors[["sharp"]], 0.18), border = colors[["sharp"]],
          lty = NA, lwd = NA, pch = NA, pt.bg = NA, col = NA),
-    list(lab = if (is_mean) quote("Outer band (without " * pi <= 1 * ")")
-               else if (is_contrast) quote("Naive band, difference")
-               else quote("Naive band " * expit(logit ~ eta[obs] %+-% lambda)),
+    list(lab = if (is_ci) quote("Outer band, plug-in (without " * pi <= 1 * ")")
+               else quote("Outer band (without " * pi <= 1 * ")"),
          fill = NA, border = NA, lty = 2, lwd = 1.5, pch = NA, pt.bg = NA, col = naive_col),
     if (has_ci) list(lab = bquote(.(sprintf("%g%% confidence set", 100 * x$level))),
                      fill = NA, border = NA, lty = 3, lwd = 1.3, pch = NA, pt.bg = NA,
@@ -137,16 +87,147 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
     if (has_point) list(lab = quote("Model on observed rows " * (lambda == 0)),
                         fill = NA, border = NA, lty = NA, lwd = 2, pch = 21,
                         pt.bg = colors[["sharp"]], col = surface_col())
-  )
+  ), held_items)
   items <- Filter(Negate(is.null), items)
   gc_ <- function(nm) unlist(lapply(items, function(it) if (is.na(it[[nm]])) NA else it[[nm]]))
-  graphics::legend("topleft", bty = "n", text.col = text_col, cex = 0.85,
+  leg_args <- list(bty = "n", text.col = text_col, cex = 0.85,
                    legend = as.expression(lapply(items, `[[`, "lab")),
                    fill = gc_("fill"), border = gc_("border"),
                    lty = gc_("lty"), lwd = gc_("lwd"), pch = gc_("pch"),
                    pt.cex = 1.2, pt.bg = gc_("pt.bg"), col = gc_("col"),
                    merge = TRUE, x.intersp = 0.8)
+
+  graphics::plot(xs, cv$upper, type = "n", ylim = ylim, xlab = "", ylab = "",
+                 axes = FALSE, ...)
+
+  # Annotations of the threshold, as functions of the user coordinates: they
+  # are obstacles for the legend, and drawn after the coordinates are final.
+  flip_adj <- function(v, pad, usr) {
+    if (tx(v) > usr[1] + 0.7 * (usr[2] - usr[1])) c(1 + pad, -0.6) else c(-pad, -0.6)
+  }
+  annotations <- function(usr) {
+    if (is.null(x$threshold)) return(list())
+    lab <- function(v) bquote(.(as.name("flips at")) ~ .(sym_e) %~~% .(sprintf("%.1f", tx(v))))
+    fs <- x$flip[["sharp"]]; fn <- x$flip[["naive"]]
+    fc <- if (is_ci && !is.null(x$flip[["ci"]])) x$flip[["ci"]] else NA_real_
+    out <- list(list(type = "hline"),
+                list(type = "text", x = usr[2], y = x$threshold,
+                     label = if (is_contrast && x$threshold == 0) "no difference" else "decision threshold",
+                     adj = c(1, 1.6), cex = 0.8))
+    if (!is.na(fs)) {
+      out <- c(out, list(list(type = "drop", v = fs, cex = 1.3, col = colors[["sharp"]]),
+                         list(type = "text", x = tx(fs), y = usr[3], label = lab(fs),
+                              adj = flip_adj(fs, 0.08, usr), cex = 0.85)))
+    } else if (!is.na(fn)) {
+      out <- c(out, list(list(type = "drop", v = fn, cex = 1.1, col = colors[["naive"]]),
+                         list(type = "text", x = tx(fn), y = usr[3],
+                              label = sprintf("outer band flips at %.1f; sharp set never", tx(fn)),
+                              adj = flip_adj(fn, 0.05, usr), cex = 0.8)))
+    }
+    if (!is.na(fc)) {
+      # where the confidence set reaches the threshold: from there on the data
+      # no longer rule out the other decision
+      out <- c(out, list(list(type = "drop", v = fc, cex = 0.9, lwd = 1.5, col = colors[["sharp"]]),
+                         list(type = "text", x = tx(fc), y = usr[3],
+                              label = bquote("confidence set at" ~ .(sym_e) %~~% .(sprintf("%.1f", tx(fc)))),
+                              adj = c(flip_adj(fc, 0.08, usr)[1], -2.2), cex = 0.8)))
+    }
+    out
+  }
+  obstacle_boxes <- function(ann, usr) lapply(ann, function(a) switch(a$type,
+    hline = c(usr[1], usr[2], x$threshold, x$threshold),
+    drop = c(tx(a$v), tx(a$v), usr[3], x$threshold),
+    text = {
+      w <- graphics::strwidth(a$label, cex = a$cex); h <- graphics::strheight(a$label, cex = a$cex)
+      x0 <- a$x - a$adj[1] * w; y0 <- a$y - a$adj[2] * h
+      c(x0, x0 + w, y0, y0 + h)
+    }))
+
+  ink <- as.matrix(cv[intersect(c("lower", "upper", "naive_lower", "naive_upper",
+                                  "ci_lower", "ci_upper"), names(cv))])
+  lo <- apply(ink, 1, min); hi <- apply(ink, 1, max)
+  if (!is.null(x$threshold)) { lo <- pmin(lo, x$threshold); hi <- pmax(hi, x$threshold) }
+  usr <- graphics::par("usr")
+  size <- do.call(graphics::legend, c(list(x = "topleft", plot = FALSE), leg_args))$rect
+  spot <- scan_legend_spot(size$w, size$h, usr, xs, lo, hi,
+                           obstacles = obstacle_boxes(annotations(usr), usr))
+  if (!is.null(spot$grow_to)) {
+    graphics::plot.window(xlim = usr[1:2], ylim = c(usr[3], spot$grow_to),
+                          xaxs = "i", yaxs = "i")
+    usr <- graphics::par("usr")
+  }
+
+  graphics::axis(1, col = text_col, col.axis = text_col)
+  graphics::axis(2, las = 1, col = text_col, col.axis = text_col)
+  graphics::box(bty = "l", col = text_col)
+  graphics::title(xlab = xlab, ylab = ylab, main = main, col.lab = text_col,
+                  col.main = text_col)
+  graphics::polygon(c(xs, rev(xs)), c(cv$lower, rev(cv$upper)),
+                    col = grDevices::adjustcolor(colors[["sharp"]], 0.18),
+                    border = NA)
+  graphics::lines(xs, cv$naive_upper, lty = 2, lwd = 1.5, col = naive_col)
+  graphics::lines(xs, cv$naive_lower, lty = 2, lwd = 1.5, col = naive_col)
+  graphics::lines(xs, cv$upper, lwd = 2, col = colors[["sharp"]])
+  graphics::lines(xs, cv$lower, lwd = 2, col = colors[["sharp"]])
+  if (has_ci) {
+    graphics::lines(xs, cv$ci_upper, lwd = 1.3, lty = 3, col = colors[["sharp"]])
+    graphics::lines(xs, cv$ci_lower, lwd = 1.3, lty = 3, col = colors[["sharp"]])
+  }
+  # The lambda = 0 point is explained in the legend, not by a label next to it:
+  # when the decision flips near lambda = 0, the flip marker, its drop line and
+  # the threshold all sit beside that point and any label there collides.
+  if (has_point)
+    graphics::points(tx(0), x$point, pch = 21, cex = 1.4, lwd = 2,
+                     bg = colors[["sharp"]], col = surface_col())
+  for (a in annotations(usr)) switch(a$type,
+    hline = graphics::abline(h = x$threshold, lty = 2, col = text_col),
+    drop = {
+      graphics::segments(tx(a$v), usr[3], tx(a$v), x$threshold, lty = 3, col = text_col)
+      graphics::points(tx(a$v), x$threshold, pch = 21, cex = a$cex,
+                       lwd = if (is.null(a$lwd)) 2 else a$lwd,
+                       bg = surface_col(), col = a$col)
+    },
+    text = graphics::text(a$x, a$y, a$label, adj = a$adj, col = text_col, cex = a$cex))
+  inset <- c(0.02, 0.02)
+  do.call(draw_scan_legend, c(list(x = spot$corner, inset = inset), leg_args))
   invisible(x)
+}
+
+draw_scan_legend <- function(...) graphics::legend(...)
+
+# Where the scan legend goes: the first corner whose box no curve, band or
+# annotation touches. `lo`, `hi` are the lowest and highest ink at each `xs`;
+# `obstacles` are boxes c(x0, x1, y0, y1). If no corner is free, the legend
+# goes top left and `grow_to` is the upper y limit that lifts it clear of the
+# ink beneath it.
+scan_legend_spot <- function(lw, lh, usr, xs, lo, hi, obstacles = list(), pad = 0.02) {
+  dx <- pad * diff(usr[1:2]); dy <- pad * diff(usr[3:4])
+  boxes <- list(
+    topleft     = c(usr[1] + dx, usr[1] + dx + lw, usr[4] - dy - lh, usr[4] - dy),
+    topright    = c(usr[2] - dx - lw, usr[2] - dx, usr[4] - dy - lh, usr[4] - dy),
+    bottomleft  = c(usr[1] + dx, usr[1] + dx + lw, usr[3] + dy, usr[3] + dy + lh),
+    bottomright = c(usr[2] - dx - lw, usr[2] - dx, usr[3] + dy, usr[3] + dy + lh))
+  span <- function(b) {
+    xo <- seq(b[1], b[2], length.out = 200)
+    xo <- xo[xo >= min(xs) & xo <= max(xs)]
+    list(lo = stats::approx(xs, lo, xo)$y, hi = stats::approx(xs, hi, xo)$y)
+  }
+  overlap <- function(a, b)
+    min(a[2], b[2]) >= max(a[1], b[1]) && min(a[4], b[4]) >= max(a[3], b[3])
+  free <- function(b) {
+    s <- span(b)
+    !any(s$hi >= b[3] & s$lo <= b[4]) &&
+      !any(vapply(obstacles, overlap, TRUE, b = b))
+  }
+  for (nm in names(boxes)) if (free(boxes[[nm]])) return(list(corner = nm, box = boxes[[nm]]))
+  # lift the top: the legend's share of the height stays fixed, the ink under
+  # it has to end below its lower edge
+  b <- boxes$topleft
+  top <- max(span(b)$hi, vapply(obstacles, function(o)
+    if (o[2] >= b[1] && o[1] <= b[2]) o[4] else -Inf, 0))
+  f <- (lh + 2 * dy) / diff(usr[3:4])
+  grow_to <- (top - f * usr[3]) / (1 - f)
+  list(corner = "topleft", box = NULL, grow_to = grow_to + 0.01 * (grow_to - usr[3]))
 }
 
 #' Relevance against exclusion violation
@@ -163,10 +244,12 @@ plot.shadow_scan <- function(x, scale = c("ratio", "log"),
 #' square plotting region. Values of zero are drawn at the lower axis limit.
 #' Distance from the line reads as a factor; distance along it as size. Read
 #' the relevance itself too: a candidate far above the line with negligible
-#' relevance is no shadow variable (see `relevance_chisq_df`). Hollow points
-#' mark candidates whose exclusion is below its noise floor (`ratio_readable`
-#' is `FALSE`): their horizontal position is not estimated, and their label
-#' gives no ratio.
+#' relevance is no shadow variable (see `relevance_chisq_df`). Rejected
+#' candidates are drawn grey and labelled "rejected", so that a weak candidate
+#' above the line is not mistaken for a pass. Hollow points mark candidates
+#' whose exclusion violation is at noise level (`ratio_readable` is `FALSE`):
+#' no violation is measured, their horizontal position is not estimated, and
+#' their label gives no ratio.
 #'
 #' @param x A `"shadow_screen"` object.
 #' @param scale `"log"` (default) or `"linear"` axes.
@@ -243,16 +326,17 @@ plot.shadow_screen <- function(x, scale = c("log", "linear"), label = NULL,
   # a ratio over an exclusion violation below its noise floor is not an
   # estimate: draw such points hollow and do not print their ratio
   readable <- if (is.null(x$ratio_readable)) rep(TRUE, nrow(x)) else x$ratio_readable
-  graphics::points(ex[readable], re[readable], pch = 21, cex = 1.6, lwd = 2,
-                   bg = col, col = surface_col())
-  graphics::points(ex[!readable], re[!readable], pch = 21, cex = 1.6, lwd = 2,
-                   bg = surface_col(), col = col)
+  verdict <- if (is.null(x$verdict)) rep("pass", nrow(x)) else x$verdict
+  st <- screen_point_style(verdict, readable, col)
+  graphics::points(ex, re, pch = 21, cex = 1.6, lwd = 2, bg = st$bg, col = st$border)
   i <- match(label, x$candidate)
   i <- i[!is.na(i)]
   if (length(i)) {
     labs <- ifelse(readable[i],
-                   sprintf("%s (ratio %s)", x$candidate[i], format_ratio(x$ratio[i])),
-                   sprintf("%s (ratio not readable)", x$candidate[i]))
+                   sprintf("ratio %s", format_ratio(x$ratio[i])),
+                   "violation at noise level")
+    labs <- sprintf("%s (%s%s)", x$candidate[i], labs,
+                    ifelse(verdict[i] == "reject", "; rejected", ""))
     place_labels(ex[i], re[i], labs, px = ex, py = re, line = lim,
                  col = text_col, cex = 0.8, obstacles = list(ann_box))
   }
@@ -379,6 +463,14 @@ runs_through <- function(l, b) {
 thin_decades <- function(decades, inch_per_decade, label_width) {
   step <- max(1L, ceiling(1.2 * label_width / inch_per_decade))
   decades[(max(decades) - decades) %% step == 0]
+}
+
+# Point style of the screen plot: colour carries the verdict (rejected grey),
+# fill carries readability (hollow where the violation is at noise level).
+screen_point_style <- function(verdict, readable, col, reject_col = "grey60") {
+  hue <- ifelse(verdict == "reject", reject_col, col)
+  list(bg = ifelse(readable, hue, surface_col()),
+       border = ifelse(readable, surface_col(), hue))
 }
 
 surface_col <- function() {

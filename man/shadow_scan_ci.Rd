@@ -9,7 +9,7 @@ shadow_scan_ci(
   r,
   response,
   outcome,
-  target = "unobserved",
+  target = "all",
   lambda = seq(0, 2, length.out = 81),
   weights = NULL,
   threshold = NULL,
@@ -28,8 +28,10 @@ in (0, 1).}
 
 \item{outcome}{Outcome, 0/1; ignored (and may be \code{NA}) where \code{response} is 0.}
 
-\item{target}{\code{"unobserved"} (default), \code{"all"}, or a logical vector
-selecting the rows of the portfolio by \eqn{X}.}
+\item{target}{\code{"all"} (default, as in \code{\link[=shadow_scan_mean_ci]{shadow_scan_mean_ci()}}),
+\code{"unobserved"} (the rows whose outcome is missing, such as rejected
+applications), or a logical vector selecting the rows of the portfolio
+by \eqn{X}.}
 
 \item{lambda, threshold}{As in \code{\link[=shadow_scan]{shadow_scan()}}.}
 
@@ -47,10 +49,17 @@ on what is covered.}
 An object of class \code{c("shadow_scan_ci", "shadow_scan")}, as from
 \code{\link[=shadow_scan]{shadow_scan()}}, whose \code{curve} holds the debiased estimates \code{lower},
 \code{upper}, their standard errors \code{se_lower}, \code{se_upper}, the confidence set
-\code{ci_lower}, \code{ci_upper}, and the plug-in naive band of the target rows.
+\code{ci_lower}, \code{ci_upper}, and the plug-in outer band of the target rows.
 \code{flip} adds \code{ci}: the smallest \eqn{\lambda} at which the confidence set
 reaches the threshold, the point from which the data no longer rule out
-the other decision.
+the other decision. \code{capped} and \code{held} say where the cap
+\eqn{\pi \le 1} binds among the target rows, as in \code{\link[=shadow_scan]{shadow_scan()}},
+computed from the nuisance estimates.
+The estimates and the confidence set are kept monotone in \eqn{\lambda}
+(running minimum of the lower ends, running maximum of the upper ends):
+the identified set grows with \eqn{\lambda}, its debiased estimates need
+not, by sampling error, and a set valid at one \eqn{\lambda} is valid at
+every larger one.
 }
 \description{
 \code{shadow_scan_ci()} estimates the sharp set of \code{\link[=shadow_scan]{shadow_scan()}} with its
@@ -152,7 +161,9 @@ inp <- crossfit_inputs(d, "observed",
   fit_r   = function(train, new) predict(glm(update(f, observed ~ .), binomial, train),
                                          new, type = "response"),
   seed = 1)
-s <- shadow_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, threshold = 0.35)
+# the rejected applications: the rows whose outcome is missing
+s <- shadow_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, target = "unobserved",
+                    threshold = 0.35)
 s
 plot(s)
 }

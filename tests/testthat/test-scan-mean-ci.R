@@ -105,9 +105,9 @@ test_that("r-hat is clipped into r_bounds and the rows are counted", {
   f <- ci_fixture
   r <- f$d$obs_rate; r[1:5] <- 0.999; r[6:8] <- 0.001
   k <- shadow_scan_mean_ci(f$q, r, f$d$observed, f$d$y, lambda = c(0, 1))
-  expect_equal(k$clipped, sum(r < 0.01 | r > 0.99))
-  expect_gte(k$clipped, 8)
-  expect_output(print(k), "clipped")
+  expect_equal(k$clipped, c(low = sum(r < 0.01), high = sum(r > 0.99)))
+  expect_gte(k$clipped[["low"]], 3); expect_gte(k$clipped[["high"]], 5)
+  expect_output(print(k), "clipped.*below 0.01.*above 0.99")
   for (bad in list(replace(r, 1, 0), replace(r, 1, 1.2), replace(r, 1, NA)))
     expect_error(shadow_scan_mean_ci(f$q, bad, f$d$observed, f$d$y), "`r`")
 })
@@ -227,7 +227,7 @@ test_that("clipped and the tail count target rows, below the lower bound", {
   tg <- f$d$x1 > 0
   k <- shadow_scan_mean_ci(f$q, r, f$R, f$d$y, target = tg, lambda = c(0, 1),
                            r_bounds = c(0.05, 0.99))
-  expect_equal(k$clipped, sum(tg & (r < 0.05 | r > 0.99)))
+  expect_equal(k$clipped, c(low = sum(tg & r < 0.05), high = sum(tg & r > 0.99)))
   expect_equal(k$tail[["target"]], sum(tg & r < 0.05))
   expect_output(print(k), "r-hat < 0.05")
 })
@@ -257,4 +257,31 @@ test_that("crossfit_quantiles refuses a fractional K and non-numeric fits", {
   fq_chr <- function(train, newdata, tau) matrix("a", nrow(newdata), length(tau))
   expect_error(crossfit_quantiles(d, "observed", fq_chr, fr, K = 5, seed = 1),
                "numeric")
+})
+
+test_that("clipping only at the top says so, without alarm", {
+  f <- ci_fixture
+  r <- pmax(f$d$obs_rate, 0.02); r[1:30] <- 0.995
+  k <- shadow_scan_mean_ci(f$q, r, f$d$observed, f$d$y, lambda = c(0, 1))
+  expect_identical(k$clipped[["low"]], 0L)
+  out <- paste(capture.output(print(k)), collapse = "\n")
+  expect_match(out, "clipped: 30 target rows with r-hat above 0.99")
+  expect_no_match(out, "below 0.01, ")
+})
+
+test_that("debiased bounds and confidence sets are monotone in lambda", {
+  f <- ci_fixture
+  k <- shadow_scan_mean_ci(f$q, f$d$obs_rate, f$d$observed, f$d$y,
+                           lambda = seq(0, 2, by = 0.1))
+  cv <- k$curve
+  expect_true(all(diff(cv$lower) <= 0) && all(diff(cv$upper) >= 0))
+  expect_true(all(diff(cv$ci_lower) <= 0) && all(diff(cv$ci_upper) >= 0))
+})
+
+test_that("the mean print reports where the cap binds", {
+  f <- ci_fixture
+  k <- shadow_scan_mean_ci(f$q, f$d$obs_rate, f$d$observed, f$d$y, lambda = c(0, 2))
+  expect_named(k$capped, c("lower", "upper"))
+  expect_true(all(k$capped >= 0 & k$capped <= 1))
+  expect_output(print(k), "cap pi <= 1 at lambda = 2 binds in")
 })

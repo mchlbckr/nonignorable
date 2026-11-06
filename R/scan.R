@@ -33,20 +33,20 @@
 #' \deqn{\mathcal H_\lambda(x) = \big[\max\{\mathrm{expit}(\ell-\lambda),\;
 #'   r\eta_{\mathrm{obs}}\},\; \min\{\mathrm{expit}(\ell+\lambda),\;
 #'   r\eta_{\mathrm{obs}} + 1 - r\}\big],}
-#' the naive band \eqn{[\mathrm{expit}(\ell-\lambda),
+#' the outer band \eqn{[\mathrm{expit}(\ell-\lambda),
 #' \mathrm{expit}(\ell+\lambda)]} intersected with the worst-case (Manski)
 #' bounds of Manski (1989). Both endpoints are attained, and at \eqn{\lambda = 0} the set is
 #' \eqn{\{\eta_{\mathrm{obs}}\}}: the value any model fitted on the observed
 #' rows asserts.
 #'
 #' @section When the sharp set is narrower, and when it is not:
-#' It is never wider than the naive band. It is strictly narrower exactly where
+#' It is never wider than the outer band. It is strictly narrower exactly where
 #' a worst-case bound cuts the band: the lower end moves when \eqn{r >
 #' \mathrm{expit}(\ell-\lambda)/\eta_{\mathrm{obs}}}, the upper end when
 #' \eqn{r > \{1-\mathrm{expit}(\ell+\lambda)\}/(1-\eta_{\mathrm{obs}})}. For
 #' \eqn{r \le e^{-\lambda}} neither moves. In reject inference the rows of
 #' interest are the *rejected* applications, whose observation rate is
-#' typically small, so the **upper** end there often coincides with the naive
+#' typically small, so the **upper** end there often coincides with the outer
 #' one. Ignoring \eqn{r} is never wrong, only wasteful where \eqn{r} is
 #' large: it gives an outer set, not a sharp one, as Dorn and Guo (2023)
 #' observe for the marginal sensitivity model.
@@ -117,7 +117,7 @@
 #' @param aggregate `"union"` (default) or `"common"`, see Aggregation.
 #' @param weights Optional non-negative row weights for the portfolio mean.
 #' @param threshold Optional decision threshold on the portfolio rate. If
-#'   given, the smallest \eqn{\lambda} at which the sharp set (and the naive
+#'   given, the smallest \eqn{\lambda} at which the sharp set (and the outer
 #'   band) reaches it is computed exactly, by root finding on the closed form.
 #'
 #' @return An object of class `"shadow_scan"`, a list with
@@ -125,10 +125,20 @@
 #'     portfolio rate) and `naive_lower`, `naive_upper`;
 #'   * `point`: the portfolio rate at \eqn{\lambda = 0};
 #'   * `threshold`, `flip`: the threshold and the \eqn{\lambda} at which the
-#'     sharp set and the naive band first reach it (`NA` if not within the
+#'     sharp set and the outer band first reach it (`NA` if not within the
 #'     scanned range);
 #'   * `binding`: for `"common"`, the row indices that bind the lower and the
-#'     upper end at each \eqn{\lambda} (`NA` where the naive bound binds);
+#'     upper end at each \eqn{\lambda} (`NA` where the outer bound binds);
+#'   * `capped`: for `"union"`, the weighted share of rows in which the cap
+#'     \eqn{\pi \le 1} (the worst-case bound) binds at the largest
+#'     \eqn{\lambda}, for the `lower` and the `upper` bound;
+#'   * `held`: for `"union"`, the \eqn{\lambda} from which the cap binds in
+#'     every row, so that this bound stays flat (`NA` if not within the
+#'     scanned range). With \eqn{\hat r} near one this comes early: the lower
+#'     bound \eqn{r\eta_{\mathrm{obs}}} binds from
+#'     \eqn{\lambda = \mathrm{logit}\,\eta_{\mathrm{obs}} -
+#'     \mathrm{logit}(r\eta_{\mathrm{obs}})}, about \eqn{-\log r} for rare
+#'     events. That flat edge is the identified set, not a defect;
 #'   * the inputs, so that `as.data.frame(x, lambda = )` can return the
 #'     pointwise sets.
 #' @references
@@ -238,12 +248,46 @@ shadow_scan <- function(eta_obs, r, lambda = seq(0, 2, length.out = 81),
     }
   }
 
+  cap <- if (aggregate == "union") cap_summary(eta_obs, r, w, lambda) else NULL
+
   structure(list(
     curve = out, point = point, threshold = threshold, flip = flip,
-    aggregate = aggregate,
+    aggregate = aggregate, held = cap$held, capped = cap$capped,
     binding = if (aggregate == "common") binding else NULL,
     eta_obs = eta_obs, r = r, weights = weights, n = length(eta_obs)
   ), class = "shadow_scan")
+}
+
+# Where the cap pi <= 1 binds. Row i's lower bound is r * eta_obs, not the
+# band, once lambda exceeds logit(eta_obs) - logit(r * eta_obs); its upper
+# bound once lambda exceeds logit(r * eta_obs + 1 - r) - logit(eta_obs).
+# `capped` is the weighted share of target rows (positive weight) where the
+# cap binds at the largest lambda; `held` is the lambda from which it binds
+# in every target row, so that the bound no longer moves (NA if not within
+# the scanned range).
+cap_summary <- function(eta_obs, r, w, lambda, target = NULL) {
+  if (is.null(w)) w <- rep(1, length(eta_obs))
+  if (!is.null(target)) w <- w * target
+  keep <- w > 0
+  ell <- stats::qlogis(eta_obs[keep]); rr <- r[keep]; e <- eta_obs[keep]; ww <- w[keep]
+  from <- list(lower = ell - stats::qlogis(rr * e),
+               upper = stats::qlogis(rr * e + 1 - rr) - ell)
+  lam <- max(lambda)
+  capped <- vapply(from, function(f) sum(ww[f < lam]) / sum(ww), 0)
+  held <- vapply(from, function(f) { h <- max(max(f), 0); if (h <= lam) h else NA_real_ }, 0)
+  list(capped = capped, held = held)
+}
+
+cap_lines <- function(x, digits = 3) {
+  if (is.null(x$capped)) return(invisible())
+  lam <- max(x$curve$lambda)
+  pc <- function(v) sprintf("%.0f%%", 100 * v)
+  cat(sprintf("  cap pi <= 1 at lambda = %s binds in %s of target rows for the lower bound, %s for the upper\n",
+              format(lam, digits = digits), pc(x$capped[["lower"]]), pc(x$capped[["upper"]])))
+  for (side in names(x$held)[!is.na(x$held)])
+    cat(sprintf("  %s bound held by the cap from lambda = %s (propensity ratio %s): flat from there\n",
+                side, format(x$held[[side]], digits = digits),
+                format(exp(x$held[[side]]), digits = digits)))
 }
 
 #' Pointwise sharp bounds
@@ -317,7 +361,7 @@ wmean <- function(x, w) if (is.null(w)) mean(x) else sum(w * x) / sum(w)
 #' @param row.names,optional Ignored.
 #' @param ... Ignored.
 #' @return `as.data.frame()`: the portfolio curve, or, if `lambda` is a single
-#'   value, the pointwise sharp set and naive band for every row.
+#'   value, the pointwise sharp set and outer band for every row.
 #' @export
 as.data.frame.shadow_scan <- function(x, row.names = NULL, optional = FALSE,
                                       ..., lambda = NULL) {
@@ -336,7 +380,7 @@ print.shadow_scan <- function(x, digits = 3, ...) {
   cat(if (is_mean) "<shadow_scan_mean> sharp identified set for a mean"
       else "<shadow_scan> sharp identified set for a rate",
       "under a propensity ratio <= exp(lambda)\n")
-  outer <- if (is_mean) "outer" else "naive" 
+  outer <- "outer"
   cat("  rows:", x$n, "  aggregation:", x$aggregate, "\n")
   cat("  lambda = 0 (model on observed rows):", format(x$point, digits = digits),
       "\n")
@@ -355,6 +399,7 @@ print.shadow_scan <- function(x, digits = 3, ...) {
     cat("    sharp set:  ", fl(x$flip[["sharp"]]), "\n")
     cat(sprintf("    %s band: ", outer), fl(x$flip[["naive"]]), "\n")
   }
+  cap_lines(x, digits)
   invisible(x)
 }
 

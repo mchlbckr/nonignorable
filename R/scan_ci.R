@@ -91,8 +91,10 @@
 #' @param r Cross-fitted \eqn{\hat r(x_i)} for every row, in (0, 1].
 #' @param response Response indicator for every row, 0/1 or logical.
 #' @param outcome Outcome, 0/1; ignored (and may be `NA`) where `response` is 0.
-#' @param target `"unobserved"` (default), `"all"`, or a logical vector
-#'   selecting the rows of the portfolio by \eqn{X}.
+#' @param target `"all"` (default, as in [shadow_scan_mean_ci()]),
+#'   `"unobserved"` (the rows whose outcome is missing, such as rejected
+#'   applications), or a logical vector selecting the rows of the portfolio
+#'   by \eqn{X}.
 #' @param lambda,threshold As in [shadow_scan()].
 #' @param weights Optional non-negative row weights, a function of \eqn{X}.
 #' @param level Confidence level. Default 0.9.
@@ -103,10 +105,17 @@
 #' @return An object of class `c("shadow_scan_ci", "shadow_scan")`, as from
 #'   [shadow_scan()], whose `curve` holds the debiased estimates `lower`,
 #'   `upper`, their standard errors `se_lower`, `se_upper`, the confidence set
-#'   `ci_lower`, `ci_upper`, and the plug-in naive band of the target rows.
+#'   `ci_lower`, `ci_upper`, and the plug-in outer band of the target rows.
 #'   `flip` adds `ci`: the smallest \eqn{\lambda} at which the confidence set
 #'   reaches the threshold, the point from which the data no longer rule out
-#'   the other decision.
+#'   the other decision. `capped` and `held` say where the cap
+#'   \eqn{\pi \le 1} binds among the target rows, as in [shadow_scan()],
+#'   computed from the nuisance estimates.
+#'   The estimates and the confidence set are kept monotone in \eqn{\lambda}
+#'   (running minimum of the lower ends, running maximum of the upper ends):
+#'   the identified set grows with \eqn{\lambda}, its debiased estimates need
+#'   not, by sampling error, and a set valid at one \eqn{\lambda} is valid at
+#'   every larger one.
 #' @references
 #' Semenova, V. (2025). Debiased machine learning of aggregated intersection
 #' bounds and other causal parameters. Working paper, SSRN 5134514.
@@ -122,11 +131,13 @@
 #'   fit_r   = function(train, new) predict(glm(update(f, observed ~ .), binomial, train),
 #'                                          new, type = "response"),
 #'   seed = 1)
-#' s <- shadow_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, threshold = 0.35)
+#' # the rejected applications: the rows whose outcome is missing
+#' s <- shadow_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, target = "unobserved",
+#'                     threshold = 0.35)
 #' s
 #' plot(s)
 shadow_scan_ci <- function(eta_obs, r, response, outcome,
-                           target = "unobserved",
+                           target = "all",
                            lambda = seq(0, 2, length.out = 81),
                            weights = NULL, threshold = NULL, level = 0.9,
                            trim = 0, se_type = c("max", "conditional", "empirical")) {
@@ -263,6 +274,7 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
       call. = FALSE)
   out$ci_lower <- pmax(out$lower - z * out$se_lower, 0)
   out$ci_upper <- pmin(out$upper + z * out$se_upper, 1)
+  out <- monotone_curve(out)
   p0 <- endpoint(0, "upper")
   point <- p0[["est"]]
   flip <- c(sharp = NA_real_, naive = NA_real_, ci = NA_real_)
@@ -284,10 +296,13 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
                                    grid = out$lambda, values = out[[paste0("ci_", side)]])
   }
 
+  cap <- cap_summary(eta_obs, r, w, lambda, target = s)
+
   structure(list(
     curve = out, point = point, threshold = threshold, flip = flip,
     aggregate = "union", binding = NULL, level = level, target = target_label,
     trim = trim, trimmed = n_trimmed, se_type = se_type,
+    held = cap$held, capped = cap$capped,
     tail = c(target = sum(s > 0 & r < 0.01), observed = sum(R == 1 & r < 0.01),
              min_r_observed = min(r[R == 1])),
     eta_obs = eta_obs, r = r, weights = weights, n = n,
@@ -296,6 +311,18 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
 }
 
 outcome_or0 <- function(outcome, R) ifelse(R == 1, outcome, 0)
+
+# The sharp set grows with lambda, so its bounds are monotone; the debiased
+# estimates of them need not be, by sampling error, most visibly where the
+# cap pi <= 1 holds a bound flat. Every set at lambda is also a valid set at
+# any larger lambda, so the running minimum of the lower ends and the running
+# maximum of the upper ends keep the estimate and the confidence set
+# monotone without losing coverage. `curve` is sorted by lambda.
+monotone_curve <- function(out) {
+  for (nm in intersect(c("lower", "ci_lower"), names(out))) out[[nm]] <- cummin(out[[nm]])
+  for (nm in intersect(c("upper", "ci_upper"), names(out))) out[[nm]] <- cummax(out[[nm]])
+  out
+}
 
 #' @export
 print.shadow_scan_ci <- function(x, digits = 3, ...) {
@@ -326,10 +353,11 @@ print.shadow_scan_ci <- function(x, digits = 3, ...) {
       sprintf("lambda = %s (propensity ratio %s)", format(v, digits = digits),
               format(exp(v), digits = digits))
     cat("  threshold", format(x$threshold, digits = digits), "reached by\n")
-    cat("    estimated set:  ", fl(x$flip[["sharp"]]), "\n")
-    cat("    confidence set: ", fl(x$flip[["ci"]]), "\n")
-    cat("    naive band:     ", fl(x$flip[["naive"]]), "\n")
+    cat("    estimated set:       ", fl(x$flip[["sharp"]]), "\n")
+    cat("    confidence set:      ", fl(x$flip[["ci"]]), "\n")
+    cat("    outer band (plug-in):", fl(x$flip[["naive"]]), "\n")
   }
+  cap_lines(x, digits)
   invisible(x)
 }
 

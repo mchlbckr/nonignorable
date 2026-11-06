@@ -109,14 +109,20 @@ mean_score <- function(side, m, r, Y, R, lam) {
 #' @param level Confidence level. Default 0.9.
 #' @param trim Rows with \eqn{\hat r <} `trim` leave the target. Default 0.
 #' @param r_bounds \eqn{\hat r} is clipped into this range before use.
-#'   Default `c(0.01, 0.99)`. The number of clipped rows is reported.
+#'   Default `c(0.01, 0.99)`. The number of clipped target rows is reported,
+#'   below and above apart: clipping at the top only stabilises the cap
+#'   \eqn{\pi \le 1} for rows that are almost always observed, clipping at the
+#'   bottom limits inverse weights.
 #' @return An object of class
 #'   `c("shadow_scan_mean_ci", "shadow_scan_ci", "shadow_scan_mean",
 #'   "shadow_scan")` with `curve` (columns `lambda`, `lower`, `upper`,
 #'   `se_lower`, `se_upper`, `ci_lower`, `ci_upper`, `naive_lower`,
 #'   `naive_upper`; the naive columns are the plug-in outer band), `point`
 #'   (the estimate at \eqn{\lambda = 0}), `flip` (`sharp`, `ci`, `naive`),
-#'   `trimmed`, `clipped`, `tail`, `n` and `n_target`. `as.data.frame(x,
+#'   `trimmed`, `clipped`, `capped` (the weighted share of target rows in
+#'   which the cap \eqn{\pi \le 1} binds at the largest \eqn{\lambda}, per
+#'   bound), `tail`, `n` and `n_target`. Estimates and confidence set are kept
+#'   monotone in \eqn{\lambda}, as in [shadow_scan_ci()]. `as.data.frame(x,
 #'   lambda = )` gives the plug-in bounds per row, with \eqn{\hat r} clipped
 #'   into `r_bounds`; they carry no correction and no confidence statement.
 #' @seealso [shadow_scan_mean()], [crossfit_quantiles()], [shadow_scan_ci()]
@@ -213,7 +219,7 @@ shadow_scan_mean_ci <- function(q, r, response, outcome, target = "all",
   s <- s * keep
   if (sum(w * s) <= 0) stop("The target is empty.", call. = FALSE)
   rc <- pmin(pmax(r, r_bounds[1]), r_bounds[2])
-  n_clipped <- sum(s > 0 & rc != r)
+  n_clipped <- c(low = sum(s > 0 & r < r_bounds[1]), high = sum(s > 0 & r > r_bounds[2]))
   z <- stats::qnorm(1 - (1 - level) / 2)
   prep <- mean_prep(q)
   ws <- w * s
@@ -241,6 +247,7 @@ shadow_scan_mean_ci <- function(q, r, response, outcome, target = "all",
   }
   out$ci_lower <- out$lower - z * out$se_lower
   out$ci_upper <- out$upper + z * out$se_upper
+  out <- monotone_curve(out)
   # The bounds lie in the range of the target rows' quantiles; far outside it
   # the inverse weights have blown up.
   rng <- range(q[s > 0, , drop = FALSE])
@@ -266,6 +273,9 @@ shadow_scan_mean_ci <- function(q, r, response, outcome, target = "all",
   }
 
   point <- endpoint(0, "upper")[["est"]]
+  lmax <- max(lambda)
+  capped <- c(lower = sum(ws * mean_score(prep$lo, -prep$m, rc, -Y, R, lmax)$cap) / sum(ws),
+              upper = sum(ws * mean_score(prep$hi, prep$m, rc, Y, R, lmax)$cap) / sum(ws))
   flip <- c(sharp = NA_real_, naive = NA_real_, ci = NA_real_)
   if (!is.null(threshold)) {
     side <- if (threshold >= point) "upper" else "lower"
@@ -289,6 +299,7 @@ shadow_scan_mean_ci <- function(q, r, response, outcome, target = "all",
     curve = out, point = point, threshold = threshold, flip = flip,
     aggregate = "union", binding = NULL, level = level, target = target_label,
     trim = trim, trimmed = n_trimmed, clipped = n_clipped, r_bounds = r_bounds,
+    capped = capped,
     tail = c(target = sum(s > 0 & r < r_bounds[1]),
              observed = sum(R == 1 & r < r_bounds[1]),
              min_r_observed = min(r[R == 1])),
@@ -308,9 +319,13 @@ print.shadow_scan_mean_ci <- function(x, digits = 3, ...) {
   cat(sprintf("  rows: %d   target: %s (%d rows)\n", x$n, x$target, x$n_target))
   if (x$trim > 0)
     cat(sprintf("  trimmed: %d rows with r-hat < %g, out of the target\n", x$trimmed, x$trim))
-  if (x$clipped > 0)
-    cat(sprintf("  clipped: %d rows with r-hat outside [%g, %g]\n", x$clipped,
-                x$r_bounds[1], x$r_bounds[2]))
+  if (sum(x$clipped) > 0) {
+    part <- c(if (x$clipped[["low"]] > 0)
+                sprintf("%d target rows with r-hat below %g (raised to it)", x$clipped[["low"]], x$r_bounds[1]),
+              if (x$clipped[["high"]] > 0)
+                sprintf("%d target rows with r-hat above %g (lowered to it)", x$clipped[["high"]], x$r_bounds[2]))
+    cat(strwrap(paste0("clipped: ", paste(part, collapse = ", ")), indent = 2, exdent = 4), sep = "\n")
+  }
   cat(sprintf("  r-hat < %g: %d target rows, %d observed rows; smallest r-hat observed %s\n",
               x$r_bounds[1], as.integer(x$tail[["target"]]), as.integer(x$tail[["observed"]]),
               format(x$tail[["min_r_observed"]], digits = 2)))
@@ -328,5 +343,6 @@ print.shadow_scan_mean_ci <- function(x, digits = 3, ...) {
     cat("    confidence set:      ", fl(x$flip[["ci"]]), "\n")
     cat("    outer band (plug-in):", fl(x$flip[["naive"]]), "\n")
   }
+  cap_lines(x, digits)
   invisible(x)
 }

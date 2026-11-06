@@ -115,7 +115,7 @@ How to read the plot:
 - **The filled band** is the sharp identified set. Every rate inside it is
   consistent with the data and with selection up to that strength, and no
   rate outside it is.
-- **The dashed band** is the naive band, which shifts every row's log-odds by
+- **The dashed band** is the outer band, which shifts every row's log-odds by
   $\pm\lambda$. The sharp set also uses the worst-case bounds that follow
   from the observed share of each row. Where $\hat r$ is small, as for these
   rejected rows, the two nearly coincide. Where it is large, the sharp set

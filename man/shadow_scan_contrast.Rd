@@ -54,7 +54,7 @@ An object of class
 \code{c("shadow_scan_contrast", "shadow_scan_ci", "shadow_scan")} whose
 \code{curve} has the columns of \code{\link[=shadow_scan_ci]{shadow_scan_ci()}} for the difference
 \eqn{A - B}, with \code{point} the difference at \eqn{\lambda = 0} and \code{flip}
-the flip points of the set, the naive band and the confidence set.
+the flip points of the set, the outer band and the confidence set.
 }
 \description{
 \code{shadow_scan_contrast()} compares two disjoint portfolios chosen by

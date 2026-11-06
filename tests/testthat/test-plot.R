@@ -43,7 +43,7 @@ test_that("the screen plot labels unreadable ratios as such", {
   txt <- character()
   local_mocked_bindings(place_labels = function(x, y, labels, ...) txt <<- labels)
   plot(sc)
-  expect_match(txt[2], "noise \\(ratio not readable\\)")
+  expect_match(txt[2], "noise \\(violation at noise level")
   expect_match(txt[1], "z_shadow \\(ratio 17")
 })
 
@@ -108,4 +108,112 @@ test_that("screen labels do not overlap and leaders do not run through them", {
     # a leader may touch only its own label, at its end point
     expect_lte(sum(hits), 0)
   }
+})
+
+test_that("the screen plot shows the verdict: rejected candidates grey and labelled", {
+  pdf(NULL)
+  on.exit(dev.off())
+  d <- simulate_shadow(2000, tilt = -1, seed = 2)
+  sc <- shadow_screen(d, "y", "observed", c("x1", "x2"), c("z_shadow", "z_policy"))
+  expect_identical(sc$verdict, c("pass", "reject"))
+  txt <- character()
+  local_mocked_bindings(place_labels = function(x, y, labels, ...) txt <<- labels)
+  plot(sc)
+  expect_no_match(txt[1], "rejected")
+  expect_match(txt[2], "rejected")
+  st <- shadowscan:::screen_point_style(c("pass", "reject", "pass", "reject"),
+                                        c(TRUE, TRUE, FALSE, FALSE), col = "blue")
+  expect_equal(st$border[1:2], c("white", "white"))      # filled: border is surface
+  expect_equal(st$bg[1], "blue"); expect_equal(st$bg[2], "grey60")
+  expect_equal(st$border[3:4], c("blue", "grey60"))      # hollow: border carries colour
+})
+
+# --- scan plots: legend placement, cap note, band name ----------------------
+
+capture_legend <- function(expr) {
+  got <- NULL
+  orig <- shadowscan:::draw_scan_legend
+  local_mocked_bindings(draw_scan_legend = function(...) { got <<- list(args = list(...), rect = orig(...)); got$rect })
+  force(expr)
+  got$usr <- par("usr")
+  got
+}
+
+legend_hits_ink <- function(x, rect, scale = "ratio") {
+  cv <- x$curve
+  xs <- if (scale == "ratio") exp(cv$lambda) else cv$lambda
+  cols <- intersect(c("lower", "upper", "naive_lower", "naive_upper", "ci_lower", "ci_upper"), names(cv))
+  m <- as.matrix(cv[cols])
+  lo <- apply(m, 1, min); hi <- apply(m, 1, max)
+  b <- c(rect$left, rect$left + rect$w, rect$top - rect$h, rect$top)
+  xo <- seq(b[1], b[2], length.out = 200)
+  xo <- xo[xo >= min(xs) & xo <= max(xs)]
+  l <- approx(xs, lo, xo)$y; h <- approx(xs, hi, xo)$y
+  any(h >= b[3] & l <= b[4])
+}
+
+test_that("the scan legend avoids every curve", {
+  png(tempfile(fileext = ".png"), width = 7, height = 4.5, units = "in", res = 96)
+  on.exit(dev.off())
+  d <- simulate_shadow(3000, tilt = -1, seed = 31)
+  rej <- d[d$observed == 0, ]
+  for (thr in list(NULL, 0.3)) {
+    s <- shadow_scan(rej$eta_obs, rej$obs_rate, threshold = thr)
+    got <- capture_legend(plot(s))
+    expect_false(legend_hits_ink(s, got$rect$rect))
+  }
+  # a band that fills the top left: the legend has to go elsewhere
+  s <- shadow_scan(rep(0.5, 50), rep(0.2, 50))
+  got <- capture_legend(plot(s))
+  expect_false(legend_hits_ink(s, got$rect$rect))
+})
+
+test_that("the legend spot prefers a free corner and grows the top when none is free", {
+  usr <- c(0, 10, 0, 1)
+  xs <- 0:10
+  # ink high on the left, low on the right: top right and bottom left are free
+  sp <- shadowscan:::scan_legend_spot(3, 0.3, usr, xs, lo = seq(0.6, 0.0, length.out = 11),
+                                      hi = seq(0.99, 0.4, length.out = 11))
+  expect_identical(sp$corner, "topright")
+  # ink everywhere from 0.05 to 0.95: no corner free, the top has to grow
+  sp <- shadowscan:::scan_legend_spot(3, 0.3, usr, xs, lo = rep(0.05, 11), hi = rep(0.95, 11))
+  expect_identical(sp$corner, "topleft")
+  expect_gt(sp$grow_to, 1)
+  # an obstacle (the threshold line) rules a corner out
+  sp <- shadowscan:::scan_legend_spot(3, 0.3, usr, xs, lo = rep(0.4, 11), hi = rep(0.5, 11),
+                                      obstacles = list(c(0, 10, 0.85, 0.85)))
+  expect_false(sp$corner %in% c("topleft", "topright"))
+})
+
+test_that("plots name the outer band, never a naive one", {
+  pdf(NULL)
+  on.exit(dev.off())
+  d <- simulate_shadow(2000, tilt = -1, seed = 31)
+  rej <- d[d$observed == 0, ]
+  s <- shadow_scan(rej$eta_obs, rej$obs_rate, threshold = 0.99)
+  got <- capture_legend(plot(s))
+  labs <- vapply(as.list(got$args$legend), function(e) paste(deparse(e), collapse = ""), "")
+  expect_true(any(grepl("Outer band", labs)))
+  expect_false(any(grepl("Naive", labs)))
+})
+
+test_that("a bound held by the cap is noted in print and legend", {
+  pdf(NULL)
+  on.exit(dev.off())
+  # r = 0.92 everywhere: the lower bound r * eta binds from
+  # lambda = logit(eta) - logit(r * eta), here about 0.086
+  s <- shadow_scan(rep(0.04, 100), rep(0.92, 100))
+  expect_equal(s$held[["lower"]], qlogis(0.04) - qlogis(0.92 * 0.04), tolerance = 1e-8)
+  expect_equal(s$held[["upper"]], qlogis(0.92 * 0.04 + 0.08) - qlogis(0.04), tolerance = 1e-8)
+  expect_equal(s$capped[["lower"]], 1)
+  expect_output(print(s), "held by the cap")
+  got <- capture_legend(plot(s))
+  labs <- vapply(as.list(got$args$legend), function(e) paste(deparse(e), collapse = ""), "")
+  expect_true(any(grepl("held by", labs)))
+  # nothing held: no note
+  d <- simulate_shadow(2000, tilt = -1, seed = 31)
+  rej <- d[d$observed == 0, ]
+  s2 <- shadow_scan(rej$eta_obs, rej$obs_rate)
+  expect_true(all(is.na(s2$held)))
+  expect_no_match(paste(capture.output(print(s2)), collapse = "\n"), "held by")
 })

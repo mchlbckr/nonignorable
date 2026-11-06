@@ -35,7 +35,7 @@
 #'   `c("shadow_scan_contrast", "shadow_scan_ci", "shadow_scan")` whose
 #'   `curve` has the columns of [shadow_scan_ci()] for the difference
 #'   \eqn{A - B}, with `point` the difference at \eqn{\lambda = 0} and `flip`
-#'   the flip points of the set, the naive band and the confidence set.
+#'   the flip points of the set, the outer band and the confidence set.
 #' @seealso [shadow_scan_ci()]
 #' @export
 #' @examples
@@ -61,6 +61,75 @@ shadow_scan_contrast <- function(eta_obs, r, response, outcome,
                                  labels = c("A", "B")) {
   se_type <- match.arg(se_type)
   n <- length(eta_obs)
+  check_contrast_args(n, target_a, target_b, lambda, labels)
+  if (!is.numeric(threshold) || length(threshold) != 1L || !is.finite(threshold) ||
+      abs(threshold) >= 1)
+    stop("`threshold` must be a single number in (-1, 1).", call. = FALSE)
+  arm <- function(tg, label) relabel_warnings(label,
+    shadow_scan_ci(eta_obs, r, response, outcome, target = tg,
+                   lambda = lambda, weights = weights,
+                   level = level, trim = trim, se_type = se_type))
+  a <- arm(target_a, labels[1]); b <- arm(target_b, labels[2])
+  k <- contrast_from_arms(a, b, threshold, level, labels, n, range = c(-1, 1))
+  k$se_type <- se_type
+  k
+}
+
+#' Debiased scan for the difference of two portfolio means
+#'
+#' `shadow_scan_mean_contrast()` is [shadow_scan_contrast()] for an outcome
+#' that is not binary: it compares the means of two disjoint portfolios chosen
+#' by \eqn{X} under the assumption of [shadow_scan_mean()], with each
+#' endpoint estimated by [shadow_scan_mean_ci()]. The sharp set for
+#' \eqn{A - B} is \eqn{[\mathrm{lower}_A - \mathrm{upper}_B,\
+#' \mathrm{upper}_A - \mathrm{lower}_B]}; because the targets are disjoint,
+#' the standard error of each endpoint is the root of the sum of the squared
+#' standard errors of the arms. Each target is a whole segment of rows,
+#' observed and unobserved alike.
+#'
+#' @inheritParams shadow_scan_mean_ci
+#' @param target_a,target_b Logical vectors, one per row, selecting the two
+#'   portfolios by \eqn{X}. They must be disjoint and non-empty.
+#' @param lambda Grid of \eqn{\lambda} values; must include 0.
+#' @param threshold The difference at which the decision changes. Default 0.
+#' @param labels Names of the two portfolios, for printing and plotting.
+#' @return An object of class
+#'   `c("shadow_scan_contrast", "shadow_scan_ci", "shadow_scan")` as from
+#'   [shadow_scan_contrast()], with `of_means = TRUE`.
+#' @seealso [shadow_scan_contrast()], [shadow_scan_mean_ci()],
+#'   [crossfit_quantiles()]
+#' @export
+#' @examples
+#' d <- simulate_shadow(3000, tilt = -1, outcome = "continuous", seed = 3)
+#' q <- obs_quantiles(d, K = 50)   # the true quantile grids of the simulation
+#' k <- shadow_scan_mean_contrast(q, d$obs_rate, d$observed, d$y,
+#'                                target_a = d$x1 > 0, target_b = d$x1 <= 0,
+#'                                lambda = seq(0, 2, length.out = 21),
+#'                                labels = c("x1 > 0", "x1 <= 0"))
+#' k
+#' plot(k)
+shadow_scan_mean_contrast <- function(q, r, response, outcome, target_a, target_b,
+                                      lambda = seq(0, 2, length.out = 81),
+                                      weights = NULL, threshold = 0, level = 0.9,
+                                      trim = 0, r_bounds = c(0.01, 0.99),
+                                      labels = c("A", "B")) {
+  n <- if (is.null(dim(q))) length(q) else nrow(q)
+  check_contrast_args(n, target_a, target_b, lambda, labels)
+  if (!is.numeric(threshold) || length(threshold) != 1L || !is.finite(threshold))
+    stop("`threshold` must be a single finite number.", call. = FALSE)
+  arm <- function(tg, label) relabel_warnings(label,
+    shadow_scan_mean_ci(q, r, response, outcome, target = tg, lambda = lambda,
+                        weights = weights, level = level, trim = trim,
+                        r_bounds = r_bounds))
+  a <- arm(target_a, labels[1]); b <- arm(target_b, labels[2])
+  k <- contrast_from_arms(a, b, threshold, level, labels, n, range = c(-Inf, Inf))
+  k$of_means <- TRUE
+  k$clipped <- a$clipped + b$clipped
+  k$r_bounds <- r_bounds
+  k
+}
+
+check_contrast_args <- function(n, target_a, target_b, lambda, labels) {
   for (tg in list(target_a, target_b))
     if (!is.logical(tg) || length(tg) != n || anyNA(tg))
       stop("`target_a` and `target_b` must be logical vectors, one per row, ",
@@ -74,30 +143,30 @@ shadow_scan_contrast <- function(eta_obs, r, response, outcome,
   if (length(unique(lambda)) < 2L)
     stop("`lambda` needs at least two distinct values, so that flip points can ",
          "be interpolated.", call. = FALSE)
-  if (!is.numeric(threshold) || length(threshold) != 1L || !is.finite(threshold) ||
-      abs(threshold) >= 1)
-    stop("`threshold` must be a single number in (-1, 1).", call. = FALSE)
   if (!is.character(labels) || length(labels) != 2L)
     stop("`labels` must be two strings.", call. = FALSE)
-  arm <- function(tg, label) withCallingHandlers(
-    shadow_scan_ci(eta_obs, r, response, outcome, target = tg,
-                   lambda = lambda, weights = weights,
-                   level = level, trim = trim, se_type = se_type),
-    warning = function(cnd) {
-      warning(label, ": ", conditionMessage(cnd), call. = FALSE)
-      invokeRestart("muffleWarning")
-    })
-  a <- arm(target_a, labels[1]); b <- arm(target_b, labels[2])
+}
+
+relabel_warnings <- function(label, expr) withCallingHandlers(expr,
+  warning = function(cnd) {
+    warning(label, ": ", conditionMessage(cnd), call. = FALSE)
+    invokeRestart("muffleWarning")
+  })
+
+# The difference A - B from two arm scans on disjoint targets. `range` clamps
+# the confidence set (a difference of rates lies in [-1, 1]).
+contrast_from_arms <- function(a, b, threshold, level, labels, n, range) {
   ca <- a$curve; cb <- b$curve
   z <- stats::qnorm(1 - (1 - level) / 2)
   out <- data.frame(lambda = ca$lambda,
                     lower = ca$lower - cb$upper, upper = ca$upper - cb$lower,
                     se_lower = sqrt(ca$se_lower^2 + cb$se_upper^2),
                     se_upper = sqrt(ca$se_upper^2 + cb$se_lower^2))
-  out$ci_lower <- pmax(out$lower - z * out$se_lower, -1)
-  out$ci_upper <- pmin(out$upper + z * out$se_upper, 1)
+  out$ci_lower <- pmax(out$lower - z * out$se_lower, range[1])
+  out$ci_upper <- pmin(out$upper + z * out$se_upper, range[2])
   out$naive_lower <- ca$naive_lower - cb$naive_upper
   out$naive_upper <- ca$naive_upper - cb$naive_lower
+  out <- monotone_curve(out)
   point <- out$upper[out$lambda == 0]
   side <- if (threshold >= point) "upper" else "lower"
   lam_max <- max(out$lambda)
@@ -108,9 +177,9 @@ shadow_scan_contrast <- function(eta_obs, r, response, outcome,
             ci = first_crossing(pick(out$ci_lower, out$ci_upper), threshold, lam_max, side, out$lambda))
   structure(list(
     curve = out, point = point, threshold = threshold, flip = flip,
-    aggregate = "union", binding = NULL, level = level, se_type = se_type,
-    trim = trim, trimmed = a$trimmed + b$trimmed, labels = labels,
-    n = n, n_a = a$n_target, n_b = b$n_target,
+    aggregate = "union", binding = NULL, level = level,
+    trim = a$trim, trimmed = a$trimmed + b$trimmed, labels = labels,
+    n = n, n_a = a$n_target, n_b = b$n_target, of_means = FALSE,
     tail = c(target = a$tail[["target"]] + b$tail[["target"]],
              observed = a$tail[["observed"]],
              min_r_observed = a$tail[["min_r_observed"]]),
@@ -122,12 +191,17 @@ shadow_scan_contrast <- function(eta_obs, r, response, outcome,
 print.shadow_scan_contrast <- function(x, digits = 3, ...) {
   cv <- x$curve; last <- nrow(cv); i0 <- which(cv$lambda == 0)
   f <- function(v) format(v, digits = digits)
-  cat(sprintf("<shadow_scan_contrast> difference of rates %s - %s, debiased, with %g%% confidence set\n",
+  cat(sprintf("<shadow_scan_contrast> difference of %s %s - %s, debiased, with %g%% confidence set\n",
+              if (isTRUE(x$of_means)) "means" else "rates",
               x$labels[1], x$labels[2], 100 * x$level))
   cat(sprintf("  rows: %d   %s: %d rows   %s: %d rows\n", x$n, x$labels[1], x$n_a,
               x$labels[2], x$n_b))
   if (x$trim > 0)
     cat(sprintf("  trimmed: %d rows with r-hat < %g, out of the targets\n", x$trimmed, x$trim))
+  if (sum(x$clipped) > 0)
+    cat(sprintf("  clipped: %d target rows with r-hat below %g, %d above %g\n",
+                as.integer(x$clipped[["low"]]), x$r_bounds[1],
+                as.integer(x$clipped[["high"]]), x$r_bounds[2]))
   cat(sprintf("  r-hat < 0.01: %d target rows, %d observed rows; smallest r-hat observed %s\n",
               as.integer(x$tail[["target"]]), as.integer(x$tail[["observed"]]),
               format(x$tail[["min_r_observed"]], digits = 2)))
@@ -138,8 +212,8 @@ print.shadow_scan_contrast <- function(x, digits = 3, ...) {
   fl <- function(v) if (is.na(v)) "not within the scanned range" else
     sprintf("lambda = %s (propensity ratio %s)", f(v), f(exp(v)))
   cat(sprintf("  difference %s reached by\n", f(x$threshold)))
-  cat("    estimated set:  ", fl(x$flip[["sharp"]]), "\n")
-  cat("    confidence set: ", fl(x$flip[["ci"]]), "\n")
-  cat("    naive band:     ", fl(x$flip[["naive"]]), "\n")
+  cat("    estimated set:       ", fl(x$flip[["sharp"]]), "\n")
+  cat("    confidence set:      ", fl(x$flip[["ci"]]), "\n")
+  cat("    outer band (plug-in):", fl(x$flip[["naive"]]), "\n")
   invisible(x)
 }

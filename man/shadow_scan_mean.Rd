@@ -67,13 +67,13 @@ are attained: the extremal propensity is \eqn{1/a} below the quantile
 \eqn{Q(1-s^*)} and \eqn{e^{-\lambda}/a} above it, with \eqn{a = 1/\{r(1 +
 \kappa s^*)\}}. The upper bound \eqn{\bar s} on \eqn{s} is the constraint
 \eqn{\pi \le 1}; dropping it (\eqn{\bar s = 1}) gives the \strong{outer band},
-which does not depend on \eqn{r} and is the counterpart of the naive band
+which does not depend on \eqn{r} and is the same as the outer band
 of the binary scan. Ignoring \eqn{r} gives an outer set, not a sharp one,
 in the sense of Dorn and Guo (2023). The cap binds for \eqn{r} near one or
 large \eqn{\lambda}; for small \eqn{r} sharp set and outer band coincide.
 
 For binary \eqn{Y} the formula reduces to the closed form of
-\code{\link[=shadow_scan]{shadow_scan()}}, the naive band intersected with the bounds of Manski
+\code{\link[=shadow_scan]{shadow_scan()}}, the outer band intersected with the bounds of Manski
 (1989). As \eqn{\lambda \to \infty} the set grows to those bounds,
 \eqn{[rm + (1-r)\inf Y,\; rm + (1-r)\sup Y]}, reaching them only in the
 limit for a continuous outcome. For every finite \eqn{\lambda} it is

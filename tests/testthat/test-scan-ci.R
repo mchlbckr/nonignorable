@@ -27,7 +27,7 @@ test_that("crossfit predictions come from other folds", {
 
 test_that("the confidence set contains the estimate and widens with lambda", {
   x <- ci_sim()
-  s <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y)
+  s <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, target = "unobserved")
   cv <- s$curve
   expect_true(all(cv$ci_lower <= cv$lower & cv$upper <= cv$ci_upper))
   expect_true(all(cv$se_lower > 0 & cv$se_upper > 0))
@@ -49,7 +49,7 @@ test_that("targets: unobserved, all and a logical segment", {
   x <- ci_sim()
   a <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, target = "all",
                       lambda = c(0, 1))
-  u <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, lambda = c(0, 1))
+  u <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, lambda = c(0, 1), target = "unobserved")
   g <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y,
                       target = x$d$x1 > 0, lambda = c(0, 1))
   expect_false(isTRUE(all.equal(a$curve$upper, u$curve$upper)))
@@ -61,7 +61,7 @@ test_that("targets: unobserved, all and a logical segment", {
 
 test_that("threshold gives three crossings, the confidence set first", {
   x <- ci_sim()
-  s <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, threshold = 0.35)
+  s <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, threshold = 0.35, target = "unobserved")
   expect_named(s$flip, c("sharp", "naive", "ci"))
   expect_lte(s$flip[["ci"]], s$flip[["sharp"]])
   expect_output(print(s), "confidence set")
@@ -82,17 +82,17 @@ test_that("inputs are validated", {
 
 test_that("both standard errors are positive and of similar size; trim shrinks the target", {
   x <- ci_sim()
-  a <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, lambda = c(0.5, 2))
+  a <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, lambda = c(0.5, 2), target = "unobserved")
   b <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, lambda = c(0.5, 2),
-                      se_type = "empirical")
+                      se_type = "empirical", target = "unobserved")
   expect_equal(a$curve$upper, b$curve$upper)
   ratio <- a$curve$se_upper / b$curve$se_upper
   expect_true(all(ratio > 0.5 & ratio < 2))
-  t <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, lambda = 1, trim = 0.05)
+  t <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, lambda = 1, trim = 0.05, target = "unobserved")
   expect_gt(t$trimmed, 0)
   expect_lt(t$n_target, a$n_target)
   expect_output(print(t), "trimmed")
-  expect_error(shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, trim = 1), "trim")
+  expect_error(shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, trim = 1, target = "unobserved"), "trim")
 })
 
 test_that("the default standard error is the larger of the two", {
@@ -109,12 +109,12 @@ test_that("the default standard error is the larger of the two", {
 test_that("blown-up inverse weights and separation are flagged", {
   d <- simulate_shadow(2000, tilt = -1, seed = 81)
   eta <- pmin(pmax(d$eta_obs, 0.01), 0.99); r <- d$obs_rate
-  ok <- shadow_scan_ci(eta, r, d$observed, d$y, lambda = c(0, 1))
+  ok <- shadow_scan_ci(eta, r, d$observed, d$y, lambda = c(0, 1), target = "unobserved")
   expect_named(ok$tail, c("target", "observed", "min_r_observed"))
   expect_output(print(ok), "r-hat < 0.01")
   bad <- which(d$observed == 1 & d$y == 1)[1:3]
   r2 <- r; r2[bad] <- 1e-5; eta2 <- eta; eta2[bad] <- 0.01
-  expect_warning(shadow_scan_ci(eta2, r2, d$observed, d$y, lambda = c(0, 1)),
+  expect_warning(shadow_scan_ci(eta2, r2, d$observed, d$y, lambda = c(0, 1), target = "unobserved"),
                  "separation")
   expect_warning(
     crossfit_inputs(d, "observed",
@@ -127,7 +127,7 @@ test_that("blown-up inverse weights and separation are flagged", {
 test_that("trimmed counts only target rows that left the target", {
   d <- simulate_shadow(2000, tilt = -1, seed = 82)
   eta <- pmin(pmax(d$eta_obs, 0.01), 0.99)
-  s <- shadow_scan_ci(eta, d$obs_rate, d$observed, d$y, lambda = c(0, 1), trim = 0.2)
+  s <- shadow_scan_ci(eta, d$obs_rate, d$observed, d$y, lambda = c(0, 1), trim = 0.2, target = "unobserved")
   expect_equal(s$trimmed, sum(d$observed == 0 & d$obs_rate < 0.2))
   k <- shadow_scan_contrast(eta, d$obs_rate, d$observed, d$y, d$x1 > 0, d$x1 <= 0,
                             lambda = c(0, 1), trim = 0.2)
@@ -141,4 +141,45 @@ test_that("crossfit_inputs rejects a response column with NA", {
                                function(tr, nd) rep(0.3, nrow(nd)),
                                function(tr, nd) rep(0.5, nrow(nd)), seed = 1),
                "0/1 or logical")
+})
+
+test_that("the print names the outer band and reports where the cap binds", {
+  x <- ci_sim(1000)
+  s <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, threshold = 0.6, target = "unobserved")
+  out <- paste(capture.output(print(s)), collapse = "\n")
+  expect_match(out, "outer band \\(plug-in\\)")
+  expect_no_match(out, "naive")
+  expect_match(out, "cap pi <= 1")
+  expect_length(s$capped, 2)
+  expect_true(all(s$capped >= 0 & s$capped <= 1))
+  # a toenail-like case: r near one, rare events, the lower bound flat early
+  n <- 400
+  set.seed(5)
+  R <- rbinom(n, 1, 0.92); y <- ifelse(R == 1, rbinom(n, 1, 0.04), NA)
+  t <- shadow_scan_ci(rep(0.04, n), rep(0.92, n), R, y, target = "unobserved")
+  expect_equal(t$held[["lower"]], qlogis(0.04) - qlogis(0.92 * 0.04), tolerance = 1e-8)
+  expect_output(print(t), "held by the cap")
+})
+
+test_that("the default target is all rows, as for the mean", {
+  x <- ci_sim(1000)
+  a <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, lambda = c(0, 1))
+  expect_identical(a$target, "all")
+  expect_identical(a$n_target, nrow(x$d))
+  expect_identical(formals(shadow_scan_ci)$target, formals(shadow_scan_mean_ci)$target)
+})
+
+test_that("debiased bounds are monotone in lambda even where the cap holds them", {
+  # toenail-like: r near one, rare events; the raw debiased lower bound can
+  # rise by sampling error once the cap takes over
+  set.seed(9)
+  n <- 300
+  R <- rbinom(n, 1, 0.92); y <- ifelse(R == 1, rbinom(n, 1, 0.04), NA)
+  eta <- runif(n, 0.02, 0.06)
+  for (tg in c("all", "unobserved")) {
+    s <- shadow_scan_ci(eta, rep(0.92, n), R, y, target = tg, lambda = seq(0, 2, by = 0.05))
+    cv <- s$curve
+    expect_true(all(diff(cv$lower) <= 0) && all(diff(cv$upper) >= 0))
+    expect_true(all(diff(cv$ci_lower) <= 0) && all(diff(cv$ci_upper) >= 0))
+  }
 })

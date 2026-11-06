@@ -33,7 +33,7 @@ r̂(x) = P(R = 1 | X = x). Any learner can produce them. The set is
 
 $$\mathcal H_\lambda(x) = \big[\max\{\mathrm{expit}(\ell-\lambda),\, r\eta_{\mathrm{obs}}\},\; \min\{\mathrm{expit}(\ell+\lambda),\, r\eta_{\mathrm{obs}} + 1 - r\}\big],\quad \ell = \mathrm{logit}\,\eta_{\mathrm{obs}},$$
 
-the naive band intersected with the worst-case bounds.
+the outer band intersected with the worst-case bounds.
 
 ```r
 library(shadowscan)
@@ -46,8 +46,8 @@ plot(s)
 
 ![Sensitivity curve](man/figures/scan.png)
 
-The sharp set is never wider than the naive band. Where r̂ is small, as for
-rejected applications, its upper edge coincides with the naive one; it is
+The sharp set is never wider than the outer band. Where r̂ is small, as for
+rejected applications, its upper edge coincides with the outer one; it is
 narrower only where a worst-case bound cuts the band. The default aggregation
 averages each row's own bounds, which is sharp under the pointwise assumption.
 `aggregate = "common"` adds the assumption of one tilt for all rows. That set
@@ -72,7 +72,8 @@ inp <- crossfit_inputs(d, "observed",
   fit_r   = function(train, new) predict(glm(update(f, observed ~ .), binomial, train),
                                          new, type = "response"),
   seed = 1)
-ci  <- shadow_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, threshold = 0.35)
+ci  <- shadow_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, target = "unobserved",
+                      threshold = 0.35)
 plot(ci)
 ```
 
@@ -85,7 +86,8 @@ with quantile grids cross-fitted by `crossfit_quantiles()`.
 To compare two portfolios chosen by X, such as the arms of a trial,
 `shadow_scan_contrast()` gives the sharp set for the difference of their rates
 with a confidence set. It also reports the selection strength from which "no
-difference" can no longer be ruled out.
+difference" can no longer be ruled out. `shadow_scan_mean_contrast()` does the
+same for the difference of two means.
 
 ```r
 k <- shadow_scan_contrast(inp$eta_obs, inp$r, d$observed, d$y,
@@ -163,10 +165,12 @@ known cut-offs or other class counts and pass factors.
 
 The scan covers a binary outcome in closed form and the **mean** of any
 outcome with a finite mean. It does not cover quantiles or the whole
-distribution. The screen's measure, incremental McFadden R², presumes a
-discrete outcome. Covariates, learners and sample size are unrestricted. The package
-contains no estimator and fits neither η_obs nor r. The sets are identified sets: estimated inputs are treated as known, and no
-confidence sets are offered. It ships no outside data:
+distribution. The screen takes a binary outcome directly and a numeric one
+through an ordinal model on classes; it measures relevance and does not
+certify identification. Covariates, learners and sample size are
+unrestricted. The package fits neither η_obs nor r: `shadow_scan()` and
+`shadow_scan_mean()` treat them as known, and the `_ci` functions take
+cross-fitted predictions from your own learner. It ships no outside data:
 examples and tests run on `simulate_shadow()`.
 
 ## License

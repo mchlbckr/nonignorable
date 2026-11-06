@@ -267,8 +267,8 @@ The estimated chance of a week-96 count ranges from `r iv(f2(min(inp$r)))`
 to `r iv(f2(max(inp$r)))`. This is the opposite of Lending Club, and it has
 two consequences.
 
-- **The sharp set is much narrower than the naive band.** At a propensity
-  ratio of `r iv(f2(exp(acv$lambda[last])))` the naive band spans
+- **The sharp set is much narrower than the outer band.** At a propensity
+  ratio of `r iv(f2(exp(acv$lambda[last])))` the outer band spans
   [`r iv(f3(acv$naive_lower[last]))`, `r iv(f3(acv$naive_upper[last]))`],
   the sharp set only [`r iv(f3(acv$lower[last]))`,
   `r iv(f3(acv$upper[last]))`]. Because every patient had a good chance of
@@ -439,7 +439,7 @@ fit <- function(lhs) function(train, new)
           new, type = "response")
 inp <- crossfit_inputs(ov, "R", fit_eta = fit("Y"), fit_r = fit("R"),
                        folds = 5, seed = 2014)
-ci <- shadow_scan_ci(inp$eta_obs, inp$r, ov$R, ov$Y,
+ci <- shadow_scan_ci(inp$eta_obs, inp$r, ov$R, ov$Y, target = "unobserved",
                      lambda = seq(0, 2, length.out = 81), threshold = 0.1845)
 ```
 

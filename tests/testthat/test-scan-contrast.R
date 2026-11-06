@@ -77,3 +77,13 @@ test_that("contrast labels the warnings of each arm", {
   expect_true(any(grepl("^arm one: ", w)))
   expect_false(any(grepl("^arm two: ", w)))
 })
+
+test_that("the contrast print names the outer band", {
+  d <- simulate_shadow(1500, tilt = -1, seed = 71)
+  arm <- d$x1 > 0
+  k <- shadow_scan_contrast(rep(0.3, nrow(d)), rep(0.6, nrow(d)), d$observed, d$y,
+                            target_a = arm, target_b = !arm)
+  out <- paste(capture.output(print(k)), collapse = "\n")
+  expect_match(out, "outer band \\(plug-in\\)")
+  expect_no_match(out, "naive")
+})
