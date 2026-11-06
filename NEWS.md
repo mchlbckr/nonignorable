@@ -30,10 +30,12 @@ First release.
 ## Scan
 
 * `sharp_scan()` gives the sharp identified set for the rate of a binary
-  outcome among the unobserved rows when the propensity ratio is at most
-  `exp(lambda)`. Rows are aggregated by `"union"` by default; `"common"` is
-  available as an option.
+  outcome over a set of rows when the propensity ratio is at most
+  `exp(lambda)`: the average of eta(x), or, with `unobserved = TRUE`, the
+  rows' own missing outcomes, E(Y | R = 0). Rows are aggregated by `"union"`
+  by default; `"common"` is available as an option.
 * `sharp_scan_mean()` gives the same for the mean of a non-binary outcome,
+  also with `unobserved`,
   taking a grid of conditional quantiles. `quantile_grid()` builds that grid
   from a `quantreg::rq` fit, from any quantile function, or from draws.
 * `sharp_scan_ci()` adds a debiased estimate and a confidence set for the
@@ -43,7 +45,8 @@ First release.
   inverse weights blow up; `crossfit_inputs()` warns when the response model
   separates observed rows.
 * `sharp_scan_mean_ci()` adds a debiased estimate and a confidence set for
-  the mean scan, for the mean over all rows or over a segment chosen by X.
+  the mean scan, for the mean over all rows, over a segment chosen by X, or
+  of the missing outcomes.
   Its score is Neyman-orthogonal in both regimes of the cap, so no margin
   condition is needed. `crossfit_quantiles()` cross-fits the quantile grids
   and r-hat for any learner.
@@ -51,20 +54,29 @@ First release.
   such as treatment arms. It gives the sharp set for the difference of their
   rates, a confidence set, and the selection strength from which "no
   difference" is no longer ruled out.
-* `sharp_scan_contrast(among = "unobserved")` compares the unobserved rows
-  of two segments, such as the rejected applicants of two regions;
-  `sharp_scan_ci()` takes a `segment` for that target.
 * `sharp_scan_mean_contrast()` does the same for the difference of two
   portfolio means.
 * `sharp_scan_ci()` and `sharp_scan_mean_ci()` both target all rows by
-  default; set `target = "unobserved"` for the rows whose outcome is missing,
-  such as rejected applications.
+  default. `target = "unobserved"` targets the missing outcomes themselves,
+  E(Y | R = 0), such as the default rate of rejected applications, with the
+  sharp set {psi - E(RY)} / pr(R = 0) and its influence function; a
+  `segment` chosen by X restricts it. Both contrasts take
+  `among = "unobserved"` to compare the missing outcomes of two segments.
+* `sharp_scan_cdf()` gives the sharp set for the distribution function
+  P(Y <= t), or P(Y <= t | R = 0), at each value of a grid, with a debiased
+  estimate and a confidence set pointwise in t; `quantile()` inverts the
+  bounds into bounds for quantiles, widened outwards on the grid. The sets
+  are sharp for each t, not as a band, and no uniform band is offered. The
+  output reports the share of rows near the kink of each bound, where the
+  normal approximation needs the margin condition. `crossfit_cdf()` fits
+  P(Y <= t | R = 1, X) as one classification per t for any learner.
 * Debiased bounds and confidence sets are kept monotone in lambda.
 * The bounds without the cap pi <= 1 are called the outer band throughout
-  (`naive_*` columns). Scans report the share of target rows where the cap
+  (`naive_*` columns). Scans report the share of the rows entering the set where the cap
   binds and, for rates, the lambda from which it holds a bound flat; the
   plot notes such a bound in its legend, which it places clear of the
-  curves. `sharp_scan_mean_ci()` counts rows with r-hat clipped below and
-  above apart.
+  curves, and leaves the flip labels a free strip below them.
+  `sharp_scan_mean_ci()` counts rows with r-hat clipped below and above
+  apart.
 * `simulate_shadow()`, `obs_quantiles()` and `scan_inputs()` provide data and
   inputs for examples and tests.

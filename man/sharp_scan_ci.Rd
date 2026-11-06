@@ -30,9 +30,10 @@ in (0, 1).}
 \item{outcome}{Outcome, 0/1; ignored (and may be \code{NA}) where \code{response} is 0.}
 
 \item{target}{\code{"all"} (default, as in \code{\link[=sharp_scan_mean_ci]{sharp_scan_mean_ci()}}),
-\code{"unobserved"} (the rows whose outcome is missing, such as rejected
-applications), or a logical vector selecting the rows of the portfolio
-by \eqn{X}.}
+\code{"unobserved"} (the rate of the missing outcomes, \eqn{E(Y \mid R = 0)},
+such as the default rate of rejected applications; see the section on
+inputs), or a logical vector selecting the rows of the portfolio by
+\eqn{X}.}
 
 \item{lambda, threshold}{As in \code{\link[=sharp_scan]{sharp_scan()}}.}
 
@@ -47,9 +48,9 @@ See the section on what is covered.}
 on what is covered.}
 
 \item{segment}{Optional logical vector chosen by \eqn{X}, one per row, that
-restricts a target of \code{"unobserved"} (or \code{"all"}) rows to one segment,
-such as the rejected applications of one region. The segment is a
-function of \eqn{X}; the target within it may depend on \eqn{R}.}
+restricts a target of \code{"unobserved"} (or \code{"all"}) to one segment, such as
+the rejected applications of one region: \eqn{E(Y \mid R = 0)} within the
+segment.}
 }
 \value{
 An object of class \code{c("sharp_scan_ci", "sharp_scan")}, as from
@@ -94,10 +95,21 @@ the signals use \eqn{RY} and \eqn{R(Y - \hat\eta_{\mathrm{obs}})/\hat r}.
 from models fitted without it. \code{\link[=crossfit_inputs]{crossfit_inputs()}} does that for any
 learner. In-sample predictions make the confidence set too narrow.
 
-\code{target} says which rows the portfolio is: \code{"unobserved"} (the rejected
-applications, the usual case), \code{"all"}, or a logical vector of rows chosen
-by \eqn{X} alone (a segment). For \code{"unobserved"}, the share of a row in the
-target, \eqn{1 - r(x)}, is itself estimated, and the score accounts for it.
+\code{target} says which rate is wanted. \code{"all"} and a logical vector of rows
+chosen by \eqn{X} alone (a segment) give the mean of
+\eqn{\eta(x) = P(Y = 1 \mid X = x)} over those rows. \code{"unobserved"} gives
+the rate of the missing outcomes themselves, \eqn{E(Y \mid R = 0)}, such
+as the default rate of the rejected applications: by Bayes' rule
+\eqn{E(Y \mid R = 0) = \{E(Y) - E(RY)\}/\mathrm{pr}(R = 0)}, so its sharp set
+is \eqn{[\theta^-, \theta^+]} with \eqn{\theta^\pm = \{\psi^\pm -
+E(RY)\}/\mathrm{pr}(R = 0)} and \eqn{\psi^\pm} the endpoints for all rows
+(Bücker 2026, corollary on the mean of the nonrespondents). Its estimator replaces the two
+expectations by sample means; its influence function is
+\eqn{\{\varphi^\pm - RY - \theta^\pm(1 - R)\}/\mathrm{pr}(R = 0)}, with
+\eqn{\varphi^\pm} the score for all rows. This is not the mean of
+\eqn{\eta(x)} over the unobserved rows: under selection on the outcome the
+unobserved rows at a given \eqn{x} differ from all rows at that \eqn{x}.
+With \code{segment}, the same holds within a segment chosen by \eqn{X}.
 }
 
 \section{What is covered}{
@@ -117,16 +129,22 @@ each observed row by \eqn{1/\hat r}, so a few observed rows in regions
 where almost nothing is observed can carry most of the variance of the
 score. The usual standard error, the sample standard deviation of the
 influence values (\code{se_type = "empirical"}), then depends on whether the
-sample happens to contain such rows, and it is too small on average: in
-simulations for the rejected rows it covered 0.84 to 0.88 at nominal 0.90,
-without improving from 1,000 to 16,000 rows. \code{se_type = "conditional"}
-computes the variance of the score given \eqn{X} in closed form from the
-nuisances, for instance
-\eqn{(1-\hat r)^2 f'(\hat\eta)^2 \hat\eta(1-\hat\eta)/\hat r} for the
-band piece, and averages it over \strong{all} rows, including the many
-unobserved ones in the same regions. In the same simulations it covered
-0.91 to 0.97 from 4,000 rows on, with intervals about 2\% wider; at 1,000
-rows and small \eqn{\lambda}, 0.85.
+sample happens to contain such rows, and it is too small on average.
+\code{se_type = "conditional"} computes the variance of the influence value
+given \eqn{X} in closed form from the nuisances, for instance
+\eqn{f'(\hat\eta)^2 \hat\eta(1-\hat\eta)/\hat r} for the band piece of
+the target \code{"all"}, and averages it over \strong{all} rows, including the many
+unobserved ones in the same regions.
+
+For the rate of the missing outcomes (\code{target = "unobserved"}), in the
+package's simulation (\code{simulate_shadow(tilt = -1)}, logistic learners, five
+folds, 400 samples each of 1,000, 4,000 and 16,000 rows, \eqn{\lambda} from
+0 to 2, \code{level = 0.9}), the empirical standard error covered 0.86 to 0.90
+and approached the spread of the estimates only slowly (for the lower end
+at \eqn{\lambda = 0.5}, 38\% too small at 1,000 rows, 14\% at 16,000); the
+conditional one, computed from the same influence function, matched that
+spread to within 7\% from 4,000 rows on and covered 0.89 to 0.97; the
+default, the larger of the two, 0.92 to 0.98.
 
 The conditional variance takes \eqn{\hat\eta_{\mathrm{obs}}(1 -
 \hat\eta_{\mathrm{obs}})} for the variance of \eqn{Y}; if the outcome
@@ -134,9 +152,9 @@ model is misspecified, the squared error \eqn{(\eta_{\mathrm{obs}} -
 \hat\eta_{\mathrm{obs}})^2} is missing from it, and only the empirical
 variance sees it. Each of the two guards against the failure of the other,
 so the default, \code{se_type = "max"}, takes the larger at each endpoint and
-\eqn{\lambda}. On Lending Club data the empirical one was the larger, by
-about 40\%; in the simulations, with a correctly specified outcome model,
-the conditional one.
+\eqn{\lambda}. On Lending Club data, for the rejected applications, the
+empirical one was the larger, by 40\% to 60\%; in the simulations, with a
+correctly specified outcome model, the conditional one.
 
 Both standard errors depend on how much mass the response model puts where
 \eqn{\hat r} is small: a smoother fit of \eqn{r} can raise the
@@ -160,7 +178,7 @@ Percentile bootstrap intervals of the plug-in covered as little as 0.72 at
 
 Only the union aggregation is covered: the common-tilt set is bounded by an
 extreme over rows, for which this theory does not hold. For a non-binary
-outcome, see \code{\link[=sharp_scan_mean]{sharp_scan_mean()}}, for which no inference is offered.
+outcome, see \code{\link[=sharp_scan_mean_ci]{sharp_scan_mean_ci()}}.
 }
 
 \examples{
@@ -179,6 +197,9 @@ s
 plot(s)
 }
 \references{
+Bücker, M. (2026). Sharp intervals for a mean under bounded selection
+ratios when the response rate is known. Manuscript.
+
 Semenova, V. (2025). Debiased machine learning of aggregated intersection
 bounds and other causal parameters. Working paper, SSRN 5134514.
 \doi{10.2139/ssrn.5134514}

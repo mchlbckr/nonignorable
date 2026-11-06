@@ -17,8 +17,9 @@
 #' standard error of the difference is the root of the sum of the squared
 #' standard errors. Overlapping targets would need their covariance and are
 #' not supported. By default each target is a whole segment of rows, observed
-#' and unobserved alike; `among = "unobserved"` compares the unobserved rows
-#' of the two segments instead, such as the rejected applicants of each.
+#' and unobserved alike; `among = "unobserved"` compares the rates of the
+#' missing outcomes of the two segments instead, \eqn{E(Y \mid R = 0)} in
+#' each, such as the default rates of the rejected applicants of each.
 #'
 #' The flip points say from which \eqn{\lambda} on the set, and the confidence
 #' set, reach `threshold` (by default 0: no difference). They are found by
@@ -96,8 +97,10 @@ sharp_scan_contrast <- function(eta_obs, r, response, outcome,
 #' \eqn{A - B} is \eqn{[\mathrm{lower}_A - \mathrm{upper}_B,\
 #' \mathrm{upper}_A - \mathrm{lower}_B]}; because the targets are disjoint,
 #' the standard error of each endpoint is the root of the sum of the squared
-#' standard errors of the arms. Each target is a whole segment of rows,
-#' observed and unobserved alike.
+#' standard errors of the arms. By default each target is a whole segment
+#' of rows, observed and unobserved alike; `among = "unobserved"` compares
+#' the means of the missing outcomes of the two segments,
+#' \eqn{E(Y \mid R = 0)} in each.
 #'
 #' @inheritParams sharp_scan_mean_ci
 #' @param target_a,target_b Logical vectors, one per row, selecting the two
@@ -105,6 +108,8 @@ sharp_scan_contrast <- function(eta_obs, r, response, outcome,
 #' @param lambda Grid of \eqn{\lambda} values; must include 0.
 #' @param threshold The difference at which the decision changes. Default 0.
 #' @param labels Names of the two portfolios, for printing and plotting.
+#' @param among `"all"` (default) or `"unobserved"`, as in
+#'   [sharp_scan_contrast()].
 #' @return An object of class
 #'   `c("sharp_scan_contrast", "sharp_scan_ci", "sharp_scan")` as from
 #'   [sharp_scan_contrast()], with `of_means = TRUE`.
@@ -124,18 +129,26 @@ sharp_scan_mean_contrast <- function(q, r, response, outcome, target_a, target_b
                                       lambda = seq(0, 2, length.out = 81),
                                       weights = NULL, threshold = 0, level = 0.9,
                                       trim = 0, r_bounds = c(0.01, 0.99),
-                                      labels = c("A", "B")) {
+                                      labels = c("A", "B"),
+                                      among = c("all", "unobserved")) {
+  among <- match.arg(among)
   n <- if (is.null(dim(q))) length(q) else nrow(q)
   check_contrast_args(n, target_a, target_b, lambda, labels)
   if (!is.numeric(threshold) || length(threshold) != 1L || !is.finite(threshold))
     stop("`threshold` must be a single finite number.", call. = FALSE)
   arm <- function(tg, label) relabel_warnings(label,
-    sharp_scan_mean_ci(q, r, response, outcome, target = tg, lambda = lambda,
-                        weights = weights, level = level, trim = trim,
-                        r_bounds = r_bounds))
+    if (among == "all")
+      sharp_scan_mean_ci(q, r, response, outcome, target = tg, lambda = lambda,
+                          weights = weights, level = level, trim = trim,
+                          r_bounds = r_bounds)
+    else
+      sharp_scan_mean_ci(q, r, response, outcome, target = "unobserved",
+                          segment = tg, lambda = lambda, weights = weights,
+                          level = level, trim = trim, r_bounds = r_bounds))
   a <- arm(target_a, labels[1]); b <- arm(target_b, labels[2])
   k <- contrast_from_arms(a, b, threshold, level, labels, n, range = c(-Inf, Inf))
   k$of_means <- TRUE
+  k$among <- among
   k$clipped <- a$clipped + b$clipped
   k$r_bounds <- r_bounds
   k
@@ -213,7 +226,7 @@ print.sharp_scan_contrast <- function(x, digits = 3, ...) {
   if (x$trim > 0)
     cat(sprintf("  trimmed: %d rows with r-hat < %g, out of the targets\n", x$trimmed, x$trim))
   if (sum(x$clipped) > 0)
-    cat(sprintf("  clipped: %d target rows with r-hat below %g, %d above %g\n",
+    cat(sprintf("  clipped: %d rows entering the sets with r-hat below %g, %d above %g\n",
                 as.integer(x$clipped[["low"]]), x$r_bounds[1],
                 as.integer(x$clipped[["high"]]), x$r_bounds[2]))
   cat(sprintf("  r-hat < 0.01: %d target rows, %d observed rows; smallest r-hat observed %s\n",

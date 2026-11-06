@@ -88,7 +88,7 @@ test_that("with the true inputs the debiased bounds hit the truth", {
   expect_equal(k$point, k$curve$upper[1])
 })
 
-test_that("targets: all, a segment, and unobserved is refused", {
+test_that("targets: all and a segment", {
   f <- ci_fixture
   seg <- f$d$x1 > 0
   k <- sharp_scan_mean_ci(f$q, f$d$obs_rate, f$d$observed, f$d$y, target = seg,
@@ -97,8 +97,40 @@ test_that("targets: all, a segment, and unobserved is refused", {
   kall <- sharp_scan_mean_ci(f$q, f$d$obs_rate, f$d$observed, f$d$y, lambda = c(0, 1))
   expect_equal(kall$n_target, nrow(f$d))
   expect_false(isTRUE(all.equal(k$curve$upper, kall$curve$upper)))
-  expect_error(sharp_scan_mean_ci(f$q, f$d$obs_rate, f$d$observed, f$d$y,
-                                   target = "unobserved"), "not covered")
+})
+
+test_that("the unobserved target is E(Y | R = 0): {psi - mean(RY)} / mean(1 - R)", {
+  f <- ci_fixture
+  R <- f$d$observed; RY <- ifelse(R == 1, f$d$y, 0); lam <- c(0, 1)
+  a <- sharp_scan_mean_ci(f$q, f$d$obs_rate, R, f$d$y, lambda = lam)
+  u <- sharp_scan_mean_ci(f$q, f$d$obs_rate, R, f$d$y, target = "unobserved", lambda = lam)
+  expect_equal(u$curve$lower, (a$curve$lower - mean(RY)) / mean(1 - R))
+  expect_equal(u$curve$upper, (a$curve$upper - mean(RY)) / mean(1 - R))
+  expect_equal(u$n_target, sum(R == 0))
+  expect_identical(u$target, "unobserved")
+  # a segment: the same as the scan on the segment's rows alone
+  seg <- f$d$x1 > 0; i <- which(seg)
+  s <- sharp_scan_mean_ci(f$q, f$d$obs_rate, R, f$d$y, target = "unobserved",
+                          segment = seg, lambda = lam)
+  sub <- sharp_scan_mean_ci(f$q[i, ], f$d$obs_rate[i], R[i], f$d$y[i],
+                            target = "unobserved", lambda = lam)
+  expect_equal(s$curve$upper, sub$curve$upper)
+  expect_equal(s$curve$se_upper, sub$curve$se_upper, tolerance = 0.05)
+  expect_match(s$target, "unobserved.*segment")
+  expect_error(sharp_scan_mean_ci(f$q, f$d$obs_rate, R, f$d$y, target = seg, segment = seg),
+               "segment")
+  expect_error(sharp_scan_mean_ci(f$q, f$d$obs_rate, R, f$d$y, target = "nope"),
+               "should be one of")
+})
+
+test_that("the unobserved mean set covers E(Y | R = 0) with true nuisances", {
+  d <- simulate_shadow(20000, tilt = -1, outcome = "continuous", seed = 71)
+  r <- d$obs_rate
+  truth <- sum(d$mu - r * d$mean_obs) / sum(1 - r)
+  u <- sharp_scan_mean_ci(obs_quantiles(d, K = 100), r, d$observed, d$y,
+                          target = "unobserved", lambda = 1)
+  expect_lte(u$curve$ci_lower, truth)
+  expect_gte(u$curve$ci_upper, truth)
 })
 
 test_that("r-hat is clipped into r_bounds and the rows are counted", {
@@ -265,7 +297,7 @@ test_that("clipping only at the top says so, without alarm", {
   k <- sharp_scan_mean_ci(f$q, r, f$d$observed, f$d$y, lambda = c(0, 1))
   expect_identical(k$clipped[["low"]], 0L)
   out <- paste(capture.output(print(k)), collapse = "\n")
-  expect_match(out, "clipped: 30 target rows with r-hat above 0.99")
+  expect_match(out, "clipped: 30 rows entering the set with r-hat above 0.99")
   expect_no_match(out, "below 0.01, ")
 })
 

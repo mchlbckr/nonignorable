@@ -11,7 +11,8 @@ sharp_scan(
   lambda = seq(0, 2, length.out = 81),
   aggregate = c("union", "common"),
   weights = NULL,
-  threshold = NULL
+  threshold = NULL,
+  unobserved = FALSE
 )
 
 \method{as.data.frame}{sharp_scan}(x, row.names = NULL, optional = FALSE, ..., lambda = NULL)
@@ -32,6 +33,11 @@ not an odds ratio). Sorted and de-duplicated.}
 \item{threshold}{Optional decision threshold on the portfolio rate. If
 given, the smallest \eqn{\lambda} at which the sharp set (and the outer
 band) reaches it is computed exactly, by root finding on the closed form.}
+
+\item{unobserved}{\code{FALSE} (default): the set is for \eqn{\eta(x)}, the rate
+of all rows at \eqn{x}, averaged over the rows given. \code{TRUE}: the rows
+given are unobserved rows, such as rejected applications, and the set is
+for their own missing outcomes; see the section on unobserved rows.}
 
 \item{x}{A \code{"sharp_scan"} object.}
 
@@ -165,6 +171,22 @@ largest where many rows lie near the switch between band and bound, which
 is where the scan looks for its flip.
 }
 
+\section{Unobserved rows}{
+
+For rejected applications the rate usually wanted is their own default
+rate, \eqn{E(Y \mid R = 0)}, not the mean of \eqn{\eta(x)} at their
+characteristics: under selection on the outcome, the unobserved rows at a
+given \eqn{x} differ from all rows at that \eqn{x}. By Bayes' rule
+\eqn{P(Y = 1 \mid R = 0, X = x) = \{\eta(x) - r\,\eta_{\mathrm{obs}}\}/(1 -
+r)}, an increasing map of \eqn{\eta(x)}, so with \code{unobserved = TRUE} each
+row's sharp set is the image of \eqn{\mathcal H_\lambda(x)} under it, and
+its mean over the unobserved rows given estimates \eqn{E(Y \mid R = 0)}
+(Bücker 2026). The cap \eqn{\pi \le 1} is then exactly the range \eqn{[0,
+1]}; the outer band, which ignores the cap, is not clipped into it. At
+\eqn{\lambda = 0} both readings give \eqn{\eta_{\mathrm{obs}}}. Every row
+needs \eqn{r < 1}.
+}
+
 \section{Aggregation}{
 
 The set is pointwise. For a portfolio rate (a weighted mean of
@@ -202,6 +224,9 @@ plot(s)
 head(as.data.frame(s, lambda = 1))
 }
 \references{
+Bücker, M. (2026). Sharp intervals for a mean under bounded selection
+ratios when the response rate is known. Manuscript.
+
 Dorn, J. and Guo, K. (2023). Sharp sensitivity analysis for inverse
 propensity weighting via quantile balancing. \emph{Journal of the American
 Statistical Association}, 118(544), 2645--2657.

@@ -96,6 +96,12 @@
 #' @param lambda Non-negative bounds; \eqn{e^\lambda} is the largest
 #'   admissible ratio of response propensities. Sorted and de-duplicated.
 #' @param weights Optional non-negative row weights for the portfolio mean.
+#' @param unobserved `FALSE` (default): the set is for \eqn{E(Y \mid X = x)},
+#'   averaged over the rows given. `TRUE`: the rows given are unobserved rows
+#'   and the set is for their own missing outcomes, row by row
+#'   \eqn{E(Y \mid R = 0, X = x) = \{E(Y \mid X = x) - r\,m(x)\}/(1 - r)} with
+#'   \eqn{m(x)} the observed mean, as for [sharp_scan()]. Every row needs
+#'   \eqn{r < 1}.
 #' @param threshold Optional decision threshold on the portfolio mean; the
 #'   smallest \eqn{\lambda} at which the sharp set (and the outer band)
 #'   reaches it is found by root finding. Both bounds are monotone in
@@ -130,7 +136,8 @@
 #' mean(d$mu[rej])     # the truth, inside the set from lambda = 1 on
 #' plot(s)
 sharp_scan_mean <- function(q, r, lambda = seq(0, 2, length.out = 81),
-                             weights = NULL, threshold = NULL) {
+                             weights = NULL, threshold = NULL,
+                             unobserved = FALSE) {
   if (is.null(dim(q))) q <- matrix(q, nrow = 1L)
   q <- as.matrix(q)
   if (!is.numeric(q) || anyNA(q) || any(!is.finite(q)))
@@ -144,6 +151,7 @@ sharp_scan_mean <- function(q, r, lambda = seq(0, 2, length.out = 81),
       any(!is.finite(lambda)) || any(lambda < 0))
     stop("`lambda` must be finite and non-negative.", call. = FALSE)
   lambda <- sort(unique(lambda))
+  check_unobserved(unobserved, r)
   w <- check_weights(weights, nrow(q))
   point_rows <- rowMeans(q)
   point <- wmean(point_rows, w)
@@ -153,7 +161,11 @@ sharp_scan_mean <- function(q, r, lambda = seq(0, 2, length.out = 81),
     stop("`threshold` must be a single finite number.", call. = FALSE)
 
   prep <- mean_prep(q)
-  bounds_at <- function(lam, cap) mean_bounds(prep, r, lam, cap)
+  # unobserved rows: bounds on E(Y | R = 0, x) = {E(Y | x) - r m(x)} / (1 - r)
+  bounds_at <- function(lam, cap) {
+    b <- mean_bounds(prep, r, lam, cap)
+    if (unobserved) lapply(b, function(v) (v - r * point_rows) / (1 - r)) else b
+  }
 
   K <- length(lambda)
   out <- data.frame(lambda = lambda, lower = NA_real_, upper = NA_real_,
@@ -179,7 +191,7 @@ sharp_scan_mean <- function(q, r, lambda = seq(0, 2, length.out = 81),
 
   structure(list(
     curve = out, point = point, threshold = threshold, flip = flip,
-    aggregate = "union", binding = NULL,
+    aggregate = "union", binding = NULL, unobserved = unobserved,
     q = q, r = r, weights = weights, n = nrow(q)
   ), class = c("sharp_scan_mean", "sharp_scan"))
 }
@@ -238,6 +250,8 @@ as.data.frame.sharp_scan_mean <- function(x, row.names = NULL,
   prep <- mean_prep(x$q)
   b <- mean_bounds(prep, x$r, lambda, TRUE)
   o <- mean_bounds(prep, x$r, lambda, FALSE)
-  data.frame(mean_obs = prep$m, r = x$r, lower = b$lower, upper = b$upper,
-             naive_lower = o$lower, naive_upper = o$upper)
+  out <- data.frame(mean_obs = prep$m, r = x$r, lower = b$lower, upper = b$upper,
+                    naive_lower = o$lower, naive_upper = o$upper)
+  if (isTRUE(x$unobserved)) out <- own_rows(out, x$r * prep$m, x$r)
+  out
 }

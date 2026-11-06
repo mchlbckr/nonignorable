@@ -89,6 +89,20 @@
 #' largest where many rows lie near the switch between band and bound, which
 #' is where the scan looks for its flip.
 #'
+#' @section Unobserved rows:
+#' For rejected applications the rate usually wanted is their own default
+#' rate, \eqn{E(Y \mid R = 0)}, not the mean of \eqn{\eta(x)} at their
+#' characteristics: under selection on the outcome, the unobserved rows at a
+#' given \eqn{x} differ from all rows at that \eqn{x}. By Bayes' rule
+#' \eqn{P(Y = 1 \mid R = 0, X = x) = \{\eta(x) - r\,\eta_{\mathrm{obs}}\}/(1 -
+#' r)}, an increasing map of \eqn{\eta(x)}, so with `unobserved = TRUE` each
+#' row's sharp set is the image of \eqn{\mathcal H_\lambda(x)} under it, and
+#' its mean over the unobserved rows given estimates \eqn{E(Y \mid R = 0)}
+#' (Bücker 2026). The cap \eqn{\pi \le 1} is then exactly the range \eqn{[0,
+#' 1]}; the outer band, which ignores the cap, is not clipped into it. At
+#' \eqn{\lambda = 0} both readings give \eqn{\eta_{\mathrm{obs}}}. Every row
+#' needs \eqn{r < 1}.
+#'
 #' @section Aggregation:
 #' The set is pointwise. For a portfolio rate (a weighted mean of
 #' \eqn{\eta(x)}) there are two ways to aggregate:
@@ -121,6 +135,10 @@
 #' @param threshold Optional decision threshold on the portfolio rate. If
 #'   given, the smallest \eqn{\lambda} at which the sharp set (and the outer
 #'   band) reaches it is computed exactly, by root finding on the closed form.
+#' @param unobserved `FALSE` (default): the set is for \eqn{\eta(x)}, the rate
+#'   of all rows at \eqn{x}, averaged over the rows given. `TRUE`: the rows
+#'   given are unobserved rows, such as rejected applications, and the set is
+#'   for their own missing outcomes; see the section on unobserved rows.
 #'
 #' @return An object of class `"sharp_scan"`, a list with
 #'   * `curve`: data frame with `lambda`, `lower`, `upper` (sharp set of the
@@ -144,6 +162,9 @@
 #'   * the inputs, so that `as.data.frame(x, lambda = )` can return the
 #'     pointwise sets.
 #' @references
+#' Bücker, M. (2026). Sharp intervals for a mean under bounded selection
+#' ratios when the response rate is known. Manuscript.
+#'
 #' Dorn, J. and Guo, K. (2023). Sharp sensitivity analysis for inverse
 #' propensity weighting via quantile balancing. *Journal of the American
 #' Statistical Association*, 118(544), 2645--2657.
@@ -173,9 +194,10 @@
 #' head(as.data.frame(s, lambda = 1))
 sharp_scan <- function(eta_obs, r, lambda = seq(0, 2, length.out = 81),
                         aggregate = c("union", "common"), weights = NULL,
-                        threshold = NULL) {
+                        threshold = NULL, unobserved = FALSE) {
   aggregate <- match.arg(aggregate)
   check_inputs(eta_obs, r)
+  check_unobserved(unobserved, r)
   if (!is.numeric(lambda) || length(lambda) == 0L || anyNA(lambda) ||
       any(!is.finite(lambda)) || any(lambda < 0))
     stop("`lambda` must be finite and non-negative.", call. = FALSE)
@@ -191,6 +213,11 @@ sharp_scan <- function(eta_obs, r, lambda = seq(0, 2, length.out = 81),
   # admissible t-range before the |t| <= lambda cap.
   m_lo <- r * eta_obs
   m_up <- r * eta_obs + 1 - r
+  # unobserved rows: the bound on E(Y | R = 0, x) = {eta(x) - r eta_obs} / (1 - r),
+  # an increasing affine map of eta(x). Here the cap pi <= 1 is exactly
+  # 0 <= E(Y | R = 0, x) <= 1, so the outer band, without the cap, can leave
+  # [0, 1]; it is not clipped, or it would coincide with the sharp set.
+  own <- function(v) if (unobserved) (v - m_lo) / (1 - r) else v
   t_min_row <- ell - stats::qlogis(m_up)   # most negative admissible tilt
   t_max_row <- ell - stats::qlogis(m_lo)   # most positive admissible tilt
 
@@ -207,18 +234,18 @@ sharp_scan <- function(eta_obs, r, lambda = seq(0, 2, length.out = 81),
 
   for (k in seq_len(K)) {
     lam <- lambda[k]
-    out$naive_lower[k] <- wmean(stats::plogis(ell - lam), w)
-    out$naive_upper[k] <- wmean(stats::plogis(ell + lam), w)
+    out$naive_lower[k] <- wmean(own(stats::plogis(ell - lam)), w)
+    out$naive_upper[k] <- wmean(own(stats::plogis(ell + lam)), w)
     if (aggregate == "common") {
       t_up <- max(-lam, T_min)
       t_lo <- min(lam, T_max)
-      out$upper[k] <- wmean(stats::plogis(ell - t_up), w)
-      out$lower[k] <- wmean(stats::plogis(ell - t_lo), w)
+      out$upper[k] <- wmean(own(stats::plogis(ell - t_up)), w)
+      out$lower[k] <- wmean(own(stats::plogis(ell - t_lo)), w)
       if (T_min > -lam) binding$upper_row[k] <- i_min
       if (T_max < lam) binding$lower_row[k] <- i_max
     } else {
-      out$lower[k] <- wmean(pmax(stats::plogis(ell - lam), m_lo), w)
-      out$upper[k] <- wmean(pmin(stats::plogis(ell + lam), m_up), w)
+      out$lower[k] <- wmean(own(pmax(stats::plogis(ell - lam), m_lo)), w)
+      out$upper[k] <- wmean(own(pmin(stats::plogis(ell + lam), m_up)), w)
     }
   }
   point <- wmean(eta_obs, w)
@@ -229,15 +256,15 @@ sharp_scan <- function(eta_obs, r, lambda = seq(0, 2, length.out = 81),
   bound_fun <- function(side, sharp) {
     function(lam) {
       if (!sharp) {
-        return(wmean(stats::plogis(ell + if (side == "upper") lam else -lam), w))
+        return(wmean(own(stats::plogis(ell + if (side == "upper") lam else -lam)), w))
       }
       if (aggregate == "common") {
         t <- if (side == "upper") max(-lam, T_min) else min(lam, T_max)
-        wmean(stats::plogis(ell - t), w)
+        wmean(own(stats::plogis(ell - t)), w)
       } else if (side == "upper") {
-        wmean(pmin(stats::plogis(ell + lam), m_up), w)
+        wmean(own(pmin(stats::plogis(ell + lam), m_up)), w)
       } else {
-        wmean(pmax(stats::plogis(ell - lam), m_lo), w)
+        wmean(own(pmax(stats::plogis(ell - lam), m_lo)), w)
       }
     }
   }
@@ -256,6 +283,7 @@ sharp_scan <- function(eta_obs, r, lambda = seq(0, 2, length.out = 81),
     curve = out, point = point, threshold = threshold, flip = flip,
     aggregate = aggregate, held = cap$held, capped = cap$capped,
     binding = if (aggregate == "common") binding else NULL,
+    unobserved = unobserved,
     eta_obs = eta_obs, r = r, weights = weights, n = length(eta_obs)
   ), class = "sharp_scan")
 }
@@ -263,7 +291,7 @@ sharp_scan <- function(eta_obs, r, lambda = seq(0, 2, length.out = 81),
 # Where the cap pi <= 1 binds. Row i's lower bound is r * eta_obs, not the
 # band, once lambda exceeds logit(eta_obs) - logit(r * eta_obs); its upper
 # bound once lambda exceeds logit(r * eta_obs + 1 - r) - logit(eta_obs).
-# `capped` is the weighted share of target rows (positive weight) where the
+# `capped` is the weighted share of the rows entering the set (positive weight) where the
 # cap binds at the largest lambda; `held` is the lambda from which it binds
 # in every target row, so that the bound no longer moves (NA if not within
 # the scanned range).
@@ -284,8 +312,9 @@ cap_lines <- function(x, digits = 3) {
   if (is.null(x$capped)) return(invisible())
   lam <- max(x$curve$lambda)
   pc <- function(v) sprintf("%.0f%%", 100 * v)
-  cat(sprintf("  cap pi <= 1 at lambda = %s binds in %s of target rows for the lower bound, %s for the upper\n",
-              format(lam, digits = digits), pc(x$capped[["lower"]]), pc(x$capped[["upper"]])))
+  cat(strwrap(sprintf("cap pi <= 1 at lambda = %s binds in %s of the rows entering the set for the lower bound, %s for the upper",
+                      format(lam, digits = digits), pc(x$capped[["lower"]]), pc(x$capped[["upper"]])),
+              indent = 2, exdent = 4), sep = "\n")
   for (side in names(x$held)[!is.na(x$held)])
     cat(sprintf("  %s bound held by the cap from lambda = %s (propensity ratio %s): flat from there\n",
                 side, format(x$held[[side]], digits = digits),
@@ -371,7 +400,26 @@ as.data.frame.sharp_scan <- function(x, row.names = NULL, optional = FALSE,
   if (!is.numeric(lambda) || length(lambda) != 1L || !is.finite(lambda) ||
       lambda < 0)
     stop("`lambda` must be a single non-negative number.", call. = FALSE)
-  sharp_bounds(x$eta_obs, x$r, lambda)
+  b <- sharp_bounds(x$eta_obs, x$r, lambda)
+  if (isTRUE(x$unobserved)) b <- own_rows(b, x$r * x$eta_obs, x$r)
+  b
+}
+
+# Per-row bounds on E(Y | x) mapped to bounds on E(Y | R = 0, x) =
+# {E(Y | x) - r E(Y | R = 1, x)} / (1 - r); `ry` = r E(Y | R = 1, x).
+own_rows <- function(b, ry, r) {
+  for (nm in c("lower", "upper", "naive_lower", "naive_upper"))
+    b[[nm]] <- (b[[nm]] - ry) / (1 - r)
+  b
+}
+
+check_unobserved <- function(unobserved, r) {
+  if (!is.logical(unobserved) || length(unobserved) != 1L || is.na(unobserved))
+    stop("`unobserved` must be TRUE or FALSE.", call. = FALSE)
+  if (unobserved && any(r >= 1))
+    stop("With `unobserved = TRUE`, every row needs r < 1: a row with r = 1 is ",
+         "never unobserved.", call. = FALSE)
+  invisible()
 }
 
 #' @export
@@ -384,6 +432,8 @@ print.sharp_scan <- function(x, digits = 3, ...) {
       "under a propensity ratio <= exp(lambda)\n")
   outer <- "outer"
   cat("  rows:", x$n, "  aggregation:", x$aggregate, "\n")
+  if (isTRUE(x$unobserved))
+    cat("  set for: the rows' own missing outcomes, E(Y | R = 0)\n")
   cat("  lambda = 0 (model on observed rows):", format(x$point, digits = digits),
       "\n")
   cat(sprintf("  lambda = %s (propensity ratio %s): sharp [%s, %s], %s [%s, %s]\n",

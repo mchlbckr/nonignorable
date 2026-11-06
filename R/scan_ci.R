@@ -25,10 +25,21 @@
 #' from models fitted without it. [crossfit_inputs()] does that for any
 #' learner. In-sample predictions make the confidence set too narrow.
 #'
-#' `target` says which rows the portfolio is: `"unobserved"` (the rejected
-#' applications, the usual case), `"all"`, or a logical vector of rows chosen
-#' by \eqn{X} alone (a segment). For `"unobserved"`, the share of a row in the
-#' target, \eqn{1 - r(x)}, is itself estimated, and the score accounts for it.
+#' `target` says which rate is wanted. `"all"` and a logical vector of rows
+#' chosen by \eqn{X} alone (a segment) give the mean of
+#' \eqn{\eta(x) = P(Y = 1 \mid X = x)} over those rows. `"unobserved"` gives
+#' the rate of the missing outcomes themselves, \eqn{E(Y \mid R = 0)}, such
+#' as the default rate of the rejected applications: by Bayes' rule
+#' \eqn{E(Y \mid R = 0) = \{E(Y) - E(RY)\}/\mathrm{pr}(R = 0)}, so its sharp set
+#' is \eqn{[\theta^-, \theta^+]} with \eqn{\theta^\pm = \{\psi^\pm -
+#' E(RY)\}/\mathrm{pr}(R = 0)} and \eqn{\psi^\pm} the endpoints for all rows
+#' (Bücker 2026, corollary on the mean of the nonrespondents). Its estimator replaces the two
+#' expectations by sample means; its influence function is
+#' \eqn{\{\varphi^\pm - RY - \theta^\pm(1 - R)\}/\mathrm{pr}(R = 0)}, with
+#' \eqn{\varphi^\pm} the score for all rows. This is not the mean of
+#' \eqn{\eta(x)} over the unobserved rows: under selection on the outcome the
+#' unobserved rows at a given \eqn{x} differ from all rows at that \eqn{x}.
+#' With `segment`, the same holds within a segment chosen by \eqn{X}.
 #'
 #' @section What is covered:
 #' At each \eqn{\lambda} separately, the interval
@@ -46,16 +57,22 @@
 #' where almost nothing is observed can carry most of the variance of the
 #' score. The usual standard error, the sample standard deviation of the
 #' influence values (`se_type = "empirical"`), then depends on whether the
-#' sample happens to contain such rows, and it is too small on average: in
-#' simulations for the rejected rows it covered 0.84 to 0.88 at nominal 0.90,
-#' without improving from 1,000 to 16,000 rows. `se_type = "conditional"`
-#' computes the variance of the score given \eqn{X} in closed form from the
-#' nuisances, for instance
-#' \eqn{(1-\hat r)^2 f'(\hat\eta)^2 \hat\eta(1-\hat\eta)/\hat r} for the
-#' band piece, and averages it over **all** rows, including the many
-#' unobserved ones in the same regions. In the same simulations it covered
-#' 0.91 to 0.97 from 4,000 rows on, with intervals about 2% wider; at 1,000
-#' rows and small \eqn{\lambda}, 0.85.
+#' sample happens to contain such rows, and it is too small on average.
+#' `se_type = "conditional"` computes the variance of the influence value
+#' given \eqn{X} in closed form from the nuisances, for instance
+#' \eqn{f'(\hat\eta)^2 \hat\eta(1-\hat\eta)/\hat r} for the band piece of
+#' the target `"all"`, and averages it over **all** rows, including the many
+#' unobserved ones in the same regions.
+#'
+#' For the rate of the missing outcomes (`target = "unobserved"`), in the
+#' package's simulation (`simulate_shadow(tilt = -1)`, logistic learners, five
+#' folds, 400 samples each of 1,000, 4,000 and 16,000 rows, \eqn{\lambda} from
+#' 0 to 2, `level = 0.9`), the empirical standard error covered 0.86 to 0.90
+#' and approached the spread of the estimates only slowly (for the lower end
+#' at \eqn{\lambda = 0.5}, 38% too small at 1,000 rows, 14% at 16,000); the
+#' conditional one, computed from the same influence function, matched that
+#' spread to within 7% from 4,000 rows on and covered 0.89 to 0.97; the
+#' default, the larger of the two, 0.92 to 0.98.
 #'
 #' The conditional variance takes \eqn{\hat\eta_{\mathrm{obs}}(1 -
 #' \hat\eta_{\mathrm{obs}})} for the variance of \eqn{Y}; if the outcome
@@ -63,9 +80,9 @@
 #' \hat\eta_{\mathrm{obs}})^2} is missing from it, and only the empirical
 #' variance sees it. Each of the two guards against the failure of the other,
 #' so the default, `se_type = "max"`, takes the larger at each endpoint and
-#' \eqn{\lambda}. On Lending Club data the empirical one was the larger, by
-#' about 40%; in the simulations, with a correctly specified outcome model,
-#' the conditional one.
+#' \eqn{\lambda}. On Lending Club data, for the rejected applications, the
+#' empirical one was the larger, by 40% to 60%; in the simulations, with a
+#' correctly specified outcome model, the conditional one.
 #'
 #' Both standard errors depend on how much mass the response model puts where
 #' \eqn{\hat r} is small: a smoother fit of \eqn{r} can raise the
@@ -89,7 +106,7 @@
 #'
 #' Only the union aggregation is covered: the common-tilt set is bounded by an
 #' extreme over rows, for which this theory does not hold. For a non-binary
-#' outcome, see [sharp_scan_mean()], for which no inference is offered.
+#' outcome, see [sharp_scan_mean_ci()].
 #'
 #' @param eta_obs Cross-fitted \eqn{\hat\eta_{\mathrm{obs}}(x_i)} for every row,
 #'   in (0, 1).
@@ -97,13 +114,14 @@
 #' @param response Response indicator for every row, 0/1 or logical.
 #' @param outcome Outcome, 0/1; ignored (and may be `NA`) where `response` is 0.
 #' @param segment Optional logical vector chosen by \eqn{X}, one per row, that
-#'   restricts a target of `"unobserved"` (or `"all"`) rows to one segment,
-#'   such as the rejected applications of one region. The segment is a
-#'   function of \eqn{X}; the target within it may depend on \eqn{R}.
+#'   restricts a target of `"unobserved"` (or `"all"`) to one segment, such as
+#'   the rejected applications of one region: \eqn{E(Y \mid R = 0)} within the
+#'   segment.
 #' @param target `"all"` (default, as in [sharp_scan_mean_ci()]),
-#'   `"unobserved"` (the rows whose outcome is missing, such as rejected
-#'   applications), or a logical vector selecting the rows of the portfolio
-#'   by \eqn{X}.
+#'   `"unobserved"` (the rate of the missing outcomes, \eqn{E(Y \mid R = 0)},
+#'   such as the default rate of rejected applications; see the section on
+#'   inputs), or a logical vector selecting the rows of the portfolio by
+#'   \eqn{X}.
 #' @param lambda,threshold As in [sharp_scan()].
 #' @param weights Optional non-negative row weights, a function of \eqn{X}.
 #' @param level Confidence level. Default 0.9.
@@ -126,6 +144,9 @@
 #'   not, by sampling error, and a set valid at one \eqn{\lambda} is valid at
 #'   every larger one.
 #' @references
+#' Bücker, M. (2026). Sharp intervals for a mean under bounded selection
+#' ratios when the response rate is known. Manuscript.
+#'
 #' Semenova, V. (2025). Debiased machine learning of aggregated intersection
 #' bounds and other causal parameters. Working paper, SSRN 5134514.
 #' \doi{10.2139/ssrn.5134514}
@@ -181,36 +202,43 @@ sharp_scan_ci <- function(eta_obs, r, response, outcome,
   if (!is.numeric(level) || length(level) != 1L || level <= 0 || level >= 1)
     stop("`level` must be a single number in (0, 1).", call. = FALSE)
 
-  # target membership s and its conditional mean p(x) = E[s | x]
+  # The target. "all", a segment by X, or rows selected by X: the mean over
+  # those rows of eta(x), with weight v = w s, s a function of X. "unobserved":
+  # E(Y | R = 0) over the rows of a segment (all rows by default), whose sharp
+  # set is {psi - E(RY)} / pr(R = 0) with psi the set of the mean over all
+  # rows of the segment (mnar-sharp, Corollary 1).
+  seg <- rep(1, n)
   if (is.character(target)) {
     target <- match.arg(target, c("unobserved", "all"))
-    if (target == "unobserved") { s <- 1 - R; p <- 1 - r }
-    else { s <- rep(1, n); p <- s }
     target_label <- target
   } else {
     if (!is.logical(target) || length(target) != n || anyNA(target))
       stop("`target` must be \"unobserved\", \"all\" or a logical vector, ",
            "one per row.", call. = FALSE)
-    s <- as.numeric(target); p <- s
+    seg <- as.numeric(target)
     target_label <- "rows selected by X"
   }
   if (!is.null(segment)) {
-    if (!is.character(target_label) || target_label == "rows selected by X")
+    if (target_label == "rows selected by X")
       stop("`segment` combines with target = \"unobserved\" or \"all\"; for ",
            "a segment of all rows pass it as `target`.", call. = FALSE)
     if (!is.logical(segment) || length(segment) != n || anyNA(segment))
       stop("`segment` must be a logical vector chosen by X, one per row, ",
            "without NA.", call. = FALSE)
-    s <- s * segment; p <- p * segment
+    seg <- as.numeric(segment)
     target_label <- paste(target_label, "rows of a segment chosen by X")
   }
+  unobs <- startsWith(target_label, "unobserved")
   if (!is.numeric(trim) || length(trim) != 1L || trim < 0 || trim >= 1)
     stop("`trim` must be a single number in [0, 1).", call. = FALSE)
   # rows with r-hat below trim leave the target, with their correction terms
   keep <- r >= trim
-  n_trimmed <- sum(s > 0 & !keep)        # target rows that leave the target
-  s <- s * keep; p <- p * keep
-  if (sum(w * s) <= 0) stop("The target is empty.", call. = FALSE)
+  in_target <- seg > 0 & (if (unobs) R == 0 else TRUE)
+  n_trimmed <- sum(in_target & !keep)    # target rows that leave the target
+  seg <- seg * keep; in_target <- in_target & keep
+  v <- w * seg
+  den <- if (unobs) mean(v * (1 - R)) else mean(v)
+  if (den <= 0) stop("The target is empty.", call. = FALSE)
   z <- stats::qnorm(1 - (1 - level) / 2)
 
   ell <- stats::qlogis(eta_obs)
@@ -218,12 +246,7 @@ sharp_scan_ci <- function(eta_obs, r, response, outcome,
   # derivative of a band piece f(eta) = expit(logit eta +- lambda) in eta
   resid <- R * (outcome_or0(outcome, R) - eta_obs) / r
   band_signal <- function(f) f + f * (1 - f) / (eta_obs * (1 - eta_obs)) * resid
-  den <- mean(w * s)
-
-  # target membership: random (1 - R) for "unobserved", else a function of X
-  s_random <- startsWith(target_label, "unobserved")
-  seg <- if (is.null(segment)) 1 else as.numeric(segment)
-  eta_c <- eta_obs
+  mean_vRY <- mean(v * RY)
 
   # debiased estimate and standard error of one endpoint
   endpoint <- function(lam, side) {
@@ -238,37 +261,48 @@ sharp_scan_ci <- function(eta_obs, r, response, outcome,
       h <- ifelse(band, f, m_lo)
       rho <- ifelse(band, band_signal(f), RY)
     }
-    score <- w * (s * h + p * (rho - h))
-    est <- mean(score) / den
-    infl <- (score - est * w * s) / den
+    if (unobs) {
+      est <- (mean(v * rho) - mean_vRY) / den
+      infl <- v * (rho - RY - est * (1 - R)) / den
+    } else {
+      est <- mean(v * rho) / den
+      infl <- v * (rho - est) / den
+    }
     se_emp <- stats::sd(infl) / sqrt(n)
     if (se_type == "empirical") return(c(est = est, se = se_emp))
-    # Conditional variance given X of D = rho - h, and its covariance with the
-    # random target indicator 1 - R, in closed form from the nuisances. They
-    # are evaluated at every row, so the variance does not hinge on the few
-    # observed rows with small r-hat that dominate the empirical one.
-    fp <- f * (1 - f) / (eta_c * (1 - eta_c))
-    if (side == "upper") {
-      vD <- ifelse(band, fp^2 * eta_c * (1 - eta_c) / r,
-                   r * (1 - eta_c) * (1 - r * (1 - eta_c)))
-      cD <- ifelse(band, 0, (1 - r) * r * (1 - eta_c))
+    # Conditional mean and variance given X of the influence value, in closed
+    # form from the nuisances. They are evaluated at every row, so the
+    # variance does not hinge on the few observed rows with small r-hat that
+    # dominate the empirical one.
+    fp <- f * (1 - f) / (eta_obs * (1 - eta_obs))
+    ev <- eta_obs * (1 - eta_obs)
+    if (unobs) {
+      # rho - RY - est (1 - R): band piece (f - est) + R {fp (Y - eta)/r - Y + est};
+      # cap pieces (1 - est)(1 - R) (upper) and -est (1 - R) (lower)
+      a <- h - r * eta_obs - est * (1 - r)
+      vD <- if (side == "upper")
+        ifelse(band, r * (fp / r - 1)^2 * ev + r * (1 - r) * (est - eta_obs)^2,
+               r * (1 - r) * (1 - est)^2)
+      else
+        ifelse(band, r * (fp / r - 1)^2 * ev + r * (1 - r) * (est - eta_obs)^2,
+               r * (1 - r) * est^2)
     } else {
-      vD <- ifelse(band, fp^2 * eta_c * (1 - eta_c) / r,
-                   r * eta_c * (1 - r * eta_c))
-      cD <- ifelse(band, 0, -(1 - r) * r * eta_c)
+      a <- h - est
+      vD <- if (side == "upper")
+        ifelse(band, fp^2 * ev / r, r * (1 - eta_obs) * (1 - r * (1 - eta_obs)))
+      else
+        ifelse(band, fp^2 * ev / r, r * eta_obs * (1 - r * eta_obs))
     }
-    a <- h - est
-    if (s_random) {                 # IF * den = (1 - R) a + (1 - r) D, times w
-      # p = (1 - r) * keep; trimmed rows contribute nothing
-      m1 <- w * p * a
-      v1 <- w^2 * keep * seg * (a^2 * r * (1 - r) + p^2 * vD + 2 * a * p * cD)
-    } else {                        # IF * den = s (a + D), s a function of X
-      m1 <- w * s * a
-      v1 <- w^2 * s^2 * vD
-    }
-    v <- (mean((m1 - mean(m1))^2) + mean(v1)) / den^2
-    se_cond <- sqrt(v / n)
+    m1 <- v * a
+    vv <- (mean((m1 - mean(m1))^2) + mean(v^2 * vD)) / den^2
+    se_cond <- sqrt(vv / n)
     c(est = est, se = if (se_type == "max") max(se_cond, se_emp) else se_cond)
+  }
+  # plug-in outer band (without the cap pi <= 1) of the target
+  naive <- function(lam, side) {
+    b <- stats::plogis(ell + if (side == "upper") lam else -lam)
+    # for "unobserved" not clipped into [0, 1]: there the cap is that range
+    if (unobs) (mean(v * b) - mean_vRY) / den else mean(v * b) / den
   }
 
   K <- length(lambda)
@@ -276,23 +310,33 @@ sharp_scan_ci <- function(eta_obs, r, response, outcome,
                     se_lower = NA_real_, se_upper = NA_real_,
                     ci_lower = NA_real_, ci_upper = NA_real_,
                     naive_lower = NA_real_, naive_upper = NA_real_)
-  tw <- w * s
   for (k in seq_len(K)) {
     lo <- endpoint(lambda[k], "lower"); up <- endpoint(lambda[k], "upper")
     out$lower[k] <- lo[["est"]]; out$se_lower[k] <- lo[["se"]]
     out$upper[k] <- up[["est"]]; out$se_upper[k] <- up[["se"]]
-    out$naive_lower[k] <- sum(tw * stats::plogis(ell - lambda[k])) / sum(tw)
-    out$naive_upper[k] <- sum(tw * stats::plogis(ell + lambda[k])) / sum(tw)
+    out$naive_lower[k] <- naive(lambda[k], "lower")
+    out$naive_upper[k] <- naive(lambda[k], "upper")
   }
   # A rate lies in [0, 1]; the debiased estimate may leave it slightly by
   # sampling error, but far outside it the inverse weights 1/r-hat have blown up.
   off <- pmax(-out$lower, out$upper - 1, 0)
-  if (max(off) > 0.05)
-    warning(sprintf(paste0(
-      "The debiased estimate leaves [0, 1] by up to %.3g: the inverse weights ",
-      "1/r-hat have blown up. Check the response model for separation (a fit ",
-      "that drives r-hat of observed rows towards 0), or use `trim`."), max(off)),
-      call. = FALSE)
+  if (max(off) > 0.05) {
+    share <- if (unobs) mean(v * (1 - R)) / mean(v) else 1
+    small_r <- any(R == 1 & v > 0 & r < 0.05)
+    cause <- c(
+      if (small_r) paste0("the inverse weights 1/r-hat have blown up. Check the ",
+                          "response model for separation (a fit that drives r-hat ",
+                          "of observed rows towards 0), or use `trim`"),
+      if (unobs && share < 0.2)
+        sprintf(paste0("only %.0f%% of the rows are unobserved, and the rate of ",
+                       "their outcomes divides by that share, which magnifies ",
+                       "the sampling error of the estimate for all rows"), 100 * share))
+    if (is.null(cause))
+      cause <- paste0("check the response model for separation and the outcome ",
+                      "model for fit")
+    warning(sprintf("The debiased estimate leaves [0, 1] by up to %.3g: %s.",
+                    max(off), paste(cause, collapse = "; and ")), call. = FALSE)
+  }
   out$ci_lower <- pmax(out$lower - z * out$se_lower, 0)
   out$ci_upper <- pmin(out$upper + z * out$se_upper, 1)
   out <- monotone_curve(out)
@@ -307,8 +351,7 @@ sharp_scan_ci <- function(eta_obs, r, response, outcome,
       e <- endpoint(l, side)
       e[["est"]] + sgn * z * e[["se"]]
     }
-    naive_fun <- function(l)
-      sum(tw * stats::plogis(ell + sgn * l)) / sum(tw)
+    naive_fun <- function(l) naive(l, side)
     flip[["sharp"]] <- first_crossing(est_fun, threshold, max(lambda), side,
                                       grid = out$lambda, values = out[[side]])
     flip[["naive"]] <- first_crossing(naive_fun, threshold, max(lambda), side,
@@ -317,17 +360,20 @@ sharp_scan_ci <- function(eta_obs, r, response, outcome,
                                    grid = out$lambda, values = out[[paste0("ci_", side)]])
   }
 
-  cap <- cap_summary(eta_obs, r, w, lambda, target = s)
+  # where the cap binds: among the rows whose eta(x) enters the set (for
+  # "unobserved", all rows of the segment)
+  cap <- cap_summary(eta_obs, r, w, lambda, target = seg)
 
   structure(list(
     curve = out, point = point, threshold = threshold, flip = flip,
     aggregate = "union", binding = NULL, level = level, target = target_label,
     trim = trim, trimmed = n_trimmed, se_type = se_type,
+    unobserved = unobs,
     held = cap$held, capped = cap$capped,
-    tail = c(target = sum(s > 0 & r < 0.01), observed = sum(R == 1 & r < 0.01),
+    tail = c(target = sum(in_target & r < 0.01), observed = sum(R == 1 & r < 0.01),
              min_r_observed = min(r[R == 1])),
     eta_obs = eta_obs, r = r, weights = weights, n = n,
-    n_target = sum(s > 0)
+    n_target = sum(in_target)
   ), class = c("sharp_scan_ci", "sharp_scan"))
 }
 

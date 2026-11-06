@@ -179,3 +179,34 @@ test_that("first_crossing finds the first crossing of a curve that is not monoto
                                            grid = seq(0, 2, length.out = 81)),
                0.2, tolerance = 1e-8)
 })
+
+test_that("unobserved = TRUE bounds the rows' own missing outcomes", {
+  d <- simulate_shadow(200000, tilt = -1, seed = 81)
+  rej <- d[d$observed == 0, ]
+  e <- rej$eta_obs; r <- rej$obs_rate
+  s <- sharp_scan(e, r, lambda = c(0, 0.5, 1), unobserved = TRUE)
+  b <- sharp_scan(e, r, lambda = c(0, 0.5, 1))
+  # per row the affine image of the eta(x) set; at lambda = 0 both give eta_obs
+  pr <- as.data.frame(s, lambda = 1); pb <- as.data.frame(b, lambda = 1)
+  expect_equal(pr$upper, (pb$upper - r * e) / (1 - r))
+  expect_equal(pr$naive_lower, (pb$naive_lower - r * e) / (1 - r))
+  expect_true(all(pr$lower >= -1e-12 & pr$upper <= 1 + 1e-12))
+  expect_equal(s$point, b$point)
+  expect_equal(s$curve$upper[1], s$point)
+  # the truth E(Y | R = 0) lies in the set at the simulated strength, the old
+  # reading (the mean of eta(x) over the rows) does not cover it
+  truth <- mean((rej$eta - r * e) / (1 - r))
+  expect_lte(s$curve$lower[3], truth); expect_gte(s$curve$upper[3], truth)
+  expect_lt(b$curve$upper[3], truth)
+  # the outer band ignores the cap, which is here the range [0, 1]
+  expect_lt(min(s$curve$naive_lower), min(s$curve$lower))
+  # common tilt and threshold use the same map
+  cm <- sharp_scan(e, r, lambda = 1, aggregate = "common", unobserved = TRUE)
+  expect_lte(cm$curve$upper, s$curve$upper[3] + 1e-12)
+  th <- sharp_scan(e, r, threshold = 0.35, unobserved = TRUE)
+  expect_equal(mean((pmin(plogis(qlogis(e) + th$flip[["sharp"]]), r * e + 1 - r) - r * e) / (1 - r)),
+               0.35, tolerance = 1e-8)
+  expect_output(print(s), "own missing outcomes")
+  expect_error(sharp_scan(c(0.2, 0.3), c(0.5, 1), unobserved = TRUE), "r < 1")
+  expect_error(sharp_scan(0.2, 0.5, unobserved = NA), "TRUE or FALSE")
+})

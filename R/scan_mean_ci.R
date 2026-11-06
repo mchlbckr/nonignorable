@@ -91,9 +91,22 @@ mean_score <- function(side, m, r, Y, R, lam) {
 #' heteroskedasticity, made the set markedly too wide, and quantile forests
 #' gave valid but conservative sets.
 #'
-#' The target is the mean over all rows (`target = "all"`) or over a segment
-#' chosen by \eqn{X} (a logical vector). The mean over the unobserved rows
-#' alone is not covered by this theory.
+#' The target is the mean over all rows (`target = "all"`), over a segment
+#' chosen by \eqn{X} (a logical vector), or the mean of the missing outcomes,
+#' \eqn{E(Y \mid R = 0)} (`target = "unobserved"`, within a `segment` if
+#' given). For the last, \eqn{E(Y \mid R = 0) = \{E(Y) - E(RY)\}/\mathrm{pr}(R
+#' = 0)}, so the sharp set is \eqn{\theta^\pm = \{\psi^\pm -
+#' E(RY)\}/\mathrm{pr}(R = 0)} with \eqn{\psi^\pm} the endpoints for all rows,
+#' estimated with sample means in place of the expectations; the influence
+#' function is \eqn{\{\varphi^\pm - RY - \theta^\pm(1 - R)\}/\mathrm{pr}(R =
+#' 0)}, and the standard error the sample standard deviation of its
+#' estimate, under the same conditions as above (Bücker 2026, corollary on
+#' the mean of the nonrespondents). It is not the mean of \eqn{E(Y \mid X =
+#' x)} over the unobserved rows. In the package's simulation (as above, five
+#' folds, 200 samples each of 2,000 and 5,000 rows, \eqn{\lambda} from 0 to 2),
+#' the interval covered the set for \eqn{E(Y \mid R = 0)} in 89.5% to 92.5%
+#' of samples, and the standard error matched the spread of the estimates
+#' to within 6%.
 #'
 #' @param q An \eqn{n \times K} matrix of conditional quantiles of \eqn{Y}
 #'   given \eqn{R = 1, X = x_i} for **every** row, fitted out of fold, at the
@@ -101,8 +114,12 @@ mean_score <- function(side, m, r, Y, R, lam) {
 #' @param r Cross-fitted \eqn{\hat r(x_i)} for every row, in (0, 1].
 #' @param response Response indicator for every row, 0/1 or logical.
 #' @param outcome Outcome; ignored (and may be `NA`) where `response` is 0.
-#' @param target `"all"` (default) or a logical vector selecting the rows of
-#'   the portfolio by \eqn{X}.
+#' @param target `"all"` (default), `"unobserved"` (the mean of the missing
+#'   outcomes, \eqn{E(Y \mid R = 0)}), or a logical vector selecting the rows
+#'   of the portfolio by \eqn{X}.
+#' @param segment Optional logical vector chosen by \eqn{X}, one per row, that
+#'   restricts a target of `"unobserved"` (or `"all"`) to one segment, as in
+#'   [sharp_scan_ci()].
 #' @param lambda Grid of \eqn{\lambda} values.
 #' @param weights Optional non-negative row weights, a function of \eqn{X}.
 #' @param threshold Optional value of the mean at which the decision changes.
@@ -119,12 +136,16 @@ mean_score <- function(side, m, r, Y, R, lam) {
 #'   `se_lower`, `se_upper`, `ci_lower`, `ci_upper`, `naive_lower`,
 #'   `naive_upper`; the naive columns are the plug-in outer band), `point`
 #'   (the estimate at \eqn{\lambda = 0}), `flip` (`sharp`, `ci`, `naive`),
-#'   `trimmed`, `clipped`, `capped` (the weighted share of target rows in
-#'   which the cap \eqn{\pi \le 1} binds at the largest \eqn{\lambda}, per
+#'   `trimmed`, `clipped` (rows entering the set, that is all rows of the
+#'   segment for `"unobserved"`), `capped` (the weighted share of the rows
+#'   entering the set in which the cap \eqn{\pi \le 1} binds at the largest \eqn{\lambda}, per
 #'   bound), `tail`, `n` and `n_target`. Estimates and confidence set are kept
 #'   monotone in \eqn{\lambda}, as in [sharp_scan_ci()]. `as.data.frame(x,
 #'   lambda = )` gives the plug-in bounds per row, with \eqn{\hat r} clipped
 #'   into `r_bounds`; they carry no correction and no confidence statement.
+#' @references
+#' Bücker, M. (2026). Sharp intervals for a mean under bounded selection
+#' ratios when the response rate is known. Manuscript.
 #' @seealso [sharp_scan_mean()], [crossfit_quantiles()], [sharp_scan_ci()]
 #' @export
 #' @examples
@@ -155,7 +176,8 @@ mean_score <- function(side, m, r, Y, R, lam) {
 sharp_scan_mean_ci <- function(q, r, response, outcome, target = "all",
                                 lambda = seq(0, 2, length.out = 81),
                                 weights = NULL, threshold = NULL, level = 0.9,
-                                trim = 0, r_bounds = c(0.01, 0.99)) {
+                                trim = 0, r_bounds = c(0.01, 0.99),
+                                segment = NULL) {
   if (is.null(dim(q))) q <- matrix(q, ncol = 1L)
   q <- as.matrix(q)
   n <- nrow(q)
@@ -202,35 +224,61 @@ sharp_scan_mean_ci <- function(q, r, response, outcome, target = "all",
   w <- check_weights(weights, n)
   if (is.null(w)) w <- rep(1, n)
 
+  # The target: the mean over all rows or over rows selected by X (weight
+  # v = w s), or E(Y | R = 0) over the rows of a segment, whose sharp set is
+  # {psi - E(RY)} / pr(R = 0) with psi the set of the mean over all rows of
+  # the segment (mnar-sharp, Corollary 1).
+  seg <- rep(1, n)
   if (is.character(target)) {
-    if (!identical(target, "all"))
-      stop("Only target = \"all\" or a logical vector chosen by X is covered; ",
-           "the mean over the unobserved rows alone is not covered by this ",
-           "theory. See ?sharp_scan_mean_ci.", call. = FALSE)
-    s <- rep(1, n); target_label <- "all"
+    target <- match.arg(target, c("all", "unobserved"))
+    target_label <- target
   } else {
     if (!is.logical(target) || length(target) != n || anyNA(target))
-      stop("`target` must be \"all\" or a logical vector, one per row.",
-           call. = FALSE)
-    s <- as.numeric(target); target_label <- "rows selected by X"
+      stop("`target` must be \"all\", \"unobserved\" or a logical vector, ",
+           "one per row.", call. = FALSE)
+    seg <- as.numeric(target); target_label <- "rows selected by X"
   }
+  if (!is.null(segment)) {
+    if (target_label == "rows selected by X")
+      stop("`segment` combines with target = \"unobserved\" or \"all\"; for ",
+           "a segment of all rows pass it as `target`.", call. = FALSE)
+    if (!is.logical(segment) || length(segment) != n || anyNA(segment))
+      stop("`segment` must be a logical vector chosen by X, one per row, ",
+           "without NA.", call. = FALSE)
+    seg <- as.numeric(segment)
+    target_label <- paste(target_label, "rows of a segment chosen by X")
+  }
+  unobs <- startsWith(target_label, "unobserved")
   keep <- r >= trim
-  n_trimmed <- sum(s > 0 & !keep)
-  s <- s * keep
-  if (sum(w * s) <= 0) stop("The target is empty.", call. = FALSE)
+  in_target <- seg > 0 & (if (unobs) R == 0 else TRUE)
+  n_trimmed <- sum(in_target & !keep)
+  seg <- seg * keep; in_target <- in_target & keep
+  ws <- w * seg
+  den <- if (unobs) mean(ws * (1 - R)) else mean(ws)
+  if (den <= 0) stop("The target is empty.", call. = FALSE)
   rc <- pmin(pmax(r, r_bounds[1]), r_bounds[2])
-  n_clipped <- c(low = sum(s > 0 & r < r_bounds[1]), high = sum(s > 0 & r > r_bounds[2]))
+  n_clipped <- c(low = sum(seg > 0 & r < r_bounds[1]),
+                 high = sum(seg > 0 & r > r_bounds[2]))
   z <- stats::qnorm(1 - (1 - level) / 2)
   prep <- mean_prep(q)
-  ws <- w * s
-  den <- mean(ws)
+  mean_wRY <- mean(ws * R * Y)
 
   endpoint <- function(lam, side) {
     phi <- if (side == "upper") mean_score(prep$hi, prep$m, rc, Y, R, lam)$phi
            else -mean_score(prep$lo, -prep$m, rc, -Y, R, lam)$phi
-    est <- mean(ws * phi) / den
-    infl <- (ws * phi - est * ws) / den
+    if (unobs) {
+      est <- (mean(ws * phi) - mean_wRY) / den
+      infl <- ws * (phi - R * Y - est * (1 - R)) / den
+    } else {
+      est <- mean(ws * phi) / den
+      infl <- ws * (phi - est) / den
+    }
     c(est = est, se = stats::sd(infl) / sqrt(n))
+  }
+  # plug-in outer band (without the cap pi <= 1) of the target
+  naive <- function(lam, side) {
+    o <- mean_bounds(prep, rc, lam, cap = FALSE)[[side]]
+    if (unobs) (mean(ws * o) - mean_wRY) / den else mean(ws * o) / den
   }
 
   out <- data.frame(lambda = lambda, lower = NA_real_, upper = NA_real_,
@@ -241,19 +289,18 @@ sharp_scan_mean_ci <- function(q, r, response, outcome, target = "all",
     lo <- endpoint(lambda[k], "lower"); up <- endpoint(lambda[k], "upper")
     out$lower[k] <- lo[["est"]]; out$se_lower[k] <- lo[["se"]]
     out$upper[k] <- up[["est"]]; out$se_upper[k] <- up[["se"]]
-    o <- mean_bounds(prep, rc, lambda[k], cap = FALSE)
-    out$naive_lower[k] <- sum(ws * o$lower) / sum(ws)
-    out$naive_upper[k] <- sum(ws * o$upper) / sum(ws)
+    out$naive_lower[k] <- naive(lambda[k], "lower")
+    out$naive_upper[k] <- naive(lambda[k], "upper")
   }
   out$ci_lower <- out$lower - z * out$se_lower
   out$ci_upper <- out$upper + z * out$se_upper
   out <- monotone_curve(out)
   # The bounds lie in the range of the target rows' quantiles; far outside it
   # the inverse weights have blown up.
-  rng <- range(q[s > 0, , drop = FALSE])
+  rng <- range(q[seg > 0, , drop = FALSE])
   off <- max(rng[1] - out$lower, out$upper - rng[2], 0)
   if (off > 0.1 * max(diff(rng), .Machine$double.eps)) {
-    obs <- R == 1 & s > 0
+    obs <- R == 1 & seg > 0
     small_r <- any(obs & r < 0.05)
     outside <- mean(outcome[obs] < apply(q[obs, , drop = FALSE], 1, min) |
                     outcome[obs] > apply(q[obs, , drop = FALSE], 1, max))
@@ -282,10 +329,7 @@ sharp_scan_mean_ci <- function(q, r, response, outcome, target = "all",
     sgn <- if (side == "upper") 1 else -1
     est_fun <- function(l) endpoint(l, side)[["est"]]
     ci_fun <- function(l) { e <- endpoint(l, side); e[["est"]] + sgn * z * e[["se"]] }
-    naive_fun <- function(l) {
-      o <- mean_bounds(prep, rc, l, cap = FALSE)
-      sum(ws * o[[side]]) / sum(ws)
-    }
+    naive_fun <- function(l) naive(l, side)
     lam_max <- max(lambda)
     flip[["sharp"]] <- first_crossing(est_fun, threshold, lam_max, side,
                                       grid = out$lambda, values = out[[side]])
@@ -299,11 +343,12 @@ sharp_scan_mean_ci <- function(q, r, response, outcome, target = "all",
     curve = out, point = point, threshold = threshold, flip = flip,
     aggregate = "union", binding = NULL, level = level, target = target_label,
     trim = trim, trimmed = n_trimmed, clipped = n_clipped, r_bounds = r_bounds,
+    unobserved = unobs,
     capped = capped,
-    tail = c(target = sum(s > 0 & r < r_bounds[1]),
+    tail = c(target = sum(in_target & r < r_bounds[1]),
              observed = sum(R == 1 & r < r_bounds[1]),
              min_r_observed = min(r[R == 1])),
-    n = n, n_target = sum(s > 0),
+    n = n, n_target = sum(in_target),
     # for per-row plug-in bounds via as.data.frame(x, lambda = )
     q = q, r = rc, weights = weights
   ), class = c("sharp_scan_mean_ci", "sharp_scan_ci", "sharp_scan_mean",
@@ -321,9 +366,9 @@ print.sharp_scan_mean_ci <- function(x, digits = 3, ...) {
     cat(sprintf("  trimmed: %d rows with r-hat < %g, out of the target\n", x$trimmed, x$trim))
   if (sum(x$clipped) > 0) {
     part <- c(if (x$clipped[["low"]] > 0)
-                sprintf("%d target rows with r-hat below %g (raised to it)", x$clipped[["low"]], x$r_bounds[1]),
+                sprintf("%d rows entering the set with r-hat below %g (raised to it)", x$clipped[["low"]], x$r_bounds[1]),
               if (x$clipped[["high"]] > 0)
-                sprintf("%d target rows with r-hat above %g (lowered to it)", x$clipped[["high"]], x$r_bounds[2]))
+                sprintf("%d rows entering the set with r-hat above %g (lowered to it)", x$clipped[["high"]], x$r_bounds[2]))
     cat(strwrap(paste0("clipped: ", paste(part, collapse = ", ")), indent = 2, exdent = 4), sep = "\n")
   }
   cat(sprintf("  r-hat < %g: %d target rows, %d observed rows; smallest r-hat observed %s\n",

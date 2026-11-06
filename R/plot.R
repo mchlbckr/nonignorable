@@ -46,7 +46,9 @@ plot.sharp_scan <- function(x, scale = c("ratio", "log"),
   is_mean <- inherits(x, "sharp_scan_mean")
   is_contrast <- inherits(x, "sharp_scan_contrast")
   is_ci <- inherits(x, "sharp_scan_ci") || inherits(x, "sharp_scan_mean_ci") || is_contrast
-  if (is.null(ylab)) ylab <- if (is_mean) "Portfolio mean"
+  if (is.null(ylab)) ylab <- if (isTRUE(x$unobserved) && !is_contrast)
+      paste(if (is_mean) "Mean" else "Rate", "of the missing outcomes")
+    else if (is_mean) "Portfolio mean"
     else if (is_contrast) sprintf("Difference of %s, %s - %s",
                                   if (isTRUE(x$of_means)) "means" else "rates",
                                   x$labels[1], x$labels[2])
@@ -148,6 +150,16 @@ plot.sharp_scan <- function(x, scale = c("ratio", "log"),
   lo <- apply(ink, 1, min); hi <- apply(ink, 1, max)
   if (!is.null(x$threshold)) { lo <- pmin(lo, x$threshold); hi <- pmax(hi, x$threshold) }
   usr <- graphics::par("usr")
+  # The flip labels sit at the bottom of the plot. Where a curve runs that low
+  # beneath them (a lower bound near 0, say), lower the y limit until the
+  # labels have a free strip below the ink.
+  new_lo <- flip_label_floor(obstacle_boxes(Filter(function(a) a$type == "text" &&
+                                                     a$y == usr[3], annotations(usr)), usr),
+                             usr, xs, lo)
+  if (!is.null(new_lo)) {
+    graphics::plot.window(xlim = usr[1:2], ylim = c(new_lo, usr[4]), xaxs = "i", yaxs = "i")
+    usr <- graphics::par("usr")
+  }
   size <- do.call(graphics::legend, c(list(x = "topleft", plot = FALSE), leg_args))$rect
   spot <- scan_legend_spot(size$w, size$h, usr, xs, lo, hi,
                            obstacles = obstacle_boxes(annotations(usr), usr))
@@ -194,6 +206,23 @@ plot.sharp_scan <- function(x, scale = c("ratio", "log"),
 }
 
 draw_scan_legend <- function(...) graphics::legend(...)
+
+# The lower y limit that gives the flip labels (boxes c(x0, x1, y0, y1), drawn
+# from the bottom edge) a free strip beneath the lowest ink `lo` within their
+# horizontal span, or NULL if they are already clear. Label heights are fixed
+# in inches, so they keep their share f of the plot height when the limit moves.
+flip_label_floor <- function(boxes, usr, xs, lo, pad = 0.04) {
+  if (!length(boxes)) return(NULL)
+  b <- do.call(rbind, boxes)
+  x0 <- max(min(b[, 1]), min(xs)); x1 <- min(max(b[, 2]), max(xs))
+  if (x0 > x1) return(NULL)
+  xo <- seq(x0, x1, length.out = 200)
+  ink <- min(stats::approx(xs, lo, xo)$y)
+  H <- usr[4] - usr[3]
+  f <- (max(b[, 4]) - usr[3]) / H
+  if (ink >= max(b[, 4]) + pad * H) return(NULL)
+  (ink - (f + pad) * usr[4]) / (1 - f - pad)
+}
 
 # Where the scan legend goes: the first corner whose box no curve, band or
 # annotation touches. `lo`, `hi` are the lowest and highest ink at each `xs`;

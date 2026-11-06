@@ -41,3 +41,16 @@ test_that("mean contrast checks its targets and threshold", {
   expect_error(sharp_scan_mean_contrast(mfx$q, mfx$d$obs_rate, mfx$d$observed, mfx$d$y,
                                          mfx$A, mfx$B, lambda = c(0.5, 1)), "lambda = 0")
 })
+
+test_that("the mean contrast can compare the missing outcomes of two segments", {
+  k <- mk(among = "unobserved")
+  arm <- function(tg) sharp_scan_mean_ci(mfx$q, mfx$d$obs_rate, mfx$d$observed, mfx$d$y,
+                                          target = "unobserved", segment = tg,
+                                          lambda = mlam)$curve
+  ca <- arm(mfx$A); cb <- arm(mfx$B)
+  expect_equal(k$curve$upper, cummax(ca$upper - cb$lower))
+  expect_equal(k$curve$se_lower, sqrt(ca$se_lower^2 + cb$se_upper^2))
+  expect_identical(k$n_a, sum(mfx$A & mfx$d$observed == 0))
+  expect_identical(k$among, "unobserved")
+  expect_output(print(k), "unobserved rows")
+})

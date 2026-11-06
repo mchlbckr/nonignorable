@@ -15,7 +15,8 @@ sharp_scan_mean_ci(
   threshold = NULL,
   level = 0.9,
   trim = 0,
-  r_bounds = c(0.01, 0.99)
+  r_bounds = c(0.01, 0.99),
+  segment = NULL
 )
 }
 \arguments{
@@ -29,8 +30,9 @@ levels \eqn{(k - 1/2)/K}.}
 
 \item{outcome}{Outcome; ignored (and may be \code{NA}) where \code{response} is 0.}
 
-\item{target}{\code{"all"} (default) or a logical vector selecting the rows of
-the portfolio by \eqn{X}.}
+\item{target}{\code{"all"} (default), \code{"unobserved"} (the mean of the missing
+outcomes, \eqn{E(Y \mid R = 0)}), or a logical vector selecting the rows
+of the portfolio by \eqn{X}.}
 
 \item{lambda}{Grid of \eqn{\lambda} values.}
 
@@ -47,6 +49,10 @@ Default \code{c(0.01, 0.99)}. The number of clipped target rows is reported,
 below and above apart: clipping at the top only stabilises the cap
 \eqn{\pi \le 1} for rows that are almost always observed, clipping at the
 bottom limits inverse weights.}
+
+\item{segment}{Optional logical vector chosen by \eqn{X}, one per row, that
+restricts a target of \code{"unobserved"} (or \code{"all"}) to one segment, as in
+\code{\link[=sharp_scan_ci]{sharp_scan_ci()}}.}
 }
 \value{
 An object of class
@@ -54,8 +60,9 @@ An object of class
 \code{se_lower}, \code{se_upper}, \code{ci_lower}, \code{ci_upper}, \code{naive_lower},
 \code{naive_upper}; the naive columns are the plug-in outer band), \code{point}
 (the estimate at \eqn{\lambda = 0}), \code{flip} (\code{sharp}, \code{ci}, \code{naive}),
-\code{trimmed}, \code{clipped}, \code{capped} (the weighted share of target rows in
-which the cap \eqn{\pi \le 1} binds at the largest \eqn{\lambda}, per
+\code{trimmed}, \code{clipped} (rows entering the set, that is all rows of the
+segment for \code{"unobserved"}), \code{capped} (the weighted share of the rows
+entering the set in which the cap \eqn{\pi \le 1} binds at the largest \eqn{\lambda}, per
 bound), \code{tail}, \code{n} and \code{n_target}. Estimates and confidence set are kept
 monotone in \eqn{\lambda}, as in \code{\link[=sharp_scan_ci]{sharp_scan_ci()}}. \code{as.data.frame(x, lambda = )} gives the plug-in bounds per row, with \eqn{\hat r} clipped
 into \code{r_bounds}; they carry no correction and no confidence statement.
@@ -120,9 +127,22 @@ simulations, a linear model for the location only, which cannot follow
 heteroskedasticity, made the set markedly too wide, and quantile forests
 gave valid but conservative sets.
 
-The target is the mean over all rows (\code{target = "all"}) or over a segment
-chosen by \eqn{X} (a logical vector). The mean over the unobserved rows
-alone is not covered by this theory.
+The target is the mean over all rows (\code{target = "all"}), over a segment
+chosen by \eqn{X} (a logical vector), or the mean of the missing outcomes,
+\eqn{E(Y \mid R = 0)} (\code{target = "unobserved"}, within a \code{segment} if
+given). For the last, \eqn{E(Y \mid R = 0) = \{E(Y) - E(RY)\}/\mathrm{pr}(R
+= 0)}, so the sharp set is \eqn{\theta^\pm = \{\psi^\pm -
+E(RY)\}/\mathrm{pr}(R = 0)} with \eqn{\psi^\pm} the endpoints for all rows,
+estimated with sample means in place of the expectations; the influence
+function is \eqn{\{\varphi^\pm - RY - \theta^\pm(1 - R)\}/\mathrm{pr}(R =
+0)}, and the standard error the sample standard deviation of its
+estimate, under the same conditions as above (Bücker 2026, corollary on
+the mean of the nonrespondents). It is not the mean of \eqn{E(Y \mid X =
+x)} over the unobserved rows. In the package's simulation (as above, five
+folds, 200 samples each of 2,000 and 5,000 rows, \eqn{\lambda} from 0 to 2),
+the interval covered the set for \eqn{E(Y \mid R = 0)} in 89.5\% to 92.5\%
+of samples, and the standard error matched the spread of the estimates
+to within 6\%.
 }
 
 \examples{
@@ -150,6 +170,10 @@ if (requireNamespace("mgcv", quietly = TRUE)) {
   print(k)
   plot(k)
 }
+}
+\references{
+Bücker, M. (2026). Sharp intervals for a mean under bounded selection
+ratios when the response rate is known. Manuscript.
 }
 \seealso{
 \code{\link[=sharp_scan_mean]{sharp_scan_mean()}}, \code{\link[=crossfit_quantiles]{crossfit_quantiles()}}, \code{\link[=sharp_scan_ci]{sharp_scan_ci()}}

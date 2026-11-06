@@ -82,8 +82,9 @@ different rows and have mean zero, so they are uncorrelated and the
 standard error of the difference is the root of the sum of the squared
 standard errors. Overlapping targets would need their covariance and are
 not supported. By default each target is a whole segment of rows, observed
-and unobserved alike; \code{among = "unobserved"} compares the unobserved rows
-of the two segments instead, such as the rejected applicants of each.
+and unobserved alike; \code{among = "unobserved"} compares the rates of the
+missing outcomes of the two segments instead, \eqn{E(Y \mid R = 0)} in
+each, such as the default rates of the rejected applicants of each.
 
 The flip points say from which \eqn{\lambda} on the set, and the confidence
 set, reach \code{threshold} (by default 0: no difference). They are found by

@@ -217,3 +217,30 @@ test_that("a bound held by the cap is noted in print and legend", {
   expect_true(all(is.na(s2$held)))
   expect_no_match(paste(capture.output(print(s2)), collapse = "\n"), "held by")
 })
+
+test_that("flip labels get a free strip below curves that run low", {
+  usr <- c(0, 10, 0, 1); xs <- 0:10
+  box <- list(c(2, 4, 0, 0.05))
+  # ink at 0.5 under the label: already clear
+  expect_null(nonignorable:::flip_label_floor(box, usr, xs, rep(0.5, 11)))
+  # ink at 0.02 under the label: the limit moves down until the label clears it
+  lo <- nonignorable:::flip_label_floor(box, usr, xs, rep(0.02, 11))
+  expect_lt(lo, 0)
+  f <- 0.05 / 1
+  expect_equal(0.02, lo + (f + 0.04) * (1 - lo), tolerance = 1e-12)
+  # no label: nothing to do
+  expect_null(nonignorable:::flip_label_floor(list(), usr, xs, rep(0, 11)))
+})
+
+test_that("a scan of unobserved rows is labelled as the missing outcomes", {
+  d <- simulate_shadow(800, tilt = -1, seed = 2)
+  rej <- d[d$observed == 0, ]
+  s <- sharp_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35, unobserved = TRUE,
+                  lambda = seq(0, 2, length.out = 21))
+  labs <- character()
+  local_mocked_bindings(title = function(..., ylab = NULL) labs <<- c(labs, ylab),
+                        .package = "graphics")
+  pdf(NULL); on.exit(dev.off())
+  plot(s)
+  expect_true("Rate of the missing outcomes" %in% labs)
+})

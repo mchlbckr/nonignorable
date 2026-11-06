@@ -98,16 +98,19 @@ at a threshold, as a lender declining every score below a cut-off, use
 
 ## Question 2: the scan
 
-The scan's target is $\eta(x) = P(Y = 1 \mid X = x)$, averaged over a
-portfolio of rows: here the unobserved ones. In reject inference that is
-the default rate the rejected applicants would show if they were granted.
-The scan needs two vectors at those rows: $\hat\eta_{\mathrm{obs}}(x)$ and
-$\hat r(x)$. Any learner can produce them.
+The scan bounds a rate over a portfolio of rows: here the unobserved ones,
+and the rate of their own missing outcomes, $E(Y \mid R = 0)$. In reject
+inference that is the default rate the rejected applicants would show if
+they were granted. It is not the average of $\eta(x) = P(Y = 1 \mid X = x)$
+at their characteristics: under selection on the outcome the rejected at a
+given $x$ differ from all applicants at that $x$, and `unobserved = TRUE`
+says so. The scan needs two vectors at those rows:
+$\hat\eta_{\mathrm{obs}}(x)$ and $\hat r(x)$. Any learner can produce them.
 Here we take the truth, to separate the logic of the scan from estimation.
 
 ```{r scan}
 rej <- d[d$observed == 0, ]
-s <- sharp_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35)
+s <- sharp_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35, unobserved = TRUE)
 s
 plot(s)
 ```
@@ -120,10 +123,12 @@ How to read the plot:
   consistent with the data and with selection up to that strength, and no
   rate outside it is.
 - **The dashed band** is the outer band, which shifts every row's log-odds by
-  $\pm\lambda$. The sharp set also uses the worst-case bounds that follow
-  from the observed share of each row. Where $\hat r$ is small, as for these
-  rejected rows, the two nearly coincide. Where it is large, the sharp set
-  is much narrower; the applications vignette shows such a case.
+  $\pm\lambda$ and ignores the constraint that a response propensity is at
+  most 1. For the unobserved rows that constraint says no more than that
+  their own rate lies in $[0, 1]$, so the outer band can leave that range,
+  as its lower end does here. The sharp set respects it. Where $\hat r$ is
+  small the two are close; where it is large, the sharp set is much
+  narrower; the applications vignette shows such a case.
 - **The threshold** is the rate at which the decision changes, here 0.35.
   The drop line marks the **flip point**, the smallest selection strength at
   which the other decision is no longer ruled out. Here it lies at
@@ -134,10 +139,11 @@ rows are better than 0.35 holds unless selection on the outcome makes the
 propensity ratio exceed `r f2(exp(s$flip[["sharp"]]))`."
 
 Because the data are simulated, we know the truth. The simulator stores
-$\eta(x)$ as `eta`, so the true rate of the unobserved rows is
+$\eta(x)$ as `eta`, $\eta_{\mathrm{obs}}(x)$ as `eta_obs` and $r(x)$ as
+`obs_rate`, so by Bayes' rule the true rate of the unobserved rows is
 
 ```{r truth}
-mean(rej$eta)
+with(rej, mean((eta - obs_rate * eta_obs) / (1 - obs_rate)))
 ```
 
 It lies in the set at $e^\lambda = e^1$, the strength we simulated, and
@@ -164,7 +170,8 @@ inp <- crossfit_inputs(d, "observed",
   fit_r   = function(train, new) predict(glm(update(f, observed ~ .), binomial, train),
                                          new, type = "response"),
   seed = 1)
-ci <- sharp_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, threshold = 0.35)
+ci <- sharp_scan_ci(inp$eta_obs, inp$r, d$observed, d$y, target = "unobserved",
+                    threshold = 0.35)
 ci
 plot(ci)
 ```
@@ -213,15 +220,45 @@ m <- lm(y ~ x1 + x2 + z_shadow + z_policy + z_score, data = obs)
 q <- quantile_grid(function(tau, newdata)
   outer(predict(m, newdata), quantile(residuals(m), tau, names = FALSE), "+"),
   mis, K = 100)
-sm <- sharp_scan_mean(q, mis$obs_rate, threshold = 0.5)
+sm <- sharp_scan_mean(q, mis$obs_rate, threshold = 0.5, unobserved = TRUE)
 plot(sm)
 ```
 
 Like `sharp_scan()`, this treats its inputs as known. For a debiased
-estimate with a confidence set, for the mean over all rows or a segment
-chosen by $X$, use `sharp_scan_mean_ci()` with inputs from
+estimate with a confidence set, for the mean over all rows, a segment
+chosen by $X$, or the missing outcomes (`target = "unobserved"`), use
+`sharp_scan_mean_ci()` with inputs from
 `crossfit_quantiles()`; the applications vignette shows it on the CD4 counts
 of a clinical trial.
+
+## The distribution function and quantiles
+
+A mean can hide where the distribution moves. `sharp_scan_cdf()` scans
+$P(Y \le t)$ at each value of a grid, as the rate of the binary outcome
+$1(Y \le t)$, with the same assumption and the same debiased estimate as
+`sharp_scan_ci()`. `crossfit_cdf()` fits
+$P(Y \le t \mid R = 1, X)$ as one classification per $t$, with the column
+`z` holding $1(Y \le t)$.
+
+```{r cdf}
+tg <- seq(-3, 2, by = 0.25)
+cf <- crossfit_cdf(dc, "observed", "y", tg,
+  fit_eta = function(train, new) predict(glm(update(f, z ~ .), binomial, train),
+                                         new, type = "response"),
+  fit_r   = function(train, new) predict(glm(update(f, observed ~ .), binomial, train),
+                                         new, type = "response"),
+  seed = 1)
+kc <- sharp_scan_cdf(cf$eta_t, cf$r, dc$observed, dc$y, t = tg, lambda = 0.5,
+                     target = "unobserved")
+plot(kc)
+quantile(kc, c(0.25, 0.5, 0.75))
+```
+
+The set and the confidence set hold for each $t$ separately: no single law
+need reach the upper curve at every $t$, and the confidence sets are not a
+band. The quantile bounds come from inverting the two curves; on the grid
+they are widened outwards, so a coarse grid makes them wider, never
+narrower.
 
 ## Further reading
 

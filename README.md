@@ -39,7 +39,7 @@ the outer band intersected with the worst-case bounds.
 library(nonignorable)
 d   <- simulate_shadow(5000, tilt = -1, seed = 1)
 rej <- d[d$observed == 0, ]
-s   <- sharp_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35)
+s   <- sharp_scan(rej$eta_obs, rej$obs_rate, threshold = 0.35, unobserved = TRUE)
 s
 plot(s)
 ```
@@ -47,8 +47,11 @@ plot(s)
 ![Sensitivity curve](man/figures/scan.png)
 
 The sharp set is never wider than the outer band. Where r̂ is small, as for
-rejected applications, its upper edge coincides with the outer one; it is
-narrower only where a worst-case bound cuts the band. The default aggregation
+rejected applications, the two are close; the sharp set is narrower only
+where a worst-case bound cuts the band. With `unobserved = TRUE` the set is
+for the rejected rows' own default rate, E(Y | R = 0), rather than for the
+average of η(x) at their characteristics; under selection on the outcome the
+two differ. The default aggregation
 averages each row's own bounds, which is sharp under the pointwise assumption.
 `aggregate = "common"` adds the assumption of one tilt for all rows. That set
 is narrower but is bounded by the most extreme rows, so with estimated inputs
@@ -105,7 +108,7 @@ reproduces `sharp_scan()` exactly.
 dc  <- simulate_shadow(3000, tilt = -1, outcome = "continuous", seed = 1)
 q   <- obs_quantiles(dc, K = 200)       # n x K, levels (k - 1/2)/K
 rej <- dc$observed == 0
-sm  <- sharp_scan_mean(q[rej, ], dc$obs_rate[rej], threshold = 0.5)
+sm  <- sharp_scan_mean(q[rej, ], dc$obs_rate[rej], threshold = 0.5, unobserved = TRUE)
 plot(sm)
 ```
 
@@ -121,6 +124,26 @@ curves and reports how far that moved them.
 obs <- dc[dc$observed == 1, ]
 fq  <- quantreg::rq(y ~ x1 + x2 + z_shadow + z_policy + z_score, data = obs)
 q   <- quantile_grid(fq, dc[rej, ], K = 200)
+```
+
+## The distribution function and quantiles
+
+`sharp_scan_cdf()` scans P(Y ≤ t), or P(Y ≤ t | R = 0), at each value of a
+grid, as the rate of the binary outcome 1(Y ≤ t), with a debiased estimate
+and a confidence set at each t. `quantile()` turns the bounds into bounds for
+quantiles. The sets hold for each t separately, not as a band.
+`crossfit_cdf()` fits P(Y ≤ t | R = 1, X) as one classification per t.
+
+```r
+tg <- seq(-2, 2, by = 0.25)
+cf <- crossfit_cdf(dc, "observed", "y", tg,
+  fit_eta = function(train, new) predict(glm(update(f, z ~ .), binomial, train),
+                                         new, type = "response"),
+  fit_r   = function(train, new) predict(glm(update(f, observed ~ .), binomial, train),
+                                         new, type = "response"),
+  seed = 1)
+kc <- sharp_scan_cdf(cf$eta_t, cf$r, dc$observed, dc$y, t = tg, lambda = 0.5)
+quantile(kc, c(0.25, 0.5, 0.75))
 ```
 
 ## The screen
@@ -163,9 +186,9 @@ known cut-offs or other class counts and pass factors.
 
 ## Scope
 
-The scan covers a binary outcome in closed form and the **mean** of any
-outcome with a finite mean. It does not cover quantiles or the whole
-distribution. The screen takes a binary outcome directly, a numeric one
+The scan covers a binary outcome in closed form, the **mean** of any
+outcome with a finite mean, and the distribution function and quantiles,
+pointwise in t. It offers no bands uniform in t. The screen takes a binary outcome directly, a numeric one
 through an ordinal model on classes and a categorical one through an ordinal
 or multinomial model; it measures relevance and does not
 certify identification. Covariates, learners and sample size are

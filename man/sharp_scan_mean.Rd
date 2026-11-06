@@ -9,7 +9,8 @@ sharp_scan_mean(
   r,
   lambda = seq(0, 2, length.out = 81),
   weights = NULL,
-  threshold = NULL
+  threshold = NULL,
+  unobserved = FALSE
 )
 }
 \arguments{
@@ -28,6 +29,13 @@ admissible ratio of response propensities. Sorted and de-duplicated.}
 smallest \eqn{\lambda} at which the sharp set (and the outer band)
 reaches it is found by root finding. Both bounds are monotone in
 \eqn{\lambda}.}
+
+\item{unobserved}{\code{FALSE} (default): the set is for \eqn{E(Y \mid X = x)},
+averaged over the rows given. \code{TRUE}: the rows given are unobserved rows
+and the set is for their own missing outcomes, row by row
+\eqn{E(Y \mid R = 0, X = x) = \{E(Y \mid X = x) - r\,m(x)\}/(1 - r)} with
+\eqn{m(x)} the observed mean, as for \code{\link[=sharp_scan]{sharp_scan()}}. Every row needs
+\eqn{r < 1}.}
 }
 \value{
 An object of class \code{c("sharp_scan_mean", "sharp_scan")} with the

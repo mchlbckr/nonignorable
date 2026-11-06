@@ -180,8 +180,12 @@ v <- function(nm, col) sc[[col]][sc$candidate == nm]
 ### Lending Club: is the rejected portfolio riskier?
 
 A lender asks whether its rejected applicants really are riskier than the
-ones it granted. The decision threshold is therefore the default rate of the
-granted loans, `r f3(m$threshold)`. It is itself an estimate and is treated
+ones it granted: whether their own default rate, $E(Y \mid R = 0)$, exceeds
+that of the granted loans. With `target = "unobserved"` the scan bounds that
+rate. It is not the average of $\eta(x)$ at the rejected applicants'
+characteristics: under selection on the outcome the rejected at a given $x$
+differ from all applicants at that $x$. The decision threshold is the default
+rate of the granted loans, `r f3(m$threshold)`. It is itself an estimate and is treated
 as fixed here. Rows with a FICO below `r m$fico_cut` or a DTI of
 `r m$dti_cut` or more were never granted. There $r(x) = 0$, the data say nothing, and
 these rows leave the analysis. That leaves the overlap region, `r m$overlap`,
@@ -273,8 +277,6 @@ two consequences.
   the sharp set only [`r iv(f3(acv$lower[last]))`,
   `r iv(f3(acv$upper[last]))`]. Because every patient had a good chance of
   being observed, the observed share bounds what the missing ones can be.
-  On Lending Club, where most rejected applicants had almost no chance of
-  being granted, the two bands nearly coincide.
 - **Sampling error is moderate.**
   `r iv(if (all$tail[["target"]] == 0) "No row has" else paste(all$tail[["target"]], "rows have"))`
   $\hat r < 0.01$, and the confidence set is only a little wider than the
@@ -324,8 +326,9 @@ the two arms, and with that strength, to undo the comparison.
 
 The same function compares any two groups chosen by $X$, such as two regions
 of a lender. Each group is a whole segment of rows, observed and unobserved
-alike. Comparing only the rejected applicants of two segments makes the
-target depend on $R$, which the function does not cover.
+alike. To compare only the rejected applicants of two segments, set
+`among = "unobserved"`: it compares the default rates of the rejected
+themselves, $E(Y \mid R = 0)$ in each segment.
 
 ## The mean of a continuous outcome
 
@@ -380,6 +383,52 @@ plug-in, `sharp_scan_mean()` on the same inputs, gives
 [`r iv(round(pl$curve$lower[i1]))`, `r iv(round(pl$curve$upper[i1]))`]. It
 skips the correction terms, and here it
 `r iv(if (pl$curve$lower[i1] >= km$curve$lower[i1] && pl$curve$upper[i1] <= km$curve$upper[i1]) "lies inside the debiased set, the direction in which the plug-in typically errs" else "does not lie inside the debiased set")`.
+
+## Quantiles of the missing counts
+
+A mean can be moved by a few extreme counts. For the patients who left the
+trial, the median count they would have had at week 96 is often the more
+telling number. `sharp_scan_cdf()` scans their distribution function,
+$P(Y \le t \mid R = 0)$, at each value of a grid, and `quantile()` turns it
+into bounds for quantiles. It needs $P(Y \le t \mid R = 1, X)$ for every
+patient and every $t$; `crossfit_cdf()` fits it as one logistic regression of
+$1(\text{count} \le t)$ per $t$, out of fold.
+
+```{r actg-cdf, eval = ok}
+fz <- as.formula(paste("z ~", rhs))
+tg <- seq(50, 650, by = 25)
+cf <- suppressWarnings(crossfit_cdf(d, "r", "cd496", tg,
+  fit_eta = function(train, new)
+    predict(glm(fz, binomial, data = train), new, type = "response"),
+  fit_r = function(train, new)
+    predict(glm(fr, binomial, data = train), new, type = "response"),
+  folds = 5, seed = 175))
+kc <- sharp_scan_cdf(cf$eta_t, cf$r, d$r, d$cd496, t = tg, lambda = 0.5,
+                     target = "unobserved")
+plot(kc, xlab = "CD4 count at week 96",
+     ylab = "Share at or below, patients without a count")
+qc <- quantile(kc, c(0.25, 0.5, 0.75))
+qc
+```
+
+```{r actg-cdf-numbers, include = FALSE, eval = ok}
+kc1 <- sharp_scan_cdf(cf$eta_t, cf$r, d$r, d$cd496, t = tg, lambda = 1,
+                      target = "unobserved")
+q1 <- quantile(kc1, 0.5)
+```
+
+Under MAR the patients without a count would have a median of about
+`r iv(round(qc$point[2]))`, against `r iv(round(median(d$cd496, na.rm = TRUE)))`
+among those with one: the model already places them lower, through their
+earlier counts. At a propensity ratio of `r iv(f2(exp(0.5)))` their median
+lies between `r iv(qc$lower[2])` and `r iv(qc$upper[2])`, at $e^1$ between
+`r iv(q1$lower)` and `r iv(q1$upper)`. The quantile bounds come from the two
+estimated curves and are widened outwards to the grid of steps of 25; they
+carry no confidence statement.
+
+Both the set and the dotted confidence set hold for each $t$ separately. No
+single law of the missing counts need reach the upper curve at every $t$, so
+the curves are not a band for the whole distribution.
 
 ## The two side by side
 

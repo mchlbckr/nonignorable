@@ -17,7 +17,8 @@ sharp_scan_mean_contrast(
   level = 0.9,
   trim = 0,
   r_bounds = c(0.01, 0.99),
-  labels = c("A", "B")
+  labels = c("A", "B"),
+  among = c("all", "unobserved")
 )
 }
 \arguments{
@@ -51,6 +52,9 @@ below and above apart: clipping at the top only stabilises the cap
 bottom limits inverse weights.}
 
 \item{labels}{Names of the two portfolios, for printing and plotting.}
+
+\item{among}{\code{"all"} (default) or \code{"unobserved"}, as in
+\code{\link[=sharp_scan_contrast]{sharp_scan_contrast()}}.}
 }
 \value{
 An object of class
@@ -65,8 +69,10 @@ endpoint estimated by \code{\link[=sharp_scan_mean_ci]{sharp_scan_mean_ci()}}. T
 \eqn{A - B} is \eqn{[\mathrm{lower}_A - \mathrm{upper}_B,\
 \mathrm{upper}_A - \mathrm{lower}_B]}; because the targets are disjoint,
 the standard error of each endpoint is the root of the sum of the squared
-standard errors of the arms. Each target is a whole segment of rows,
-observed and unobserved alike.
+standard errors of the arms. By default each target is a whole segment
+of rows, observed and unobserved alike; \code{among = "unobserved"} compares
+the means of the missing outcomes of the two segments,
+\eqn{E(Y \mid R = 0)} in each.
 }
 \examples{
 d <- simulate_shadow(3000, tilt = -1, outcome = "continuous", seed = 3)

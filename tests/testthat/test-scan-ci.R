@@ -208,3 +208,45 @@ test_that("a segment restricts the unobserved target to rows chosen by X", {
   expect_error(sharp_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, target = seg,
                               segment = seg), "segment")
 })
+
+test_that("the unobserved target is E(Y | R = 0): {psi - mean(RY)} / mean(1 - R)", {
+  x <- ci_sim(2000)
+  d <- x$d; lam <- c(0, 0.5, 1)
+  RY <- ifelse(d$observed == 1, d$y, 0)
+  a <- sharp_scan_ci(x$inp$eta_obs, x$inp$r, d$observed, d$y, target = "all", lambda = lam)
+  u <- sharp_scan_ci(x$inp$eta_obs, x$inp$r, d$observed, d$y, target = "unobserved", lambda = lam)
+  expect_equal(u$curve$lower, (a$curve$lower - mean(RY)) / mean(1 - d$observed))
+  expect_equal(u$curve$upper, (a$curve$upper - mean(RY)) / mean(1 - d$observed))
+  # with weights, a function of X
+  w <- 1 + (d$x2 > 0)
+  aw <- sharp_scan_ci(x$inp$eta_obs, x$inp$r, d$observed, d$y, target = "all", lambda = lam, weights = w)
+  uw <- sharp_scan_ci(x$inp$eta_obs, x$inp$r, d$observed, d$y, target = "unobserved", lambda = lam, weights = w)
+  expect_equal(uw$curve$upper, (aw$curve$upper * mean(w) - mean(w * RY)) / mean(w * (1 - d$observed)))
+})
+
+test_that("the unobserved set covers the rejects' own rate, not E[eta(X) | R = 0]", {
+  # true nuisances, true |b| = 1: at lambda = 1 the set must contain E(Y | R = 0)
+  d <- simulate_shadow(40000, tilt = -1, seed = 64)
+  r <- d$obs_rate
+  truth <- sum(d$eta - r * d$eta_obs) / sum(1 - r)
+  u <- sharp_scan_ci(d$eta_obs, r, d$observed, d$y, target = "unobserved", lambda = 1)
+  expect_lte(u$curve$ci_lower, truth)
+  expect_gte(u$curve$ci_upper, truth)
+  # the conditional and the empirical standard error agree with true nuisances
+  ue <- sharp_scan_ci(d$eta_obs, r, d$observed, d$y, target = "unobserved",
+                      lambda = c(0, 1), se_type = "empirical")$curve
+  uc <- sharp_scan_ci(d$eta_obs, r, d$observed, d$y, target = "unobserved",
+                      lambda = c(0, 1), se_type = "conditional")$curve
+  expect_equal(uc$se_upper, ue$se_upper, tolerance = 0.15)
+  expect_equal(uc$se_lower, ue$se_lower, tolerance = 0.15)
+})
+
+test_that("a rate of few unobserved rows that leaves [0, 1] names the small share", {
+  set.seed(1)
+  n <- 200
+  R <- rbinom(n, 1, 0.93); y <- ifelse(R == 1, rbinom(n, 1, 0.04), NA)
+  w <- expect_warning(sharp_scan_ci(runif(n, 0.02, 0.06), rep(0.93, n), R, y,
+                                    target = "unobserved", lambda = c(0, 1, 2)),
+                      "unobserved, and the rate of their outcomes divides by that share")
+  expect_no_match(conditionMessage(w), "separation")
+})

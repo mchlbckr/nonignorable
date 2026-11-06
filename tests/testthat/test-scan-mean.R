@@ -187,3 +187,22 @@ test_that("flip, print, as.data.frame and validation", {
   pdf(NULL); on.exit(dev.off())
   expect_identical(plot(s), s)
 })
+
+test_that("unobserved = TRUE bounds the mean of the rows' own missing outcomes", {
+  d <- simulate_shadow(20000, tilt = -1, outcome = "continuous", seed = 82)
+  mis <- d[d$observed == 0, ]
+  q <- obs_quantiles(mis, K = 200); r <- mis$obs_rate
+  s <- sharp_scan_mean(q, r, lambda = c(0, 1), unobserved = TRUE)
+  b <- sharp_scan_mean(q, r, lambda = c(0, 1))
+  m <- rowMeans(q)
+  pr <- as.data.frame(s, lambda = 1); pb <- as.data.frame(b, lambda = 1)
+  expect_equal(pr$lower, (pb$lower - r * m) / (1 - r))
+  expect_equal(s$point, b$point)
+  truth <- mean((mis$mu - r * mis$mean_obs) / (1 - r))
+  expect_lte(s$curve$lower[2], truth); expect_gte(s$curve$upper[2], truth)
+  # binary input reproduces the binary scan here too
+  e <- c(0.1, 0.4, 0.7); rr <- c(0.3, 0.6, 0.8); K <- 1000
+  qb <- t(sapply(e, function(p) as.numeric(((seq_len(K) - 0.5) / K) > 1 - p)))
+  expect_equal(sharp_scan_mean(qb, rr, lambda = 1, unobserved = TRUE)$curve$upper,
+               sharp_scan(e, rr, lambda = 1, unobserved = TRUE)$curve$upper, tolerance = 2e-3)
+})
