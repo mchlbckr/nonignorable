@@ -39,7 +39,10 @@ else the most relevant one and the one with the highest ratio.}
 Scatter of the screen: exclusion violation on the horizontal axis,
 relevance on the vertical, both incremental McFadden \eqn{R^2} on the same
 scale, with the equality line dashed. Above the line a candidate predicts
-the outcome better than it predicts selection. Points are labelled directly
+the outcome better than it predicts selection. The line is not the border
+between usable and unusable: under strong selection on the outcome a
+validly excluded candidate shows exclusion signal through the outcome and
+sits close to it (see \code{\link[=shadow_screen]{shadow_screen()}}). Points are labelled directly
 rather than through a legend; labels are placed so that they do not overlap
 each other or the points.
 }

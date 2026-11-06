@@ -42,7 +42,13 @@
 #' cannot condition on an outcome that is missing. Under nonignorable selection
 #' a relevant \eqn{Z} therefore shows some exclusion signal through \eqn{Y}
 #' even when it is validly excluded; the screen is a screen, not a test of the
-#' restriction.
+#' restriction. The ratio therefore counts only together with the relevance
+#' requirement, never on its own: the stronger the selection on the outcome
+#' and the association, the closer a validly excluded candidate moves to the
+#' equality line, and for a candidate without relevance the ratio is noise
+#' that shifts with the coding. The equality line is not the border between
+#' usable and unusable candidates; a ratio near one does not by itself show a
+#' violation, a ratio well below one does.
 #'
 #' **A numeric outcome.** When the observed outcome is numeric with more than
 #' two values and `family` is left at its binomial default, relevance comes
@@ -123,7 +129,8 @@
 #' @param min_relevance Minimum relevance \eqn{\chi^2} per degree of freedom
 #'   for a candidate to pass. Default 10.
 #' @param min_ratio Minimum ratio of relevance to exclusion for a candidate to
-#'   pass. Default 1, the equality line.
+#'   pass, applied only together with `min_relevance`. Default 1, the
+#'   equality line; see the details for why it is no test of exclusion.
 #' @param numeric `"linear"` (default) or `"classes"`; see the section on
 #'   numeric characteristics.
 #' @param k Target number of classes for `numeric = "classes"`. Default 10.

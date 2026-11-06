@@ -75,8 +75,12 @@ sc
 
 Relevance is the gain in McFadden $R^2$ from adding the candidate to the
 outcome model among observed rows. Exclusion violation is the same gain in
-the selection model. A shadow variable should sit well above the equality
-line in the plot: much more relevance than violation.
+the selection model. A shadow variable needs clear relevance first; then it
+should sit above the equality line in the plot, with more relevance than
+violation. How far above is no test: the stronger the selection on the
+outcome, the more a valid shadow variable predicts selection too, through the
+outcome, and the closer it moves to the line. A candidate well below the line
+is the warning sign.
 
 ```{r screen-plot, fig.height = 5, fig.width = 5, out.width = "70%"}
 plot(sc)
