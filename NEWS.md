@@ -20,8 +20,9 @@ First release.
   draws them hollow without a ratio.
 * A numeric outcome with more than two values is screened too: relevance
   comes from a proportional-odds model (`MASS::polr`) on `outcome_classes`
-  classes of equal mass, five by default. The screen measures relevance; it
-  does not certify identification.
+  classes of equal mass, five by default; a factor outcome with more than two
+  levels by an ordinal (ordered factor) or a multinomial model (`nnet`). The
+  screen measures relevance; it does not certify identification.
 * `print()` shows the verdict and its reasons in one column and fits 80
   columns; `plot()` draws rejected candidates grey and labels them.
 * `citation("shadowscan")` lists the package and the two papers behind it.
@@ -50,6 +51,9 @@ First release.
   such as treatment arms. It gives the sharp set for the difference of their
   rates, a confidence set, and the selection strength from which "no
   difference" is no longer ruled out.
+* `shadow_scan_contrast(among = "unobserved")` compares the unobserved rows
+  of two segments, such as the rejected applicants of two regions;
+  `shadow_scan_ci()` takes a `segment` for that target.
 * `shadow_scan_mean_contrast()` does the same for the difference of two
   portfolio means.
 * `shadow_scan_ci()` and `shadow_scan_mean_ci()` both target all rows by

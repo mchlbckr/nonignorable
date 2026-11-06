@@ -15,7 +15,8 @@ shadow_scan_ci(
   threshold = NULL,
   level = 0.9,
   trim = 0,
-  se_type = c("max", "conditional", "empirical")
+  se_type = c("max", "conditional", "empirical"),
+  segment = NULL
 )
 }
 \arguments{
@@ -44,6 +45,11 @@ See the section on what is covered.}
 
 \item{se_type}{\code{"max"} (default), \code{"conditional"} or \code{"empirical"}; see the section
 on what is covered.}
+
+\item{segment}{Optional logical vector chosen by \eqn{X}, one per row, that
+restricts a target of \code{"unobserved"} (or \code{"all"}) rows to one segment,
+such as the rejected applications of one region. The segment is a
+function of \eqn{X}; the target within it may depend on \eqn{R}.}
 }
 \value{
 An object of class \code{c("shadow_scan_ci", "shadow_scan")}, as from

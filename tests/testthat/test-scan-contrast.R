@@ -87,3 +87,16 @@ test_that("the contrast print names the outer band", {
   expect_match(out, "outer band \\(plug-in\\)")
   expect_no_match(out, "naive")
 })
+
+test_that("the contrast can compare the unobserved rows of two segments", {
+  k <- k_ab(among = "unobserved")
+  arm <- function(tg) shadow_scan_ci(fx$inp$eta_obs, fx$inp$r, fx$d$observed, fx$d$y,
+                                     target = "unobserved", segment = tg, lambda = lam)$curve
+  ca <- arm(fx$A); cb <- arm(fx$B)
+  expect_equal(k$curve$upper, cummax(ca$upper - cb$lower))
+  expect_equal(k$curve$se_lower, sqrt(ca$se_lower^2 + cb$se_upper^2))
+  expect_identical(k$n_a, sum(fx$A & fx$d$observed == 0))
+  expect_identical(k$among, "unobserved")
+  expect_output(print(k), "unobserved rows")
+  expect_error(k_ab(among = "observed"), "should be one of")
+})

@@ -33,8 +33,10 @@ allowed and enter with their degrees of freedom.}
 
 \item{family}{Family of the outcome model, passed to \code{glm()}. The response
 model is always binomial. With the binomial default a numeric outcome
-with more than two values is screened by an ordinal model on classes; see
-the section on a numeric outcome. Another family (say \code{poisson()} for
+with more than two values is screened by an ordinal model on classes,
+and a factor outcome with more than two levels by an ordinal or a
+multinomial model; see the sections on a numeric and a categorical
+outcome. Another family (say \code{poisson()} for
 counts) fits that \code{glm} instead.}
 
 \item{min_relevance}{Minimum relevance \eqn{\chi^2} per degree of freedom
@@ -67,13 +69,13 @@ and of the response model; \code{NA} for a target that is not binary),
 characteristic with its treatment, the number of classes, the share of
 rows outside the range seen among the observed rows, and, for classes,
 the heaping share of \code{\link[=screen_classes]{screen_classes()}}. Attribute \code{"outcome_coding"}:
-\code{model} (\code{"glm"} or \code{"ordinal"}), the number of outcome \code{classes}, the
+\code{model} (\code{"glm"}, \code{"ordinal"} or \code{"multinomial"}), the number of outcome \code{classes}, the
 number \code{requested} and the number of \code{distinct} observed values.
 }
 \description{
 \code{shadow_screen()} asks whether a variable \eqn{Z} is fit to serve as a
 \strong{shadow variable} for an outcome \eqn{Y} that is missing not at
-random, binary or numeric: relevant for \eqn{Y} given \eqn{X}, and excluded from the response
+random, binary, categorical or numeric: relevant for \eqn{Y} given \eqn{X}, and excluded from the response
 model given \eqn{X} and \eqn{Y}. It is a different tool from
 \code{\link[=shadow_scan]{shadow_scan()}}: the screen presupposes a shadow-variable model that
 point-identifies the selection parameter; the scan needs no shadow variable
@@ -142,6 +144,13 @@ proportional-odds assumption over few cuts), not an optimum. Bücker (2026),
 section "The screen when the outcome is continuous", shows the behaviour
 of both measures in the number of classes and checks the screen against a
 known truth.
+
+\strong{A categorical outcome.} A factor or character outcome with more than two
+observed levels is screened in the same way, with its levels as classes:
+an ordered factor in the proportional-odds model, an unordered one in a
+multinomial logit (\code{\link[nnet:multinom]{nnet::multinom()}}), where a candidate costs its
+degrees of freedom once per level beyond the first. A factor with two
+observed levels is binary.
 
 The screen \strong{measures relevance; it does not certify identification}.
 Identification with a shadow variable needs more than dependence of

@@ -16,9 +16,9 @@
 #' different rows and have mean zero, so they are uncorrelated and the
 #' standard error of the difference is the root of the sum of the squared
 #' standard errors. Overlapping targets would need their covariance and are
-#' not supported. Each target is a whole segment of rows, observed and
-#' unobserved alike; a target that depends on \eqn{R}, such as only the
-#' rejected applicants of each segment, is outside what the contrast covers.
+#' not supported. By default each target is a whole segment of rows, observed
+#' and unobserved alike; `among = "unobserved"` compares the unobserved rows
+#' of the two segments instead, such as the rejected applicants of each.
 #'
 #' The flip points say from which \eqn{\lambda} on the set, and the confidence
 #' set, reach `threshold` (by default 0: no difference). They are found by
@@ -31,6 +31,11 @@
 #' @param lambda Grid of \eqn{\lambda} values; must include 0.
 #' @param threshold The difference at which the decision changes. Default 0.
 #' @param labels Names of the two portfolios, for printing and plotting.
+#' @param among `"all"` (default): each target is a whole segment, observed
+#'   and unobserved rows alike. `"unobserved"`: only the unobserved rows of
+#'   each segment, such as the rejected applications of two regions; see the
+#'   `segment` argument of [shadow_scan_ci()]. The targets stay disjoint, so
+#'   the standard errors still add in squares.
 #' @return An object of class
 #'   `c("shadow_scan_contrast", "shadow_scan_ci", "shadow_scan")` whose
 #'   `curve` has the columns of [shadow_scan_ci()] for the difference
@@ -58,20 +63,27 @@ shadow_scan_contrast <- function(eta_obs, r, response, outcome,
                                  weights = NULL, threshold = 0, level = 0.9,
                                  trim = 0,
                                  se_type = c("max", "conditional", "empirical"),
-                                 labels = c("A", "B")) {
+                                 labels = c("A", "B"), among = c("all", "unobserved")) {
   se_type <- match.arg(se_type)
+  among <- match.arg(among)
   n <- length(eta_obs)
   check_contrast_args(n, target_a, target_b, lambda, labels)
   if (!is.numeric(threshold) || length(threshold) != 1L || !is.finite(threshold) ||
       abs(threshold) >= 1)
     stop("`threshold` must be a single number in (-1, 1).", call. = FALSE)
   arm <- function(tg, label) relabel_warnings(label,
-    shadow_scan_ci(eta_obs, r, response, outcome, target = tg,
-                   lambda = lambda, weights = weights,
-                   level = level, trim = trim, se_type = se_type))
+    if (among == "all")
+      shadow_scan_ci(eta_obs, r, response, outcome, target = tg,
+                     lambda = lambda, weights = weights,
+                     level = level, trim = trim, se_type = se_type)
+    else
+      shadow_scan_ci(eta_obs, r, response, outcome, target = "unobserved",
+                     segment = tg, lambda = lambda, weights = weights,
+                     level = level, trim = trim, se_type = se_type))
   a <- arm(target_a, labels[1]); b <- arm(target_b, labels[2])
   k <- contrast_from_arms(a, b, threshold, level, labels, n, range = c(-1, 1))
   k$se_type <- se_type
+  k$among <- among
   k
 }
 
@@ -194,8 +206,10 @@ print.shadow_scan_contrast <- function(x, digits = 3, ...) {
   cat(sprintf("<shadow_scan_contrast> difference of %s %s - %s, debiased, with %g%% confidence set\n",
               if (isTRUE(x$of_means)) "means" else "rates",
               x$labels[1], x$labels[2], 100 * x$level))
-  cat(sprintf("  rows: %d   %s: %d rows   %s: %d rows\n", x$n, x$labels[1], x$n_a,
-              x$labels[2], x$n_b))
+  cat(sprintf("  rows: %d   %s: %d %srows   %s: %d %srows\n", x$n, x$labels[1], x$n_a,
+              if (identical(x$among, "unobserved")) "unobserved " else "",
+              x$labels[2], x$n_b,
+              if (identical(x$among, "unobserved")) "unobserved " else ""))
   if (x$trim > 0)
     cat(sprintf("  trimmed: %d rows with r-hat < %g, out of the targets\n", x$trimmed, x$trim))
   if (sum(x$clipped) > 0)

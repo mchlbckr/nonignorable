@@ -167,3 +167,53 @@ test_that("a heaped outcome is classed between distinct values, never merged sil
   sc3 <- shadow_screen(d, "y", "observed", "x1", "z_shadow")
   expect_identical(attr(sc3, "outcome_coding")$classes, 4L)
 })
+
+# --- categorical outcomes with more than two levels --------------------------
+
+cat3 <- local({
+  d <- simulate_shadow(4000, tilt = -1, outcome = "continuous", seed = 22)
+  lv <- c("low", "mid", "high")
+  d$y3 <- lv[findInterval(d$y, quantile(d$y[d$observed == 1], c(1/3, 2/3))) + 1]
+  d$y3[d$observed == 0] <- NA
+  d
+})
+
+test_that("an ordered factor outcome uses its levels in the ordinal model", {
+  d <- cat3
+  d$y3 <- factor(d$y3, levels = c("low", "mid", "high"), ordered = TRUE)
+  sc <- shadow_screen(d, "y3", "observed", c("x1", "x2"), "z_shadow")
+  oc <- attr(sc, "outcome_coding")
+  expect_identical(oc$model, "ordinal")
+  expect_identical(oc$classes, 3L)
+  obs <- d[d$observed == 1, ]
+  f0 <- MASS::polr(y3 ~ x1 + x2, data = obs); f1 <- MASS::polr(y3 ~ x1 + x2 + z_shadow, data = obs)
+  d0 <- -2 * sum(table(obs$y3) * log(prop.table(table(obs$y3))))
+  expect_equal(sc$relevance, (deviance(f0) - deviance(f1)) / d0, tolerance = 1e-5)
+  expect_identical(sc$df, 1L)
+})
+
+test_that("an unordered factor or character outcome uses a multinomial model", {
+  for (d in list(transform(cat3, y3 = factor(y3)), cat3)) {
+    sc <- shadow_screen(d, "y3", "observed", c("x1", "x2"), "z_shadow")
+    oc <- attr(sc, "outcome_coding")
+    expect_identical(oc$model, "multinomial")
+    expect_identical(oc$classes, 3L)
+    expect_identical(sc$df, 2L)                 # (J - 1) * dim(Z)
+    obs <- d[d$observed == 1, ]; obs$y3 <- factor(obs$y3)
+    m0 <- nnet::multinom(y3 ~ x1 + x2, data = obs, trace = FALSE)
+    m1 <- nnet::multinom(y3 ~ x1 + x2 + z_shadow, data = obs, trace = FALSE)
+    d0 <- -2 * sum(table(obs$y3) * log(prop.table(table(obs$y3))))
+    expect_equal(sc$relevance, (deviance(m0) - deviance(m1)) / d0, tolerance = 1e-4)
+    expect_output(print(sc), "multinomial model on 3 classes")
+  }
+})
+
+test_that("a factor with two observed levels stays binary", {
+  d <- simulate_shadow(2000, tilt = -1, seed = 2)
+  d$yf <- factor(ifelse(d$y == 1, "bad", "good"), levels = c("good", "bad", "unused"))
+  d$yf[d$observed == 0] <- NA
+  sc <- shadow_screen(d, "yf", "observed", c("x1", "x2"), "z_shadow")
+  ref <- shadow_screen(d, "y", "observed", c("x1", "x2"), "z_shadow")
+  expect_identical(attr(sc, "outcome_coding")$model, "glm")
+  expect_equal(sc$relevance, ref$relevance)
+})

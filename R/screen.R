@@ -2,7 +2,7 @@
 #'
 #' `shadow_screen()` asks whether a variable \eqn{Z} is fit to serve as a
 #' **shadow variable** for an outcome \eqn{Y} that is missing not at
-#' random, binary or numeric: relevant for \eqn{Y} given \eqn{X}, and excluded from the response
+#' random, binary, categorical or numeric: relevant for \eqn{Y} given \eqn{X}, and excluded from the response
 #' model given \eqn{X} and \eqn{Y}. It is a different tool from
 #' [shadow_scan()]: the screen presupposes a shadow-variable model that
 #' point-identifies the selection parameter; the scan needs no shadow variable
@@ -69,6 +69,13 @@
 #' of both measures in the number of classes and checks the screen against a
 #' known truth.
 #'
+#' **A categorical outcome.** A factor or character outcome with more than two
+#' observed levels is screened in the same way, with its levels as classes:
+#' an ordered factor in the proportional-odds model, an unordered one in a
+#' multinomial logit ([nnet::multinom()]), where a candidate costs its
+#' degrees of freedom once per level beyond the first. A factor with two
+#' observed levels is binary.
+#'
 #' The screen **measures relevance; it does not certify identification**.
 #' Identification with a shadow variable needs more than dependence of
 #' \eqn{Z} on \eqn{Y} given \eqn{X}: in a parametric tilt model a rank
@@ -128,8 +135,10 @@
 #'   allowed and enter with their degrees of freedom.
 #' @param family Family of the outcome model, passed to `glm()`. The response
 #'   model is always binomial. With the binomial default a numeric outcome
-#'   with more than two values is screened by an ordinal model on classes; see
-#'   the section on a numeric outcome. Another family (say `poisson()` for
+#'   with more than two values is screened by an ordinal model on classes,
+#'   and a factor outcome with more than two levels by an ordinal or a
+#'   multinomial model; see the sections on a numeric and a categorical
+#'   outcome. Another family (say `poisson()` for
 #'   counts) fits that `glm` instead.
 #' @param min_relevance Minimum relevance \eqn{\chi^2} per degree of freedom
 #'   for a candidate to pass. Default 10.
@@ -156,7 +165,7 @@
 #'   characteristic with its treatment, the number of classes, the share of
 #'   rows outside the range seen among the observed rows, and, for classes,
 #'   the heaping share of [screen_classes()]. Attribute `"outcome_coding"`:
-#'   `model` (`"glm"` or `"ordinal"`), the number of outcome `classes`, the
+#'   `model` (`"glm"`, `"ordinal"` or `"multinomial"`), the number of outcome `classes`, the
 #'   number `requested` and the number of `distinct` observed values.
 #' @references
 #' Bücker, M. (2026). The price of a weak shadow variable: inference under
@@ -212,6 +221,21 @@ shadow_screen <- function(data, outcome, response, covariates = character(),
   ordinal <- is.numeric(y_obs) && length(unique(y_obs)) > 2L &&
     identical(family$family, "binomial")
   outcome_coding <- list(model = "glm", classes = NA_integer_)
+  # a factor or character outcome with more than two observed levels: an
+  # ordered factor keeps its order in the ordinal model, an unordered one goes
+  # into a multinomial model; glm() would silently fit the first level
+  # against all others
+  categorical <- (is.factor(y_obs) || is.character(y_obs)) &&
+    length(unique(y_obs)) > 2L && identical(family$family, "binomial")
+  if (categorical) {
+    yv <- data[[outcome]]
+    yv[rv != 1 | is.na(rv)] <- NA
+    yv <- if (is.ordered(yv)) droplevels(yv) else factor(yv)
+    data[[outcome]] <- yv
+    outcome_coding <- list(model = if (is.ordered(yv)) "ordinal" else "multinomial",
+                           classes = nlevels(yv), requested = NA_integer_,
+                           distinct = nlevels(yv))
+  }
   if (ordinal) {
     if (!is.numeric(outcome_classes) || length(outcome_classes) != 1L ||
         is.na(outcome_classes) || outcome_classes < 2 ||
@@ -240,8 +264,10 @@ shadow_screen <- function(data, outcome, response, covariates = character(),
     pooled <- data[stats::complete.cases(data[cols]), c(outcome, cols),
                    drop = FALSE]
     obs <- pooled[pooled[[response]] == 1, , drop = FALSE]
-    rel <- if (ordinal) incr_polr(obs, outcome, covariates, z)
-           else incr_fit(obs, outcome, covariates, z, family)
+    rel <- switch(outcome_coding$model,
+                  ordinal = incr_polr(obs, outcome, covariates, z),
+                  multinomial = incr_multinom(obs, outcome, covariates, z),
+                  incr_fit(obs, outcome, covariates, z, family))
     exc <- incr_fit(pooled, response, covariates, z, stats::binomial())
     data.frame(
       candidate = z,
@@ -372,6 +398,25 @@ incr_polr <- function(d, lhs, covariates, z) {
   list(r2 = chisq / null, chisq = chisq, df = df, epp = NA_real_)
 }
 
+# The same for an unordered outcome in a multinomial logit: z costs its
+# columns once per non-reference level, (J - 1) * dim(z) degrees of freedom.
+incr_multinom <- function(d, lhs, covariates, z) {
+  d[[lhs]] <- droplevels(d[[lhs]])
+  tab <- table(d[[lhs]]); tab <- tab[tab > 0]
+  null <- -2 * sum(tab * log(tab / sum(tab)))
+  rank_of <- function(vars) if (!length(vars)) 1L else
+    qr(stats::model.matrix(stats::reformulate(vars), d))$rank
+  dev_of <- function(vars) if (!length(vars)) null else
+    nnet::multinom(stats::reformulate(vars, lhs), data = d, trace = FALSE,
+                   maxit = 1000)$deviance
+  df <- (rank_of(c(covariates, z)) - rank_of(covariates)) * (length(tab) - 1L)
+  if (df < 1)
+    stop("Candidate `", z, "` adds no degrees of freedom (constant or ",
+         "collinear with the covariates).", call. = FALSE)
+  chisq <- max(dev_of(covariates) - dev_of(c(covariates, z)), 0)
+  list(r2 = chisq / null, chisq = chisq, df = as.integer(df), epp = NA_real_)
+}
+
 # "pass", or "reject: " and the reasons in short form, for one column of print
 verdict_text <- function(verdict, reason) {
   short <- gsub("violates exclusion", "exclusion", gsub(" and ", ", ", reason))
@@ -385,7 +430,15 @@ print.shadow_screen <- function(x, digits = 3, ...) {
   cat(sprintf("  pass: relevance chi2/df >= %s and ratio > %s\n",
               format(s$min_relevance), format(s$min_ratio)))
   oc <- attr(x, "outcome_coding")
-  if (identical(oc$model, "ordinal"))
+  if (identical(oc$model, "multinomial"))
+    cat(strwrap(sprintf(paste0("relevance: multinomial model on %d classes of the observed ",
+                               "outcome; a candidate has (classes - 1) degrees of freedom ",
+                               "per column, so read chi2/df"), oc$classes),
+                indent = 2, exdent = 4), sep = "\n")
+  if (identical(oc$model, "ordinal") && is.na(oc$requested))
+    cat(strwrap(sprintf("relevance: ordinal model on the %d levels of the observed outcome",
+                        oc$classes), indent = 2, exdent = 4), sep = "\n")
+  if (identical(oc$model, "ordinal") && !is.na(oc$requested))
     cat(strwrap(sprintf(paste0("relevance: ordinal model on %d classes of the observed ",
                                "outcome%s; R^2 falls as classes get finer, so compare chi2/df ",
                                "across codings"),

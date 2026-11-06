@@ -17,7 +17,8 @@ shadow_scan_contrast(
   level = 0.9,
   trim = 0,
   se_type = c("max", "conditional", "empirical"),
-  labels = c("A", "B")
+  labels = c("A", "B"),
+  among = c("all", "unobserved")
 )
 }
 \arguments{
@@ -48,6 +49,12 @@ See the section on what is covered.}
 on what is covered.}
 
 \item{labels}{Names of the two portfolios, for printing and plotting.}
+
+\item{among}{\code{"all"} (default): each target is a whole segment, observed
+and unobserved rows alike. \code{"unobserved"}: only the unobserved rows of
+each segment, such as the rejected applications of two regions; see the
+\code{segment} argument of \code{\link[=shadow_scan_ci]{shadow_scan_ci()}}. The targets stay disjoint, so
+the standard errors still add in squares.}
 }
 \value{
 An object of class
@@ -74,9 +81,9 @@ are disjoint, the influence functions of the two endpoints are non-zero on
 different rows and have mean zero, so they are uncorrelated and the
 standard error of the difference is the root of the sum of the squared
 standard errors. Overlapping targets would need their covariance and are
-not supported. Each target is a whole segment of rows, observed and
-unobserved alike; a target that depends on \eqn{R}, such as only the
-rejected applicants of each segment, is outside what the contrast covers.
+not supported. By default each target is a whole segment of rows, observed
+and unobserved alike; \code{among = "unobserved"} compares the unobserved rows
+of the two segments instead, such as the rejected applicants of each.
 
 The flip points say from which \eqn{\lambda} on the set, and the confidence
 set, reach \code{threshold} (by default 0: no difference). They are found by

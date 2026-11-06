@@ -165,8 +165,9 @@ known cut-offs or other class counts and pass factors.
 
 The scan covers a binary outcome in closed form and the **mean** of any
 outcome with a finite mean. It does not cover quantiles or the whole
-distribution. The screen takes a binary outcome directly and a numeric one
-through an ordinal model on classes; it measures relevance and does not
+distribution. The screen takes a binary outcome directly, a numeric one
+through an ordinal model on classes and a categorical one through an ordinal
+or multinomial model; it measures relevance and does not
 certify identification. Covariates, learners and sample size are
 unrestricted. The package fits neither η_obs nor r: `shadow_scan()` and
 `shadow_scan_mean()` treat them as known, and the `_ci` functions take

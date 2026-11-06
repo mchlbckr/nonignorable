@@ -91,6 +91,10 @@
 #' @param r Cross-fitted \eqn{\hat r(x_i)} for every row, in (0, 1].
 #' @param response Response indicator for every row, 0/1 or logical.
 #' @param outcome Outcome, 0/1; ignored (and may be `NA`) where `response` is 0.
+#' @param segment Optional logical vector chosen by \eqn{X}, one per row, that
+#'   restricts a target of `"unobserved"` (or `"all"`) rows to one segment,
+#'   such as the rejected applications of one region. The segment is a
+#'   function of \eqn{X}; the target within it may depend on \eqn{R}.
 #' @param target `"all"` (default, as in [shadow_scan_mean_ci()]),
 #'   `"unobserved"` (the rows whose outcome is missing, such as rejected
 #'   applications), or a logical vector selecting the rows of the portfolio
@@ -140,7 +144,8 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
                            target = "all",
                            lambda = seq(0, 2, length.out = 81),
                            weights = NULL, threshold = NULL, level = 0.9,
-                           trim = 0, se_type = c("max", "conditional", "empirical")) {
+                           trim = 0, se_type = c("max", "conditional", "empirical"),
+                           segment = NULL) {
   se_type <- match.arg(se_type)
   check_inputs(eta_obs, r)
   n <- length(eta_obs)
@@ -184,6 +189,16 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
     s <- as.numeric(target); p <- s
     target_label <- "rows selected by X"
   }
+  if (!is.null(segment)) {
+    if (!is.character(target_label) || target_label == "rows selected by X")
+      stop("`segment` combines with target = \"unobserved\" or \"all\"; for ",
+           "a segment of all rows pass it as `target`.", call. = FALSE)
+    if (!is.logical(segment) || length(segment) != n || anyNA(segment))
+      stop("`segment` must be a logical vector chosen by X, one per row, ",
+           "without NA.", call. = FALSE)
+    s <- s * segment; p <- p * segment
+    target_label <- paste(target_label, "rows of a segment chosen by X")
+  }
   if (!is.numeric(trim) || length(trim) != 1L || trim < 0 || trim >= 1)
     stop("`trim` must be a single number in [0, 1).", call. = FALSE)
   # rows with r-hat below trim leave the target, with their correction terms
@@ -201,7 +216,8 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
   den <- mean(w * s)
 
   # target membership: random (1 - R) for "unobserved", else a function of X
-  s_random <- identical(target_label, "unobserved")
+  s_random <- startsWith(target_label, "unobserved")
+  seg <- if (is.null(segment)) 1 else as.numeric(segment)
   eta_c <- eta_obs
 
   # debiased estimate and standard error of one endpoint
@@ -240,7 +256,7 @@ shadow_scan_ci <- function(eta_obs, r, response, outcome,
     if (s_random) {                 # IF * den = (1 - R) a + (1 - r) D, times w
       # p = (1 - r) * keep; trimmed rows contribute nothing
       m1 <- w * p * a
-      v1 <- w^2 * keep * (a^2 * r * (1 - r) + p^2 * vD + 2 * a * p * cD)
+      v1 <- w^2 * keep * seg * (a^2 * r * (1 - r) + p^2 * vD + 2 * a * p * cD)
     } else {                        # IF * den = s (a + D), s a function of X
       m1 <- w * s * a
       v1 <- w^2 * s^2 * vD

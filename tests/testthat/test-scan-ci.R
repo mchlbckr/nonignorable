@@ -183,3 +183,28 @@ test_that("debiased bounds are monotone in lambda even where the cap holds them"
     expect_true(all(diff(cv$ci_lower) <= 0) && all(diff(cv$ci_upper) >= 0))
   }
 })
+
+test_that("a segment restricts the unobserved target to rows chosen by X", {
+  x <- ci_sim(2000)
+  seg <- x$d$x1 > 0
+  lam <- c(0, 0.5, 1)
+  s <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, target = "unobserved",
+                      segment = seg, lambda = lam)
+  expect_identical(s$n_target, sum(seg & x$d$observed == 0))
+  expect_match(s$target, "unobserved.*segment")
+  # the estimate is that of the scan on the segment's rows alone
+  i <- which(seg)
+  sub <- shadow_scan_ci(x$inp$eta_obs[i], x$inp$r[i], x$d$observed[i], x$d$y[i],
+                        target = "unobserved", lambda = lam)
+  expect_equal(s$curve$lower, sub$curve$lower)
+  expect_equal(s$curve$upper, sub$curve$upper)
+  expect_true(all(s$curve$se_upper > 0))
+  # an all-TRUE segment changes nothing
+  a <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, target = "unobserved",
+                      segment = rep(TRUE, nrow(x$d)), lambda = lam)
+  u <- shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, target = "unobserved",
+                      lambda = lam)
+  expect_equal(a$curve, u$curve)
+  expect_error(shadow_scan_ci(x$inp$eta_obs, x$inp$r, x$d$observed, x$d$y, target = seg,
+                              segment = seg), "segment")
+})
