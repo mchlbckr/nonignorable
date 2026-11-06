@@ -65,7 +65,7 @@
 #' \eqn{\chi^2}/df, not \eqn{\Delta R^2}, across codings. Five classes is a
 #' choice for the stability of the ordinal model (few cut points, the
 #' proportional-odds assumption over few cuts), not an optimum. Bücker (2026),
-#' section "The screen when the outcome is continuous", derives the behaviour
+#' section "The screen when the outcome is continuous", shows the behaviour
 #' of both measures in the number of classes and checks the screen against a
 #' known truth.
 #'
