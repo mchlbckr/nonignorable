@@ -20,7 +20,7 @@ Description: Two tools for an outcome that is missing not at random.
     portfolio and for the difference between two; 'sharp_scan_mean_ci()'
     does the same for the mean.
 URL: https://github.com/mchlbckr/nonignorable,
-    https://mchlbckr.github.io/nonignorable/
+    https://buecker.ms/nonignorable/
 BugReports: https://github.com/mchlbckr/nonignorable/issues
 License: MIT + file LICENSE
 Encoding: UTF-8

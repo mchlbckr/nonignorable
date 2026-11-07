@@ -1,4 +1,4 @@
-# nonignorable
+# nonignorable <img src="man/figures/logo.png" align="right" height="139" alt="nonignorable logo" />
 
 If a binary outcome is missing not at random, as defaults are for rejected
 credit applications, every model fitted on the observed rows silently asserts
