@@ -1,0 +1,87 @@
+# Relevance against exclusion violation
+
+Scatter of the screen: exclusion violation on the horizontal axis,
+relevance on the vertical, both incremental McFadden \\R^2\\ on the same
+scale, with the equality line dashed. Above the line a candidate
+predicts the outcome better than it predicts selection. The line is not
+the border between usable and unusable: under strong selection on the
+outcome a validly excluded candidate shows exclusion signal through the
+outcome and sits close to it (see
+[`shadow_screen()`](https://mchlbckr.github.io/nonignorable/reference/shadow_screen.md)).
+Points are labelled directly rather than through a legend; labels are
+placed so that they do not overlap each other or the points.
+
+## Usage
+
+``` r
+# S3 method for class 'shadow_screen'
+plot(
+  x,
+  scale = c("log", "linear"),
+  label = NULL,
+  col = scan_colors[["sharp"]],
+  text_col = "grey20",
+  xlab = expression("Exclusion violation, incremental McFadden " * R^2),
+  ylab = expression("Relevance, incremental McFadden " * R^2),
+  main = NULL,
+  ...
+)
+```
+
+## Arguments
+
+- x:
+
+  A `"shadow_screen"` object.
+
+- scale:
+
+  `"log"` (default) or `"linear"` axes.
+
+- label:
+
+  Candidates to label. Default: all if there are at most fifteen, else
+  the most relevant one and the one with the highest ratio.
+
+- col:
+
+  Point colour.
+
+- text_col:
+
+  Colour for text and reference lines.
+
+- xlab, ylab, main:
+
+  Axis labels and title.
+
+- ...:
+
+  Passed to
+  [`graphics::plot.default()`](https://rdrr.io/r/graphics/plot.default.html).
+
+## Value
+
+`x`, invisibly.
+
+## Details
+
+Both measures typically span several orders of magnitude, so the default
+is logarithmic axes, on which the equality line is still the diagonal of
+the square plotting region. Values of zero are drawn at the lower axis
+limit. Distance from the line reads as a factor; distance along it as
+size. Read the relevance itself too: a candidate far above the line with
+negligible relevance is no shadow variable (see `relevance_chisq_df`).
+Rejected candidates are drawn grey and labelled "rejected", so that a
+weak candidate above the line is not mistaken for a pass. Hollow points
+mark candidates whose exclusion violation is at noise level
+(`ratio_readable` is `FALSE`): no violation is measured, their
+horizontal position is not estimated, and their label gives no ratio.
+
+## Examples
+
+``` r
+d <- simulate_shadow(5000, tilt = -1, seed = 1)
+plot(shadow_screen(d, "y", "observed", c("x1", "x2"),
+                   c("z_shadow", "z_policy", "z_score")))
+```
