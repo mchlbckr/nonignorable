@@ -1,12 +1,12 @@
 # Debiased scan for the difference of two portfolio means
 
 `sharp_scan_mean_contrast()` is
-[`sharp_scan_contrast()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_contrast.md)
+[`sharp_scan_contrast()`](https://buecker.ms/nonignorable/reference/sharp_scan_contrast.md)
 for an outcome that is not binary: it compares the means of two disjoint
 portfolios chosen by \\X\\ under the assumption of
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md),
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md),
 with each endpoint estimated by
-[`sharp_scan_mean_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean_ci.md).
+[`sharp_scan_mean_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean_ci.md).
 The sharp set for \\A - B\\ is \\\[\mathrm{lower}\_A -
 \mathrm{upper}\_B,\\ \mathrm{upper}\_A - \mathrm{lower}\_B\]\\; because
 the targets are disjoint, the standard error of each endpoint is the
@@ -96,20 +96,20 @@ sharp_scan_mean_contrast(
 - among:
 
   `"all"` (default) or `"unobserved"`, as in
-  [`sharp_scan_contrast()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_contrast.md).
+  [`sharp_scan_contrast()`](https://buecker.ms/nonignorable/reference/sharp_scan_contrast.md).
 
 ## Value
 
 An object of class
 `c("sharp_scan_contrast", "sharp_scan_ci", "sharp_scan")` as from
-[`sharp_scan_contrast()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_contrast.md),
+[`sharp_scan_contrast()`](https://buecker.ms/nonignorable/reference/sharp_scan_contrast.md),
 with `of_means = TRUE`.
 
 ## See also
 
-[`sharp_scan_contrast()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_contrast.md),
-[`sharp_scan_mean_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean_ci.md),
-[`crossfit_quantiles()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_quantiles.md)
+[`sharp_scan_contrast()`](https://buecker.ms/nonignorable/reference/sharp_scan_contrast.md),
+[`sharp_scan_mean_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean_ci.md),
+[`crossfit_quantiles()`](https://buecker.ms/nonignorable/reference/crossfit_quantiles.md)
 
 ## Examples
 

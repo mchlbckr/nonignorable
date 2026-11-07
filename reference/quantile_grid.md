@@ -3,9 +3,9 @@
 `quantile_grid()` produces the \\n \times K\\ matrix of conditional
 quantiles of \\Y\\ given \\R = 1, X = x_i\\ at the levels \\(k -
 1/2)/K\\ that
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md)
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md)
 takes as `q`. It is a convenience like
-[`scan_inputs()`](https://mchlbckr.github.io/nonignorable/reference/scan_inputs.md),
+[`scan_inputs()`](https://buecker.ms/nonignorable/reference/scan_inputs.md),
 not a commitment to a learner, and accepts three kinds of `fit`:
 
 ## Usage
@@ -66,7 +66,7 @@ and probability curves without crossing. *Econometrica*, 78(3),
 
 ## See also
 
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md)
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md)
 
 ## Examples
 

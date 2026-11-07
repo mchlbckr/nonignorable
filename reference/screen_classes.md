@@ -2,7 +2,7 @@
 
 `screen_classes()` turns a numeric characteristic into a factor of about
 `k` classes of roughly equal mass for
-[`shadow_screen()`](https://mchlbckr.github.io/nonignorable/reference/shadow_screen.md).
+[`shadow_screen()`](https://buecker.ms/nonignorable/reference/shadow_screen.md).
 Unlike quantile classes from [`cut()`](https://rdrr.io/r/base/cut.html)
 and [`quantile()`](https://rdrr.io/r/stats/quantile.html), a class
 boundary never falls on a value that occurs in the data, so no
@@ -47,7 +47,7 @@ Values outside `support` get classes of their own, `"below"` and
 rows whose outcome is observed: a lender that never accepts below a
 score cut-off then shows up as one class with no accepted row, which is
 the step that a linear term in the response model cannot represent.
-[`shadow_screen()`](https://mchlbckr.github.io/nonignorable/reference/shadow_screen.md)
+[`shadow_screen()`](https://buecker.ms/nonignorable/reference/shadow_screen.md)
 does this itself with `numeric = "classes"`.
 
 Classes are built greedily from the smallest value up: a class is closed
@@ -59,7 +59,7 @@ own class.
 
 ## See also
 
-[`shadow_screen()`](https://mchlbckr.github.io/nonignorable/reference/shadow_screen.md)
+[`shadow_screen()`](https://buecker.ms/nonignorable/reference/shadow_screen.md)
 
 ## Examples
 

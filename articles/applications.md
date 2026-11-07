@@ -15,7 +15,7 @@ that differ in almost every respect:
   Shao, 2021; Beppu and Morikawa, 2024; Chen and Shao, 2025).
 
 Each step below is run on both, side by side.
-[`vignette("nonignorable")`](https://mchlbckr.github.io/nonignorable/articles/nonignorable.md)
+[`vignette("nonignorable")`](https://buecker.ms/nonignorable/articles/nonignorable.md)
 explains the tools on simulated data.
 
 ## The data
@@ -61,7 +61,7 @@ The analysis follows the literature and treats all of them as missing.
 
 ### Lending Club: the coding matters
 
-[`shadow_screen()`](https://mchlbckr.github.io/nonignorable/reference/shadow_screen.md)
+[`shadow_screen()`](https://buecker.ms/nonignorable/reference/shadow_screen.md)
 takes each of the six characteristics in turn as candidate, with the
 other five as covariates. With numeric characteristics entered linearly:
 
@@ -311,7 +311,7 @@ is the opposite of Lending Club, and it has two consequences.
 
 A trial is run for a comparison: is zidovudine alone worse than the
 alternatives?
-[`sharp_scan_contrast()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_contrast.md)
+[`sharp_scan_contrast()`](https://buecker.ms/nonignorable/reference/sharp_scan_contrast.md)
 scans the difference in the share with CD4 below 200 between two arms.
 It reports the selection strength from which “no difference” can no
 longer be ruled out.
@@ -376,12 +376,12 @@ the rejected themselves, \\E(Y \mid R = 0)\\ in each segment.
 ## The mean of a continuous outcome
 
 For the CD4 count itself rather than the share below 200,
-[`sharp_scan_mean_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean_ci.md)
+[`sharp_scan_mean_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean_ci.md)
 scans the mean count at week 96 over all patients, with a debiased
 estimate and a confidence set. It needs, for every patient, a grid of
 conditional quantiles of the count among the observed, fitted out of
 fold.
-[`crossfit_quantiles()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_quantiles.md)
+[`crossfit_quantiles()`](https://buecker.ms/nonignorable/reference/crossfit_quantiles.md)
 takes the learner as a function. Here it is a location-scale model from
 mgcv for the square root of the count, smooth in the two earlier CD4
 counts, with the quantiles of its standardised residuals; squaring the
@@ -431,7 +431,7 @@ selection up to a propensity ratio of 1.90 in the estimate and 1.63 in
 the confidence set. Beyond that, a dropout that hides the patients with
 high counts could carry the mean back to its starting level. At a ratio
 of \\e^1\\ the set is \[274, 368\]. The plug-in,
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md)
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md)
 on the same inputs, gives \[275, 365\]. It skips the correction terms,
 and here it lies inside the debiased set, the direction in which the
 plug-in typically errs.
@@ -441,13 +441,13 @@ plug-in typically errs.
 A mean can be moved by a few extreme counts. For the patients who left
 the trial, the median count they would have had at week 96 is often the
 more telling number.
-[`sharp_scan_cdf()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_cdf.md)
+[`sharp_scan_cdf()`](https://buecker.ms/nonignorable/reference/sharp_scan_cdf.md)
 scans their distribution function, \\P(Y \le t \mid R = 0)\\, at each
 value of a grid, and
 [`quantile()`](https://rdrr.io/r/stats/quantile.html) turns it into
 bounds for quantiles. It needs \\P(Y \le t \mid R = 1, X)\\ for every
 patient and every \\t\\;
-[`crossfit_cdf()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_cdf.md)
+[`crossfit_cdf()`](https://buecker.ms/nonignorable/reference/crossfit_cdf.md)
 fits it as one logistic regression of \\1(\text{count} \le t)\\ per
 \\t\\, out of fold.
 

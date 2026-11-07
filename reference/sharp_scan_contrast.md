@@ -3,7 +3,7 @@
 `sharp_scan_contrast()` compares two disjoint portfolios chosen by \\X\\
 – treatment arms of a trial, or two segments such as two regions – under
 the same assumption as
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md):
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md):
 in every row the ratio of the response propensities is at most
 \\e^\lambda\\. It answers the question a comparison is run for: up to
 which strength of selection does the finding "A differs from B" survive?
@@ -89,7 +89,7 @@ sharp_scan_contrast(
   unobserved rows alike. `"unobserved"`: only the unobserved rows of
   each segment, such as the rejected applications of two regions; see
   the `segment` argument of
-  [`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md).
+  [`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md).
   The targets stay disjoint, so the standard errors still add in
   squares.
 
@@ -98,7 +98,7 @@ sharp_scan_contrast(
 An object of class
 `c("sharp_scan_contrast", "sharp_scan_ci", "sharp_scan")` whose `curve`
 has the columns of
-[`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md)
+[`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md)
 for the difference \\A - B\\, with `point` the difference at \\\lambda =
 0\\ and `flip` the flip points of the set, the outer band and the
 confidence set.
@@ -110,7 +110,7 @@ portfolios may sit at opposite ends at once, and the sharp set for the
 difference of rates \\A - B\\ is \\\[\mathrm{lower}\_A -
 \mathrm{upper}\_B,\\ \mathrm{upper}\_A - \mathrm{lower}\_B\]\\. Each
 endpoint is estimated by
-[`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md).
+[`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md).
 Because the two targets are disjoint, the influence functions of the two
 endpoints are non-zero on different rows and have mean zero, so they are
 uncorrelated and the standard error of the difference is the root of the
@@ -128,7 +128,7 @@ gives a precise flip.
 
 ## See also
 
-[`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md)
+[`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md)
 
 ## Examples
 

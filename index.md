@@ -6,13 +6,13 @@ silently asserts *one* value for how observability depends on the
 outcome. Nothing in the data selects it. `nonignorable` provides two
 tools for two different questions:
 
-- **[`shadow_screen()`](https://mchlbckr.github.io/nonignorable/reference/shadow_screen.md)**:
+- **[`shadow_screen()`](https://buecker.ms/nonignorable/reference/shadow_screen.md)**:
   *is this variable fit to serve as a shadow variable?* It puts
   relevance for the outcome against violation of the exclusion
   restriction, both as incremental McFadden R², on one scale.
-- **[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md)**
+- **[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)**
   and
-  **[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md)**:
+  **[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md)**:
   *how far can the answer move?* They return the sharp identified set
   under a bound e^λ on the ratio of response propensities between
   outcome values (a risk ratio, not an odds ratio), with no shadow
@@ -72,15 +72,15 @@ page explains how to read it.
 
 ## Sampling error
 
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md)
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)
 treats its inputs as known.
-[`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md)
+[`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md)
 adds a confidence set for the binary scan, after Semenova (2025): the
 binding piece of each row is chosen from models fitted without it, and
 an orthogonal signal of that piece is averaged instead of its plug-in
 value, which is biased towards the inside of the set. It needs
 cross-fitted inputs for all rows and the observed outcomes;
-[`crossfit_inputs()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_inputs.md)
+[`crossfit_inputs()`](https://buecker.ms/nonignorable/reference/crossfit_inputs.md)
 produces them for any learner you pass as a function.
 
 ``` r
@@ -102,17 +102,17 @@ plot(ci)
 Sensitivity curve with confidence set
 
 The confidence set covers the identified set, pointwise in λ.
-[`sharp_scan_mean_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean_ci.md)
+[`sharp_scan_mean_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean_ci.md)
 does the same for the mean of a non-binary outcome, with quantile grids
 cross-fitted by
-[`crossfit_quantiles()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_quantiles.md).
+[`crossfit_quantiles()`](https://buecker.ms/nonignorable/reference/crossfit_quantiles.md).
 
 To compare two portfolios chosen by X, such as the arms of a trial,
-[`sharp_scan_contrast()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_contrast.md)
+[`sharp_scan_contrast()`](https://buecker.ms/nonignorable/reference/sharp_scan_contrast.md)
 gives the sharp set for the difference of their rates with a confidence
 set. It also reports the selection strength from which “no difference”
 can no longer be ruled out.
-[`sharp_scan_mean_contrast()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean_contrast.md)
+[`sharp_scan_mean_contrast()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean_contrast.md)
 does the same for the difference of two means.
 
 ``` r
@@ -124,11 +124,11 @@ k <- sharp_scan_contrast(inp$eta_obs, inp$r, d$observed, d$y,
 ## The scan for a mean
 
 For an outcome that is not binary,
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md)
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md)
 takes, per row, a grid of conditional quantiles of Y given R = 1 and X,
 together with r̂(x). It returns the sharp set for the mean under the same
 assumption. Binary input reproduces
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md)
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)
 exactly.
 
 ``` r
@@ -144,9 +144,9 @@ plot(sm)
 
 Sensitivity curve for a mean
 
-[`obs_quantiles()`](https://mchlbckr.github.io/nonignorable/reference/simulate_shadow.md)
+[`obs_quantiles()`](https://buecker.ms/nonignorable/reference/simulate_shadow.md)
 knows the simulator’s truth. On real data,
-[`quantile_grid()`](https://mchlbckr.github.io/nonignorable/reference/quantile_grid.md)
+[`quantile_grid()`](https://buecker.ms/nonignorable/reference/quantile_grid.md)
 builds the grid from a fitted model. It accepts a
 [`quantreg::rq`](https://rdrr.io/pkg/quantreg/man/rq.html) fit (refitted
 at the K levels), any `function(tau, newdata)`, or a matrix of draws
@@ -162,14 +162,14 @@ q   <- quantile_grid(fq, dc[rej, ], K = 200)
 
 ## The distribution function and quantiles
 
-[`sharp_scan_cdf()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_cdf.md)
+[`sharp_scan_cdf()`](https://buecker.ms/nonignorable/reference/sharp_scan_cdf.md)
 scans P(Y ≤ t), or P(Y ≤ t \| R = 0), at each value of a grid, as the
 rate of the binary outcome 1(Y ≤ t), with a debiased estimate and a
 confidence set at each t.
 [`quantile()`](https://rdrr.io/r/stats/quantile.html) turns the bounds
 into bounds for quantiles. The sets hold for each t separately, not as a
 band.
-[`crossfit_cdf()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_cdf.md)
+[`crossfit_cdf()`](https://buecker.ms/nonignorable/reference/crossfit_cdf.md)
 fits P(Y ≤ t \| R = 1, X) as one classification per t.
 
 ``` r
@@ -215,7 +215,7 @@ shadow_screen(d, "y", "observed", c("x1", "x2"), "z_score", numeric = "classes")
 ```
 
 The classes come from
-[`screen_classes()`](https://mchlbckr.github.io/nonignorable/reference/screen_classes.md),
+[`screen_classes()`](https://buecker.ms/nonignorable/reference/screen_classes.md),
 which cuts only between distinct values. Quantile classes from
 [`cut()`](https://rdrr.io/r/base/cut.html) put boundaries on heaped
 values, such as loan amounts on round numbers, and then assign those
@@ -225,13 +225,13 @@ factors.
 
 ## Vignettes
 
-- [`vignette("nonignorable")`](https://mchlbckr.github.io/nonignorable/articles/nonignorable.md):
+- [`vignette("nonignorable")`](https://buecker.ms/nonignorable/articles/nonignorable.md):
   the tools on simulated data with a known truth, and how to read their
   output.
-- [`vignette("applications")`](https://mchlbckr.github.io/nonignorable/articles/applications.md):
+- [`vignette("applications")`](https://buecker.ms/nonignorable/articles/applications.md):
   reject inference on Lending Club 2014 and dropout in the ACTG 175
   trial, side by side, including a comparison of treatment arms with
-  [`sharp_scan_contrast()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_contrast.md).
+  [`sharp_scan_contrast()`](https://buecker.ms/nonignorable/reference/sharp_scan_contrast.md).
 
 ## Scope
 
@@ -243,13 +243,13 @@ classes and a categorical one through an ordinal or multinomial model;
 it measures relevance and does not certify identification. Covariates,
 learners and sample size are unrestricted. The package fits neither
 η_obs nor r:
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md)
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)
 and
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md)
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md)
 treat them as known, and the `_ci` functions take cross-fitted
 predictions from your own learner. It ships no outside data: examples
 and tests run on
-[`simulate_shadow()`](https://mchlbckr.github.io/nonignorable/reference/simulate_shadow.md).
+[`simulate_shadow()`](https://buecker.ms/nonignorable/reference/simulate_shadow.md).
 
 ## License
 

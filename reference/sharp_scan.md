@@ -5,7 +5,7 @@ missing not at random. It assumes nothing but a bound \\\|b(x)\| \le
 \lambda\\ on the log ratio of the response propensities of the two
 outcome values and needs **no shadow variable**. It is a different tool
 from
-[`shadow_screen()`](https://mchlbckr.github.io/nonignorable/reference/shadow_screen.md),
+[`shadow_screen()`](https://buecker.ms/nonignorable/reference/shadow_screen.md),
 which asks whether a variable is fit to serve as a shadow variable for a
 point-identified model; the two rest on different assumptions.
 
@@ -127,7 +127,7 @@ odds ratio. It is not the odds-ratio parameter of Vansteelandt et al.
 member of the class of Manski (2016, Sect. 4.2), with the ratio taken
 between outcome values rather than relative to the response rate; for a
 non-binary outcome see
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md).
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md).
 With \\\ell = \mathrm{logit}\\ \eta\_{\mathrm{obs}}\\ and \\\eta_t =
 \mathrm{expit}(\ell - t)\\, the identified set is \$\$\mathcal
 H\_\lambda(x) = \\\eta_t : \|t\| \le \lambda,\\ c_t \in (0,1\],\\ c_t
@@ -166,7 +166,7 @@ applications \\\hat\eta\_{\mathrm{obs}}\\ is an extrapolation of a model
 fitted on the accepted ones; that is a property of the task, not of this
 package. The package never sees the learner: `glm`, a scorecard, a
 random forest or a model from another language serve equally.
-[`scan_inputs()`](https://mchlbckr.github.io/nonignorable/reference/scan_inputs.md)
+[`scan_inputs()`](https://buecker.ms/nonignorable/reference/scan_inputs.md)
 extracts both vectors from fitted models with a
 [`predict()`](https://rdrr.io/r/stats/predict.html) method. The set
 requires \\\hat r(x) \> 0\\: where acceptance was deterministic, nothing
@@ -180,7 +180,7 @@ observed-data law were known exactly. The scan plugs in
 Their estimation error is **not** included, so the reported set is
 narrower than an honest statement about the population would be. For a
 confidence set use
-[`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md),
+[`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md),
 which needs cross-fitted inputs for all rows and the observed outcomes.
 Inference for such sets is not routine: the endpoints are maxima and
 minima of estimated quantities, where the usual bootstrap can fail; a
@@ -266,10 +266,10 @@ sensitivity analysis. *Statistica Sinica*, 16(3), 953–979.
 
 ## See also
 
-[`plot.sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/plot.sharp_scan.md),
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md)
+[`plot.sharp_scan()`](https://buecker.ms/nonignorable/reference/plot.sharp_scan.md),
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md)
 for a non-binary outcome,
-[`shadow_screen()`](https://mchlbckr.github.io/nonignorable/reference/shadow_screen.md)
+[`shadow_screen()`](https://buecker.ms/nonignorable/reference/shadow_screen.md)
 for the other question.
 
 ## Examples

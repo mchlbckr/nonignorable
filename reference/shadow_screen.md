@@ -5,7 +5,7 @@
 binary, categorical or numeric: relevant for \\Y\\ given \\X\\, and
 excluded from the response model given \\X\\ and \\Y\\. It is a
 different tool from
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md):
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md):
 the screen presupposes a shadow-variable model that point-identifies the
 selection parameter; the scan needs no shadow variable and returns an
 identified set. Do not read the two as one procedure.
@@ -88,7 +88,7 @@ shadow_screen(
 
   Number of classes of about equal mass for a numeric outcome, cut only
   between distinct values as in
-  [`screen_classes()`](https://mchlbckr.github.io/nonignorable/reference/screen_classes.md).
+  [`screen_classes()`](https://buecker.ms/nonignorable/reference/screen_classes.md).
   Default 5. An outcome with at most this many distinct values (a count,
   a rating) uses them as its levels; heavy atoms can leave fewer classes
   than asked, and [`print()`](https://rdrr.io/r/base/print.html) says
@@ -106,7 +106,7 @@ and of the response model; `NA` for a target that is not binary),
 one row per numeric characteristic with its treatment, the number of
 classes, the share of rows outside the range seen among the observed
 rows, and, for classes, the heaping share of
-[`screen_classes()`](https://mchlbckr.github.io/nonignorable/reference/screen_classes.md).
+[`screen_classes()`](https://buecker.ms/nonignorable/reference/screen_classes.md).
 Attribute `"outcome_coding"`: `model` (`"glm"`, `"ordinal"` or
 `"multinomial"`), the number of outcome `classes`, the number
 `requested` and the number of `distinct` observed values.
@@ -208,7 +208,7 @@ visible trace of such a rule.
 
 `numeric = "classes"` codes every numeric covariate and candidate with
 more than two distinct values by
-[`screen_classes()`](https://mchlbckr.github.io/nonignorable/reference/screen_classes.md):
+[`screen_classes()`](https://buecker.ms/nonignorable/reference/screen_classes.md):
 about `k` classes of equal mass, cut only between distinct values, plus
 a class `"below"` or `"above"` for values outside the range seen among
 the observed rows. The relevance hardly changes; the exclusion axis
@@ -229,7 +229,7 @@ rows outside the range seen among the observed rows (`outside` in
 threshold that only defines the population does not. Whether classes are
 well defined is answered by the mass on single values (`heaping`,
 reported for `numeric = "classes"` and by
-[`screen_classes()`](https://mchlbckr.github.io/nonignorable/reference/screen_classes.md)).
+[`screen_classes()`](https://buecker.ms/nonignorable/reference/screen_classes.md)).
 Classes are cut only between distinct values, so heavy atoms give
 classes of unequal mass, not arbitrary ones. A loan amount in round
 numbers shows both: no gap in support, so a linear term suffices; where
@@ -237,7 +237,7 @@ an analysis codes it in classes all the same, for instance to compare
 two codings that differ in nothing else, the heaping shows whether that
 result is well defined. For other cut-offs or class counts per
 characteristic, code the columns yourself with
-[`screen_classes()`](https://mchlbckr.github.io/nonignorable/reference/screen_classes.md)
+[`screen_classes()`](https://buecker.ms/nonignorable/reference/screen_classes.md)
 and pass factors.
 
 ## References
@@ -252,8 +252,8 @@ variables. *Statistical Theory and Related Fields*, 8, 40–50.
 
 ## See also
 
-[`plot.shadow_screen()`](https://mchlbckr.github.io/nonignorable/reference/plot.shadow_screen.md),
-[`screen_classes()`](https://mchlbckr.github.io/nonignorable/reference/screen_classes.md)
+[`plot.shadow_screen()`](https://buecker.ms/nonignorable/reference/plot.shadow_screen.md),
+[`screen_classes()`](https://buecker.ms/nonignorable/reference/screen_classes.md)
 
 ## Examples
 

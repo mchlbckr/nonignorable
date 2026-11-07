@@ -1,7 +1,7 @@
 # Confidence set for the binary scan, by debiased estimation
 
 `sharp_scan_ci()` estimates the sharp set of
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md)
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)
 with its sampling error and returns, at each \\\lambda\\, a confidence
 set that covers the identified set. It follows Semenova (2025): each
 endpoint is a mean over rows of the minimum (or maximum) of two pieces,
@@ -60,7 +60,7 @@ sharp_scan_ci(
 - target:
 
   `"all"` (default, as in
-  [`sharp_scan_mean_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean_ci.md)),
+  [`sharp_scan_mean_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean_ci.md)),
   `"unobserved"` (the rate of the missing outcomes, \\E(Y \mid R = 0)\\,
   such as the default rate of rejected applications; see the section on
   inputs), or a logical vector selecting the rows of the portfolio by
@@ -69,7 +69,7 @@ sharp_scan_ci(
 - lambda, threshold:
 
   As in
-  [`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md).
+  [`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md).
 
 - weights:
 
@@ -99,7 +99,7 @@ sharp_scan_ci(
 ## Value
 
 An object of class `c("sharp_scan_ci", "sharp_scan")`, as from
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md),
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md),
 whose `curve` holds the debiased estimates `lower`, `upper`, their
 standard errors `se_lower`, `se_upper`, the confidence set `ci_lower`,
 `ci_upper`, and the plug-in outer band of the target rows. `flip` adds
@@ -107,7 +107,7 @@ standard errors `se_lower`, `se_upper`, the confidence set `ci_lower`,
 threshold, the point from which the data no longer rule out the other
 decision. `capped` and `held` say where the cap \\\pi \le 1\\ binds
 among the target rows, as in
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md),
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md),
 computed from the nuisance estimates. The estimates and the confidence
 set are kept monotone in \\\lambda\\ (running minimum of the lower ends,
 running maximum of the upper ends): the identified set grows with
@@ -117,13 +117,13 @@ set valid at one \\\lambda\\ is valid at every larger one.
 ## Inputs
 
 Unlike
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md),
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md),
 the inputs are given for **all** rows, observed and unobserved, together
 with the response indicator and the outcome: the signals use \\RY\\ and
 \\R(Y - \hat\eta\_{\mathrm{obs}})/\hat r\\. `eta_obs` and `r` must be
 **cross-fitted**: the prediction for a row comes from models fitted
 without it.
-[`crossfit_inputs()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_inputs.md)
+[`crossfit_inputs()`](https://buecker.ms/nonignorable/reference/crossfit_inputs.md)
 does that for any learner. In-sample predictions make the confidence set
 too narrow.
 
@@ -203,7 +203,7 @@ with their correction terms. That changes the target to the rows with
 \\\hat r \ge\\ `trim`, and the output says how many rows left it. Rows
 with \\\hat r\\ at zero, where the selection was deterministic, have to
 leave the target in any case, as for
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md).
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md).
 
 For the whole sample (`target = "all"`), where the weight does not
 depend on \\r\\, both standard errors covered 0.88 to 0.92 from 1,000
@@ -213,7 +213,7 @@ as 0.72 at \\\lambda = 2\\.
 Only the union aggregation is covered: the common-tilt set is bounded by
 an extreme over rows, for which this theory does not hold. For a
 non-binary outcome, see
-[`sharp_scan_mean_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean_ci.md).
+[`sharp_scan_mean_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean_ci.md).
 
 ## References
 
@@ -227,8 +227,8 @@ intersection bounds and other causal parameters. Working paper, SSRN
 
 ## See also
 
-[`crossfit_inputs()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_inputs.md),
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md)
+[`crossfit_inputs()`](https://buecker.ms/nonignorable/reference/crossfit_inputs.md),
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)
 
 ## Examples
 

@@ -3,7 +3,7 @@
 Splits the rows into folds and predicts, for each fold from models
 fitted on the other folds, a grid of conditional quantiles of \\Y\\
 given \\R = 1\\ and \\X\\, and \\\hat r\\, as
-[`sharp_scan_mean_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean_ci.md)
+[`sharp_scan_mean_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean_ci.md)
 requires. The learner is yours. `fit_q` receives only the observed rows
 of the training folds and the levels `tau` = \\(k - 1/2)/K\\.
 
@@ -70,10 +70,10 @@ A smooth location and scale model is a good choice: fit \\\mu(x)\\ and
 `mgcv::gam(..., family = mgcv::gaulss())`), and return \\\hat\mu(x) +
 \hat\sigma(x) \hat F^{-1}(\tau)\\, with \\\hat F^{-1}\\ the quantiles of
 the standardised training residuals.
-[`quantile_grid()`](https://mchlbckr.github.io/nonignorable/reference/quantile_grid.md)
+[`quantile_grid()`](https://buecker.ms/nonignorable/reference/quantile_grid.md)
 can be used inside `fit_q`.
 
 ## See also
 
-[`sharp_scan_mean_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean_ci.md),
-[`crossfit_inputs()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_inputs.md)
+[`sharp_scan_mean_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean_ci.md),
+[`crossfit_inputs()`](https://buecker.ms/nonignorable/reference/crossfit_inputs.md)

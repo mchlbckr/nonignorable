@@ -7,14 +7,14 @@ package offers two tools for two different questions.
 
 ## Details
 
-- [`shadow_screen()`](https://mchlbckr.github.io/nonignorable/reference/shadow_screen.md):
+- [`shadow_screen()`](https://buecker.ms/nonignorable/reference/shadow_screen.md):
   *is this variable fit to serve as a shadow variable?* Relevance for
   the outcome against violation of the exclusion restriction, on one
   scale. This belongs to a point-identified shadow-variable model.
 
-- [`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md)
+- [`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)
   and
-  [`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md):
+  [`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md):
   *how far can the answer move?* The sharp identified set under a bound
   on the ratio of response propensities between outcome values, with no
   shadow variable at all; for a binary outcome and for the mean of any
@@ -23,7 +23,7 @@ package offers two tools for two different questions.
 The two rest on different assumptions and are not two halves of one
 procedure. The help pages state the formulas, so that every number can
 be checked by hand.
-[`simulate_shadow()`](https://mchlbckr.github.io/nonignorable/reference/simulate_shadow.md)
+[`simulate_shadow()`](https://buecker.ms/nonignorable/reference/simulate_shadow.md)
 provides data with known truth.
 
 ## See also

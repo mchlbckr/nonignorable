@@ -3,7 +3,7 @@
 `sharp_scan_cdf()` estimates, at each value `t` of a grid, the sharp
 identified set for the distribution function \\F(t) = P(Y \le t)\\ of an
 outcome that may be missing not at random, under the assumption of
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md):
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md):
 the ratio of the response propensities of any two outcome values is at
 most \\e^\lambda\\. It adds a debiased estimate and a confidence set at
 each `t`. [`quantile()`](https://rdrr.io/r/stats/quantile.html) inverts
@@ -49,7 +49,7 @@ plot(
 
   An \\n \times T\\ matrix: column \\j\\ holds the cross-fitted
   \\\hat\eta\_{t_j}(x_i)\\ for every row, as from
-  [`crossfit_cdf()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_cdf.md).
+  [`crossfit_cdf()`](https://buecker.ms/nonignorable/reference/crossfit_cdf.md).
   Values are clipped into `[clip, 1 - clip]`.
 
 - r:
@@ -75,7 +75,7 @@ plot(
 - target, segment, weights, level, trim, se_type:
 
   As in
-  [`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md).
+  [`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md).
 
 - clip:
 
@@ -96,7 +96,7 @@ plot(
 - colors, text_col:
 
   Colours, as for
-  [`plot.sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/plot.sharp_scan.md).
+  [`plot.sharp_scan()`](https://buecker.ms/nonignorable/reference/plot.sharp_scan.md).
 
 - xlab, ylab, main:
 
@@ -126,7 +126,7 @@ binary scan for \\Z\\ (Bücker 2026, Corollary S2):
 \min\\\mathrm{expit}(\ell_t + \lambda),\\ r\eta_t + 1 - r\\\], \qquad
 \ell_t = \mathrm{logit}\\\eta_t,\$\$ and the set for \\F(t)\\ is its
 mean over rows. Each endpoint is estimated as in
-[`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md),
+[`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md),
 whose score for the binary outcome \\Z\\ it uses; `target`, `segment`,
 `weights`, `trim` and `se_type` have the same meaning, so
 `target = "unobserved"` gives the distribution function of the missing
@@ -155,7 +155,7 @@ faster than \\n^{-1/4}\\.
 
 Estimate \\\eta_t(x)\\ directly, as a classification of \\Z\\ on \\X\\
 among the observed rows, one fit per `t`;
-[`crossfit_cdf()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_cdf.md)
+[`crossfit_cdf()`](https://buecker.ms/nonignorable/reference/crossfit_cdf.md)
 does that for any learner. Reading \\\eta_t\\ off a grid of conditional
 quantiles is possible but adds the error of the grid.
 
@@ -187,9 +187,9 @@ point and interval estimators of monotone functions by rearrangement.
 
 ## See also
 
-[`crossfit_cdf()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_cdf.md),
-[`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md),
-[`sharp_scan_mean_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean_ci.md)
+[`crossfit_cdf()`](https://buecker.ms/nonignorable/reference/crossfit_cdf.md),
+[`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md),
+[`sharp_scan_mean_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean_ci.md)
 
 ## Examples
 

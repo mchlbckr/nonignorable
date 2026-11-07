@@ -15,13 +15,13 @@ The package asks two separate questions about such data.
 1.  **Is there a shadow variable?** A shadow variable predicts \\Y\\ but
     has no effect of its own on whether \\Y\\ is observed. With one, the
     missing-data mechanism can be identified.
-    [`shadow_screen()`](https://mchlbckr.github.io/nonignorable/reference/shadow_screen.md)
+    [`shadow_screen()`](https://buecker.ms/nonignorable/reference/shadow_screen.md)
     reports, for each candidate, how strongly it predicts the outcome
     and how strongly it violates that exclusion restriction, on a common
     scale.
 
 2.  **How far can the answer move?**
-    [`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md)
+    [`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)
     drops identification and asks how much the conclusion can change if
     selection on \\Y\\ has a given strength. That strength is a bound
     \\e^\lambda\\ on the ratio of the response propensities of two rows
@@ -41,7 +41,7 @@ screen does not make the scan unnecessary.
 
 ## Simulated data with a known truth
 
-[`simulate_shadow()`](https://mchlbckr.github.io/nonignorable/reference/simulate_shadow.md)
+[`simulate_shadow()`](https://buecker.ms/nonignorable/reference/simulate_shadow.md)
 draws data in which the bad outcome makes a row less likely to be
 observed. `tilt = -1` means the ratio of propensities is \\e^1\\ in
 every row. The data carry their own truth: `eta_obs` is \\P(Y = 1 \mid
@@ -184,12 +184,12 @@ c(lower = mean(b$lower), upper = mean(b$upper))
 
 ## Sampling error
 
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md)
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)
 treats its inputs as known. With estimated inputs, use
-[`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md).
+[`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md).
 It needs inputs for all rows, fitted out of fold, and the observed
 outcomes.
-[`crossfit_inputs()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_inputs.md)
+[`crossfit_inputs()`](https://buecker.ms/nonignorable/reference/crossfit_inputs.md)
 produces them for any learner passed as a function of a training frame
 and new rows.
 
@@ -239,7 +239,7 @@ Two lines of the output deserve attention.
 
 ## Comparing two portfolios
 
-[`sharp_scan_contrast()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_contrast.md)
+[`sharp_scan_contrast()`](https://buecker.ms/nonignorable/reference/sharp_scan_contrast.md)
 scans the difference of rates between two portfolios chosen by \\X\\,
 such as two treatment arms or two regions. Each portfolio is a whole
 segment of rows, observed and unobserved alike. Its threshold is 0, no
@@ -265,10 +265,10 @@ k
 ## A mean instead of a rate
 
 For an outcome that is not binary,
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md)
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md)
 takes, per row, a grid of conditional quantiles of \\Y\\ given \\R = 1\\
 and \\X\\.
-[`quantile_grid()`](https://mchlbckr.github.io/nonignorable/reference/quantile_grid.md)
+[`quantile_grid()`](https://buecker.ms/nonignorable/reference/quantile_grid.md)
 builds it from a
 [`quantreg::rq`](https://rdrr.io/pkg/quantreg/man/rq.html) fit, from any
 function of the levels, or from draws.
@@ -289,25 +289,25 @@ plot(sm)
 ![](nonignorable_files/figure-html/mean-1.png)
 
 Like
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md),
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md),
 this treats its inputs as known. For a debiased estimate with a
 confidence set, for the mean over all rows, a segment chosen by \\X\\,
 or the missing outcomes (`target = "unobserved"`), use
-[`sharp_scan_mean_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean_ci.md)
+[`sharp_scan_mean_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean_ci.md)
 with inputs from
-[`crossfit_quantiles()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_quantiles.md);
+[`crossfit_quantiles()`](https://buecker.ms/nonignorable/reference/crossfit_quantiles.md);
 the applications vignette shows it on the CD4 counts of a clinical
 trial.
 
 ## The distribution function and quantiles
 
 A mean can hide where the distribution moves.
-[`sharp_scan_cdf()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_cdf.md)
+[`sharp_scan_cdf()`](https://buecker.ms/nonignorable/reference/sharp_scan_cdf.md)
 scans \\P(Y \le t)\\ at each value of a grid, as the rate of the binary
 outcome \\1(Y \le t)\\, with the same assumption and the same debiased
 estimate as
-[`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md).
-[`crossfit_cdf()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_cdf.md)
+[`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md).
+[`crossfit_cdf()`](https://buecker.ms/nonignorable/reference/crossfit_cdf.md)
 fits \\P(Y \le t \mid R = 1, X)\\ as one classification per \\t\\, with
 the column `z` holding \\1(Y \le t)\\.
 
@@ -344,7 +344,7 @@ wider, never narrower.
 
 ## Further reading
 
-[`vignette("applications", package = "nonignorable")`](https://mchlbckr.github.io/nonignorable/articles/applications.md)
+[`vignette("applications", package = "nonignorable")`](https://buecker.ms/nonignorable/articles/applications.md)
 applies the tools to two real cases side by side. On Lending Club 2014
 the coding of the screen matters, and the main finding does not survive
 MAR once sampling error is counted. In the ACTG 175 trial a comparison

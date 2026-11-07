@@ -1,12 +1,12 @@
 # Debiased scan for the mean of a non-binary outcome, with a confidence set
 
 `sharp_scan_mean_ci()` estimates the sharp identified set of
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md)
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md)
 – the mean of an outcome that may be missing not at random, when the
 ratio of the response propensities of any two outcome values is at most
 \\e^\lambda\\ – with a debiased estimator and a confidence set. It is
 the counterpart of
-[`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md)
+[`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md)
 for an outcome that is not binary.
 
 ## Usage
@@ -86,7 +86,7 @@ sharp_scan_mean_ci(
 
   Optional logical vector chosen by \\X\\, one per row, that restricts a
   target of `"unobserved"` (or `"all"`) to one segment, as in
-  [`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md).
+  [`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md).
 
 ## Value
 
@@ -101,7 +101,7 @@ naive columns are the plug-in outer band), `point` (the estimate at
 set in which the cap \\\pi \le 1\\ binds at the largest \\\lambda\\, per
 bound), `tail`, `n` and `n_target`. Estimates and confidence set are
 kept monotone in \\\lambda\\, as in
-[`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md).
+[`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md).
 `as.data.frame(x, lambda = )` gives the plug-in bounds per row, with
 \\\hat r\\ clipped into `r_bounds`; they carry no correction and no
 confidence statement.
@@ -111,7 +111,7 @@ confidence statement.
 Each endpoint of the set is a mean over rows of \\\mu^\pm(x)\\, which
 depends on \\r(x)\\ and on the quantile function of \\Y\\ given \\R = 1,
 X = x\\. The plug-in,
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md),
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md),
 inherits the first-order error of both estimates; in simulations it was
 typically biased towards the inside of the set. The estimator here adds
 to each row a correction term that removes that first-order error: an
@@ -125,7 +125,7 @@ condition is needed. The confidence set is the Wald interval from the
 empirical standard deviation of the score.
 
 The quantiles enter as a grid of \\K\\ levels \\(k - 1/2)/K\\, as in
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md).
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md).
 An estimator that uses the full empirical distribution of residuals
 instead differs from this one by \\O(1/K)\\.
 
@@ -143,7 +143,7 @@ optimum, so that \\s^\*\\ lies strictly inside \\(0, 1)\\ (for a flat
 grid the code takes \\s^\* = 0\\); a bounded conditional second moment
 of \\Y\\; a non-degenerate score variance; and nuisance estimates whose
 errors vanish faster than \\n^{-1/4}\\, cross-fitted as by
-[`crossfit_quantiles()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_quantiles.md).
+[`crossfit_quantiles()`](https://buecker.ms/nonignorable/reference/crossfit_quantiles.md).
 
 In the package's own simulation
 (`simulate_shadow(outcome = "continuous", tilt = -1)`, learners as in
@@ -184,9 +184,9 @@ ratios when the response rate is known. Manuscript.
 
 ## See also
 
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md),
-[`crossfit_quantiles()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_quantiles.md),
-[`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md)
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md),
+[`crossfit_quantiles()`](https://buecker.ms/nonignorable/reference/crossfit_quantiles.md),
+[`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md)
 
 ## Examples
 

@@ -6,6 +6,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Shadow-Variable Screens and Sharp Sensitivity Scans for Nonignorable Missing Outcomes • nonignorable</title>
+<!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
+<link rel="icon" type="”image/svg+xml”" href="favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" sizes="any" href="favicon.ico">
+<link rel="manifest" href="site.webmanifest">
 <!-- mathjax math --><script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" integrity="sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI=" crossorigin="anonymous"></script><script>
   window.MathJax = {
     chtml: {
@@ -21,6 +26,7 @@
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Shadow-Variable Screens and Sharp Sensitivity Scans for Nonignorable Missing Outcomes">
 <meta name="description" content="Two tools for an outcome that is missing not at random. shadow_screen() asks whether a candidate variable can serve as a shadow variable, reporting its relevance for the outcome and its violation of the exclusion restriction on a common scale (incremental McFadden R-squared). sharp_scan() asks how far the answer can move: given the observed-data outcome probability and the conditional observation rate, it returns the sharp identified set under a bound on the ratio of response propensities between outcome values, in closed form for a binary outcome (sharp_scan()) and for the mean of any outcome with a finite mean (sharp_scan_mean()), pointwise and aggregated over a portfolio. The two tools answer different questions under different assumptions and are not two halves of one procedure. sharp_scan_ci() and sharp_scan_contrast() add debiased estimates and confidence sets for the binary scan, for one portfolio and for the difference between two; sharp_scan_mean_ci() does the same for the mean.">
 <meta property="og:description" content="Two tools for an outcome that is missing not at random. shadow_screen() asks whether a candidate variable can serve as a shadow variable, reporting its relevance for the outcome and its violation of the exclusion restriction on a common scale (incremental McFadden R-squared). sharp_scan() asks how far the answer can move: given the observed-data outcome probability and the conditional observation rate, it returns the sharp identified set under a bound on the ratio of response propensities between outcome values, in closed form for a binary outcome (sharp_scan()) and for the mean of any outcome with a finite mean (sharp_scan_mean()), pointwise and aggregated over a portfolio. The two tools answer different questions under different assumptions and are not two halves of one procedure. sharp_scan_ci() and sharp_scan_contrast() add debiased estimates and confidence sets for the binary scan, for one portfolio and for the difference between two; sharp_scan_mean_ci() does the same for the mean.">
+<meta property="og:image" content="https://buecker.ms/nonignorable/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -62,8 +68,10 @@
 </nav><div class="container template-home">
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
-<div class="page-header"><h1 id="nonignorable">nonignorable<a class="anchor" aria-label="anchor" href="#nonignorable"></a>
-</h1></div>
+<div class="page-header">
+<img src="logo.png" class="logo" alt=""><h1 id="nonignorable-">nonignorable <a class="anchor" aria-label="anchor" href="#nonignorable-"></a>
+</h1>
+</div>
 <p>If a binary outcome is missing not at random, as defaults are for rejected credit applications, every model fitted on the observed rows silently asserts <em>one</em> value for how observability depends on the outcome. Nothing in the data selects it. <code>nonignorable</code> provides two tools for two different questions:</p>
 <ul>
 <li>

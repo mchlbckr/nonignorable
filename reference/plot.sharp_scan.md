@@ -1,7 +1,7 @@
 # Sensitivity curve of a scan
 
 Plots the portfolio rate (or mean, for
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md))
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md))
 against selection strength: the sharp identified set as a filled band
 with solid edges, the outer band, the bounds without the cap \\\pi \le
 1\\ (for a rate \\\mathrm{expit}(\ell \pm \lambda)\\), dashed and
@@ -67,14 +67,14 @@ plot(
 
 Where \\\hat r\\ is small, as for rejected applications, the upper edge
 of the sharp set coincides with the outer one; see
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md).
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md).
 
 The legend goes into the first corner, from top left, that no curve,
 band or annotation touches; if none is free, the vertical axis is
 extended upwards to make room. Where the cap \\\pi \le 1\\ binds in
 every target row from some \\\lambda\\ on, that edge of the set stays
 flat from there, and the legend says from where (see `held` in
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md)).
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)).
 
 ## Examples
 

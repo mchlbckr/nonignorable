@@ -7,7 +7,7 @@ predicts the outcome better than it predicts selection. The line is not
 the border between usable and unusable: under strong selection on the
 outcome a validly excluded candidate shows exclusion signal through the
 outcome and sits close to it (see
-[`shadow_screen()`](https://mchlbckr.github.io/nonignorable/reference/shadow_screen.md)).
+[`shadow_screen()`](https://buecker.ms/nonignorable/reference/shadow_screen.md)).
 Points are labelled directly rather than through a legend; labels are
 placed so that they do not overlap each other or the points.
 

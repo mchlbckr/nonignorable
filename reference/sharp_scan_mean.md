@@ -1,12 +1,12 @@
 # Sharp identified set for a mean under a bounded ratio of response propensities
 
 `sharp_scan_mean()` is the scan of
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md)
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)
 for an outcome that is not binary: continuous, count or anything with a
 finite mean. It answers the same question – how far can the answer move
 if the outcome is missing not at random – under literally the same
 assumption, without restriction to two outcome values. Like
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md)
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)
 it needs no shadow variable.
 
 ## Usage
@@ -56,14 +56,14 @@ sharp_scan_mean(
   is for their own missing outcomes, row by row \\E(Y \mid R = 0, X = x)
   = \\E(Y \mid X = x) - r\\m(x)\\/(1 - r)\\ with \\m(x)\\ the observed
   mean, as for
-  [`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md).
+  [`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md).
   Every row needs \\r \< 1\\.
 
 ## Value
 
 An object of class `c("sharp_scan_mean", "sharp_scan")` with the same
 structure as
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md):
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md):
 `curve` (`lambda`, `lower`, `upper`, and `naive_lower`, `naive_upper`
 for the outer band without the cap), `point`, `threshold`, `flip`.
 `as.data.frame(x, lambda = )` returns the pointwise sets.
@@ -75,7 +75,7 @@ With \\\pi(y,x) = P(R=1 \mid Y=y, X=x)\\, assume pointwise in \\x\\
 \pi(y,x).\$\$ \\e^\lambda\\ bounds the ratio of response propensities
 between any two outcome values: a **risk ratio**, not an odds ratio. For
 binary \\Y\\ it is exactly the assumption \\\|b(x)\| \le \lambda\\ of
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md).
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md).
 It is a member of the class of assumptions of Manski (2016, Sect. 4.2),
 with the ratio taken between outcomes rather than relative to the
 response rate.
@@ -99,7 +99,7 @@ sense of Dorn and Guo (2023). The cap binds for \\r\\ near one or large
 \\\lambda\\; for small \\r\\ sharp set and outer band coincide.
 
 For binary \\Y\\ the formula reduces to the closed form of
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md),
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md),
 the outer band intersected with the bounds of Manski (1989). As
 \\\lambda \to \infty\\ the set grows to those bounds, \\\[rm + (1-r)\inf
 Y,\\ rm + (1-r)\sup Y\]\\, reaching them only in the limit for a
@@ -116,13 +116,13 @@ from – quantile regression, a distributional model, draws from a
 generative model – is the user's business, as
 \\\hat\eta\_{\mathrm{obs}}\\ is in the binary scan; the package never
 sees a learner.
-[`quantile_grid()`](https://mchlbckr.github.io/nonignorable/reference/quantile_grid.md)
+[`quantile_grid()`](https://buecker.ms/nonignorable/reference/quantile_grid.md)
 builds `q` from a quantile regression, any quantile function or draws.
 Rows are sorted internally, so crossing quantile curves do no harm. A
 quantile grid cuts off the tails: with heavy tails it underestimates
 \\U(s)\\ for small \\s\\, and therefore the width of the set. `r` is the
 *conditional* observation rate, as in
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md).
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md).
 
 ## Estimated inputs
 
@@ -134,9 +134,9 @@ statement about the population would be; in simulations the plug-in was
 typically biased towards the inside of the set. For a debiased estimate
 with a confidence set, for the mean over all rows or over a segment
 chosen by \\X\\, use
-[`sharp_scan_mean_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean_ci.md)
+[`sharp_scan_mean_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean_ci.md)
 with inputs from
-[`crossfit_quantiles()`](https://mchlbckr.github.io/nonignorable/reference/crossfit_quantiles.md).
+[`crossfit_quantiles()`](https://buecker.ms/nonignorable/reference/crossfit_quantiles.md).
 No resampling captures misspecification of the extrapolation to rows
 that are rarely observed.
 
@@ -157,7 +157,7 @@ are not covered.
 ## Aggregation
 
 Only the average of the pointwise endpoints (`"union"`, the default of
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md)).
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)).
 Because the assumption is pointwise and both the normalisation and the
 ratio bound separate across \\x\\, this is the sharp set for the
 portfolio mean. The `"common"` aggregation of the binary scan has no
@@ -183,9 +183,9 @@ statistics with survey nonresponse. *Journal of Econometrics*, 191(2),
 
 ## See also
 
-[`sharp_scan()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan.md)
+[`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)
 for a binary outcome, with the optional common-tilt aggregation;
-[`obs_quantiles()`](https://mchlbckr.github.io/nonignorable/reference/simulate_shadow.md)
+[`obs_quantiles()`](https://buecker.ms/nonignorable/reference/simulate_shadow.md)
 for simulated input.
 
 ## Examples

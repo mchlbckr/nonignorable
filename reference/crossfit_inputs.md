@@ -2,7 +2,7 @@
 
 Splits the rows into folds and predicts \\\hat\eta\_{\mathrm{obs}}\\ and
 \\\hat r\\ for each fold from models fitted on the other folds, as
-[`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md)
+[`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md)
 requires. The learner is yours: `fit_eta` and `fit_r` are functions that
 fit on a training frame and return probabilities for new rows. `fit_eta`
 receives only the observed rows of the training folds.
@@ -58,4 +58,4 @@ A list with `eta_obs`, `r` (one per row of `data`) and `fold`.
 
 ## See also
 
-[`sharp_scan_ci()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_ci.md)
+[`sharp_scan_ci()`](https://buecker.ms/nonignorable/reference/sharp_scan_ci.md)

@@ -63,7 +63,7 @@ quantiles of \\Y\\ given \\R = 1, X = x_i\\.
 ## Details
 
 The covariates play fixed roles, so that
-[`shadow_screen()`](https://mchlbckr.github.io/nonignorable/reference/shadow_screen.md)
+[`shadow_screen()`](https://buecker.ms/nonignorable/reference/shadow_screen.md)
 has something to find:
 
 - `x1`, `x2`: ordinary covariates entering both outcome and selection.
@@ -96,7 +96,7 @@ function of \\Y\\ given \\R = 1, X = x\\ is \\\mu(x) +
 \Phi^{-1}\[\log\\1 + p(e^{b} - 1)\\/b\]\\, all in closed form. Truth:
 `mu` \\= E(Y \mid x)\\, `mean_obs` \\= E(Y \mid R = 1, x)\\, `obs_rate`;
 `obs_quantiles()` returns the quantile grid that
-[`sharp_scan_mean()`](https://mchlbckr.github.io/nonignorable/reference/sharp_scan_mean.md)
+[`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md)
 takes.
 
 ## Examples
