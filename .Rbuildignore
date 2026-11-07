@@ -11,3 +11,8 @@
 ^MEAN-CI-DESIGN\.md$
 ^MEAN-CI-PLAN\.md$
 ^Rplots\.pdf$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$
+^\.claude$

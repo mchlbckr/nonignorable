@@ -1,0 +1,70 @@
+url: https://mchlbckr.github.io/nonignorable/
+
+template:
+  bootstrap: 5
+  math-rendering: mathjax
+  bslib:
+    primary: "#1f5fbf"
+    base_font: {google: "Source Sans 3"}
+    heading_font: {google: "Source Sans 3"}
+    code_font: {google: "Source Code Pro"}
+
+authors:
+  Michael Bücker:
+    href: https://github.com/mchlbckr
+
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+    right: [search, github]
+
+articles:
+- title: Articles
+  navbar: ~
+  contents:
+  - nonignorable
+  - applications
+
+reference:
+- title: Screen
+  desc: Is a candidate fit to serve as a shadow variable?
+  contents:
+  - shadow_screen
+  - plot.shadow_screen
+  - screen_classes
+- title: Scan of a rate
+  desc: >
+    Sharp identified set for the rate of a binary outcome under a bound on
+    the ratio of response propensities, with known inputs.
+  contents:
+  - sharp_scan
+  - plot.sharp_scan
+- title: Scan of a mean
+  desc: The same for the mean of any outcome, from a grid of conditional quantiles.
+  contents:
+  - sharp_scan_mean
+  - quantile_grid
+- title: Distribution function and quantiles
+  desc: The scan at each value of a grid, pointwise in t, and bounds for quantiles.
+  contents:
+  - sharp_scan_cdf
+  - crossfit_cdf
+- title: Sampling error
+  desc: Debiased estimates and confidence sets from cross-fitted inputs.
+  contents:
+  - sharp_scan_ci
+  - sharp_scan_mean_ci
+  - crossfit_inputs
+  - crossfit_quantiles
+- title: Comparing two groups
+  contents:
+  - sharp_scan_contrast
+  - sharp_scan_mean_contrast
+- title: Simulated data
+  contents:
+  - simulate_shadow
+  - scan_inputs
+  - obs_quantiles
+- title: Package
+  contents:
+  - nonignorable-package
