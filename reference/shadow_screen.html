@@ -164,7 +164,21 @@ number <code>requested</code> and the number of <code>distinct</code> observed v
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>For each candidate four nested <code>glm</code>s are fitted: \(Y\) on \(X\) and on
+    <p><strong>Why a shadow variable.</strong> The observed rows alone cannot tell missing at
+random from selection on \(Y\): every model fitted to them fits equally
+well whatever the missing outcomes are. A shadow variable is an assumption
+that fills this gap. With one, how selection depends on \(Y\) can be
+estimated instead of assumed. In lending, a candidate is a characteristic
+that the lender recorded but did not use in the decision; in a trial, an
+earlier measurement of the outcome.</p>
+<p><strong>What the screen does.</strong> Exclusion cannot be checked directly: it
+conditions on \(Y\), which is missing in exactly the rows that matter.
+The screen measures what the data can show, whether a candidate is
+relevant at all and whether it predicts selection more strongly than it
+predicts the outcome. The second is the mark of a variable that the
+selection uses directly, such as a score the lender decides on. Unfit
+candidates can so be discarded before a model is built on one.</p>
+<p>For each candidate four nested <code>glm</code>s are fitted: \(Y\) on \(X\) and on
 \(X + Z\) <strong>among the observed rows</strong>, and \(R\) on \(X\) and on
 \(X + Z\) on the <strong>pooled</strong> sample. Two axes are reported, both as
 incremental McFadden \(R^2\), so that they share one scale:

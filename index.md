@@ -187,6 +187,18 @@ quantile(kc, c(0.25, 0.5, 0.75))
 
 ## The screen
 
+The scan needs no shadow variable; with one, the selection on the
+outcome can be estimated instead of bounded. A shadow variable predicts
+the outcome (relevance) but has no effect of its own on whether the
+outcome is observed (exclusion). Exclusion cannot be checked directly,
+because it conditions on the missing outcome. The screen measures what
+the data can show: whether a candidate is relevant, and whether it
+predicts selection more strongly than the outcome, the mark of a
+variable the selection uses directly. For each candidate it compares the
+gain in McFadden R² from adding it to the outcome model (observed rows)
+and to the response model (all rows), and passes candidates with clear
+relevance and more relevance than violation.
+
 ``` r
 
 sc <- shadow_screen(d, outcome = "y", response = "observed",

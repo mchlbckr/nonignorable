@@ -113,6 +113,22 @@ Attribute `"outcome_coding"`: `model` (`"glm"`, `"ordinal"` or
 
 ## Details
 
+**Why a shadow variable.** The observed rows alone cannot tell missing
+at random from selection on \\Y\\: every model fitted to them fits
+equally well whatever the missing outcomes are. A shadow variable is an
+assumption that fills this gap. With one, how selection depends on \\Y\\
+can be estimated instead of assumed. In lending, a candidate is a
+characteristic that the lender recorded but did not use in the decision;
+in a trial, an earlier measurement of the outcome.
+
+**What the screen does.** Exclusion cannot be checked directly: it
+conditions on \\Y\\, which is missing in exactly the rows that matter.
+The screen measures what the data can show, whether a candidate is
+relevant at all and whether it predicts selection more strongly than it
+predicts the outcome. The second is the mark of a variable that the
+selection uses directly, such as a score the lender decides on. Unfit
+candidates can so be discarded before a model is built on one.
+
 For each candidate four nested `glm`s are fitted: \\Y\\ on \\X\\ and on
 \\X + Z\\ **among the observed rows**, and \\R\\ on \\X\\ and on \\X +
 Z\\ on the **pooled** sample. Two axes are reported, both as incremental

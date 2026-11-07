@@ -32,6 +32,8 @@ Useful links:
 
 - <https://github.com/mchlbckr/nonignorable>
 
+- <https://buecker.ms/nonignorable/>
+
 - Report bugs at <https://github.com/mchlbckr/nonignorable/issues>
 
 ## Author

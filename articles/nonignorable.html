@@ -137,6 +137,44 @@ predicts default and that the lender also uses to decide.</p>
 <div class="section level2">
 <h2 id="question-1-the-screen">Question 1: the screen<a class="anchor" aria-label="anchor" href="#question-1-the-screen"></a>
 </h2>
+<div class="section level3">
+<h3 id="why-a-shadow-variable">Why a shadow variable<a class="anchor" aria-label="anchor" href="#why-a-shadow-variable"></a>
+</h3>
+<p>The observed rows alone cannot tell MAR from selection on <span class="math inline">\(Y\)</span>: every model fitted to them fits
+equally well whatever the missing outcomes are. Some assumption has to
+fill the gap. A shadow variable <span class="math inline">\(Z\)</span>
+is one such assumption. It must do two things:</p>
+<ul>
+<li>
+<strong>relevance</strong>: <span class="math inline">\(Z\)</span>
+predicts <span class="math inline">\(Y\)</span> given <span class="math inline">\(X\)</span>;</li>
+<li>
+<strong>exclusion</strong>: <span class="math inline">\(Z\)</span>
+has no effect of its own on whether <span class="math inline">\(Y\)</span> is observed, once <span class="math inline">\(X\)</span> and <span class="math inline">\(Y\)</span> are known.</li>
+</ul>
+<p>With such a <span class="math inline">\(Z\)</span>, how selection
+depends on <span class="math inline">\(Y\)</span> can be estimated
+instead of assumed. In lending, a candidate is a characteristic that the
+lender recorded but did not use in the decision; in a trial, an earlier
+measurement of the outcome.</p>
+</div>
+<div class="section level3">
+<h3 id="what-the-screen-does">What the screen does<a class="anchor" aria-label="anchor" href="#what-the-screen-does"></a>
+</h3>
+<p>Exclusion cannot be checked directly. It conditions on <span class="math inline">\(Y\)</span>, and <span class="math inline">\(Y\)</span> is missing in exactly the rows that
+matter. What the data can show is whether a candidate is relevant at
+all, and whether it predicts selection more strongly than it predicts
+the outcome. The second is the mark of a variable that the selection
+uses directly, such as a score the lender decides on. The screen
+measures both for every candidate, so that unfit candidates are
+discarded before a model is built on one.</p>
+<p>For each candidate it fits four logistic models: the outcome on <span class="math inline">\(X\)</span> and on <span class="math inline">\(X +
+Z\)</span> among the observed rows, and the response indicator on <span class="math inline">\(X\)</span> and on <span class="math inline">\(X +
+Z\)</span> over all rows. <strong>Relevance</strong> is the gain in
+McFadden <span class="math inline">\(R^2\)</span> from adding <span class="math inline">\(Z\)</span> to the outcome model. <strong>Exclusion
+violation</strong> is the same gain in the response model. Both are on
+one scale, so their <strong>ratio</strong> says how much better <span class="math inline">\(Z\)</span> predicts the outcome than it predicts
+selection.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/shadow_screen.html">shadow_screen</a></span><span class="op">(</span><span class="va">d</span>, outcome <span class="op">=</span> <span class="st">"y"</span>, response <span class="op">=</span> <span class="st">"observed"</span>,</span>
 <span>                    covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"x1"</span>, <span class="st">"x2"</span><span class="op">)</span>,</span>
@@ -149,14 +187,19 @@ predicts default and that the lender also uses to decide.</p>
 <span><span class="co">#&gt;  z_shadow     0.0383   0.00204   18.8      55 pass                   </span></span>
 <span><span class="co">#&gt;  z_policy      0.002     0.057 0.0351    2.87 reject: weak, exclusion</span></span>
 <span><span class="co">#&gt;  z_score      0.0879     0.114  0.774     126 reject: exclusion</span></span></code></pre></div>
-<p>Relevance is the gain in McFadden <span class="math inline">\(R^2\)</span> from adding the candidate to the
-outcome model among observed rows. Exclusion violation is the same gain
-in the selection model. A shadow variable needs clear relevance first;
-then it should sit above the equality line in the plot, with more
-relevance than violation. How far above is no test: the stronger the
-selection on the outcome, the more a valid shadow variable predicts
-selection too, through the outcome, and the closer it moves to the line.
-A candidate well below the line is the warning sign.</p>
+</div>
+<div class="section level3">
+<h3 id="reading-the-result">Reading the result<a class="anchor" aria-label="anchor" href="#reading-the-result"></a>
+</h3>
+<p>A candidate passes when its relevance is clear, a likelihood-ratio
+<span class="math inline">\(\chi^2\)</span> per degree of freedom of at
+least 10, and its ratio is above 1. The plot shows each candidate with
+violation across and relevance up. A shadow variable sits above the
+equality line, with more relevance than violation. How far above is no
+test: the stronger the selection on the outcome, the more a valid shadow
+variable predicts selection too, through the outcome, and the closer it
+moves to the line. A candidate well below the line is the warning
+sign.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">sc</span><span class="op">)</span></span></code></pre></div>
 <p><img src="nonignorable_files/figure-html/screen-plot-1.png" class="r-plt" alt="" width="70%"></p>
@@ -169,6 +212,7 @@ inference.</p>
 cuts hard at a threshold, as a lender declining every score below a
 cut-off, use <code>numeric = "classes"</code>. The applications vignette
 shows why this matters.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="question-2-the-scan">Question 2: the scan<a class="anchor" aria-label="anchor" href="#question-2-the-scan"></a>
