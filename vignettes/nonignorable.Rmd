@@ -66,6 +66,39 @@ bureau score that predicts default and that the lender also uses to decide.
 
 ## Question 1: the screen
 
+### Why a shadow variable
+
+The observed rows alone cannot tell MAR from selection on $Y$: every model
+fitted to them fits equally well whatever the missing outcomes are. Some
+assumption has to fill the gap. A shadow variable $Z$ is one such assumption.
+It must do two things:
+
+- **relevance**: $Z$ predicts $Y$ given $X$;
+- **exclusion**: $Z$ has no effect of its own on whether $Y$ is observed,
+  once $X$ and $Y$ are known.
+
+With such a $Z$, how selection depends on $Y$ can be estimated instead of
+assumed. In lending, a candidate is a characteristic that the lender
+recorded but did not use in the decision; in a trial, an earlier measurement
+of the outcome.
+
+### What the screen does
+
+Exclusion cannot be checked directly. It conditions on $Y$, and $Y$ is
+missing in exactly the rows that matter. What the data can show is whether
+a candidate is relevant at all, and whether it predicts selection more
+strongly than it predicts the outcome. The second is the mark of a variable
+that the selection uses directly, such as a score the lender decides on.
+The screen measures both for every candidate, so that unfit candidates are
+discarded before a model is built on one.
+
+For each candidate it fits four logistic models: the outcome on $X$ and on
+$X + Z$ among the observed rows, and the response indicator on $X$ and on
+$X + Z$ over all rows. **Relevance** is the gain in McFadden $R^2$ from
+adding $Z$ to the outcome model. **Exclusion violation** is the same gain in
+the response model. Both are on one scale, so their **ratio** says how much
+better $Z$ predicts the outcome than it predicts selection.
+
 ```{r screen}
 sc <- shadow_screen(d, outcome = "y", response = "observed",
                     covariates = c("x1", "x2"),
@@ -73,10 +106,12 @@ sc <- shadow_screen(d, outcome = "y", response = "observed",
 sc
 ```
 
-Relevance is the gain in McFadden $R^2$ from adding the candidate to the
-outcome model among observed rows. Exclusion violation is the same gain in
-the selection model. A shadow variable needs clear relevance first; then it
-should sit above the equality line in the plot, with more relevance than
+### Reading the result
+
+A candidate passes when its relevance is clear, a likelihood-ratio
+$\chi^2$ per degree of freedom of at least 10, and its ratio is above 1.
+The plot shows each candidate with violation across and relevance up. A
+shadow variable sits above the equality line, with more relevance than
 violation. How far above is no test: the stronger the selection on the
 outcome, the more a valid shadow variable predicts selection too, through the
 outcome, and the closer it moves to the line. A candidate well below the line

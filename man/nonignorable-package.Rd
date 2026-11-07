@@ -30,6 +30,7 @@ checked by hand. \code{\link[=simulate_shadow]{simulate_shadow()}} provides data
 Useful links:
 \itemize{
   \item \url{https://github.com/mchlbckr/nonignorable}
+  \item \url{https://buecker.ms/nonignorable/}
   \item Report bugs at \url{https://github.com/mchlbckr/nonignorable/issues}
 }
 

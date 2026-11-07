@@ -82,6 +82,22 @@ point-identifies the selection parameter; the scan needs no shadow variable
 and returns an identified set. Do not read the two as one procedure.
 }
 \details{
+\strong{Why a shadow variable.} The observed rows alone cannot tell missing at
+random from selection on \eqn{Y}: every model fitted to them fits equally
+well whatever the missing outcomes are. A shadow variable is an assumption
+that fills this gap. With one, how selection depends on \eqn{Y} can be
+estimated instead of assumed. In lending, a candidate is a characteristic
+that the lender recorded but did not use in the decision; in a trial, an
+earlier measurement of the outcome.
+
+\strong{What the screen does.} Exclusion cannot be checked directly: it
+conditions on \eqn{Y}, which is missing in exactly the rows that matter.
+The screen measures what the data can show, whether a candidate is
+relevant at all and whether it predicts selection more strongly than it
+predicts the outcome. The second is the mark of a variable that the
+selection uses directly, such as a score the lender decides on. Unfit
+candidates can so be discarded before a model is built on one.
+
 For each candidate four nested \code{glm}s are fitted: \eqn{Y} on \eqn{X} and on
 \eqn{X + Z} \strong{among the observed rows}, and \eqn{R} on \eqn{X} and on
 \eqn{X + Z} on the \strong{pooled} sample. Two axes are reported, both as
