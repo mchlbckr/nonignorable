@@ -92,8 +92,8 @@
 <div class="section level2">
 <h2 id="the-scan">The scan<a class="anchor" aria-label="anchor" href="#the-scan"></a>
 </h2>
-<p>The scan takes two numeric vectors evaluated at the rows of interest: η̂_obs(x) = P(Y = 1 | X = x, R = 1) and the <em>conditional</em> observation rate r̂(x) = P(R = 1 | X = x). Any learner can produce them. The set is</p>
-<p><span class="math display">\[\mathcal H_\lambda(x) = \big[\max\{\mathrm{expit}(\ell-\lambda),\, r\eta_{\mathrm{obs}}\},\; \min\{\mathrm{expit}(\ell+\lambda),\, r\eta_{\mathrm{obs}} + 1 - r\}\big],\quad \ell = \mathrm{logit}\,\eta_{\mathrm{obs}},\]</span></p>
+<p>The scan takes two numeric vectors evaluated at the rows of interest: <span class="math inline">\(\hat\eta_{\mathrm{obs}}(x) = P(Y = 1 \mid X = x, R = 1)\)</span> and the <em>conditional</em> observation rate <span class="math inline">\(\hat r(x) = P(R = 1 \mid X = x)\)</span>. Any learner can produce them. The set is</p>
+<p><span class="math display">\[\mathcal H_\lambda(x) = \Big[\max\lbrace \mathrm{expit}(\ell-\lambda), \ r\eta_{\mathrm{obs}} \rbrace, \quad \min\lbrace \mathrm{expit}(\ell+\lambda), \ r\eta_{\mathrm{obs}} + 1 - r \rbrace\Big], \qquad \ell = \mathrm{logit} \ \eta_{\mathrm{obs}},\]</span></p>
 <p>the outer band intersected with the worst-case bounds.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/mchlbckr/nonignorable" class="external-link">nonignorable</a></span><span class="op">)</span></span>
@@ -205,7 +205,7 @@
 <div class="section level2">
 <h2 id="scope">Scope<a class="anchor" aria-label="anchor" href="#scope"></a>
 </h2>
-<p>The scan covers a binary outcome in closed form, the <strong>mean</strong> of any outcome with a finite mean, and the distribution function and quantiles, pointwise in t. It offers no bands uniform in t. The screen takes a binary outcome directly, a numeric one through an ordinal model on classes and a categorical one through an ordinal or multinomial model; it measures relevance and does not certify identification. Covariates, learners and sample size are unrestricted. The package fits neither η_obs nor r: <code><a href="reference/sharp_scan.html">sharp_scan()</a></code> and <code><a href="reference/sharp_scan_mean.html">sharp_scan_mean()</a></code> treat them as known, and the <code>_ci</code> functions take cross-fitted predictions from your own learner. It ships no outside data: examples and tests run on <code><a href="reference/simulate_shadow.html">simulate_shadow()</a></code>.</p>
+<p>The scan covers a binary outcome in closed form, the <strong>mean</strong> of any outcome with a finite mean, and the distribution function and quantiles, pointwise in t. It offers no bands uniform in t. The screen takes a binary outcome directly, a numeric one through an ordinal model on classes and a categorical one through an ordinal or multinomial model; it measures relevance and does not certify identification. Covariates, learners and sample size are unrestricted. The package fits neither <span class="math inline">\(\eta_{\mathrm{obs}}\)</span> nor <span class="math inline">\(r\)</span>: <code><a href="reference/sharp_scan.html">sharp_scan()</a></code> and <code><a href="reference/sharp_scan_mean.html">sharp_scan_mean()</a></code> treat them as known, and the <code>_ci</code> functions take cross-fitted predictions from your own learner. It ships no outside data: examples and tests run on <code><a href="reference/simulate_shadow.html">simulate_shadow()</a></code>.</p>
 </div>
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>

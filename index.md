@@ -34,13 +34,14 @@ remotes::install_github("mchlbckr/nonignorable")
 ## The scan
 
 The scan takes two numeric vectors evaluated at the rows of interest:
-η̂\_obs(x) = P(Y = 1 \| X = x, R = 1) and the *conditional* observation
-rate r̂(x) = P(R = 1 \| X = x). Any learner can produce them. The set is
+\\\hat\eta\_{\mathrm{obs}}(x) = P(Y = 1 \mid X = x, R = 1)\\ and the
+*conditional* observation rate \\\hat r(x) = P(R = 1 \mid X = x)\\. Any
+learner can produce them. The set is
 
-\\\mathcal H\_\lambda(x) = \big\[\max\\\mathrm{expit}(\ell-\lambda),\\
-r\eta\_{\mathrm{obs}}\\,\\ \min\\\mathrm{expit}(\ell+\lambda),\\
-r\eta\_{\mathrm{obs}} + 1 - r\\\big\],\quad \ell =
-\mathrm{logit}\\\eta\_{\mathrm{obs}},\\
+\\\mathcal H\_\lambda(x) = \Big\[\max\lbrace
+\mathrm{expit}(\ell-\lambda), \\ r\eta\_{\mathrm{obs}} \rbrace, \quad
+\min\lbrace \mathrm{expit}(\ell+\lambda), \\ r\eta\_{\mathrm{obs}} + 1 -
+r \rbrace\Big\], \qquad \ell = \mathrm{logit} \\ \eta\_{\mathrm{obs}},\\
 
 the outer band intersected with the worst-case bounds.
 
@@ -269,7 +270,7 @@ binary outcome directly, a numeric one through an ordinal model on
 classes and a categorical one through an ordinal or multinomial model;
 it measures relevance and does not certify identification. Covariates,
 learners and sample size are unrestricted. The package fits neither
-η_obs nor r:
+\\\eta\_{\mathrm{obs}}\\ nor \\r\\:
 [`sharp_scan()`](https://buecker.ms/nonignorable/reference/sharp_scan.md)
 and
 [`sharp_scan_mean()`](https://buecker.ms/nonignorable/reference/sharp_scan_mean.md)
