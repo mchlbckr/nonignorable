@@ -5,25 +5,26 @@ Authors@R:
     person("Michael", "Bücker", email = "michael.buecker@fh-muenster.de",
            role = c("aut", "cre", "cph"))
 Description: Two tools for an outcome that is missing not at random.
-    'shadow_screen()' asks whether a candidate variable can serve as a shadow
-    variable, reporting its relevance for the outcome and its violation of the
-    exclusion restriction on a common scale (incremental McFadden R-squared).
-    'sharp_scan()' asks how far the answer can move: given the observed-data
-    outcome probability and the conditional observation rate, it returns the
-    sharp identified set under a bound on the ratio of response propensities
-    between outcome values, in closed form for a binary outcome
-    ('sharp_scan()') and for the mean of any outcome with a finite mean
-    ('sharp_scan_mean()'), pointwise and aggregated over a portfolio. The two tools
-    answer different questions under different assumptions and are not two
-    halves of one procedure. 'sharp_scan_ci()' and 'sharp_scan_contrast()'
-    add debiased estimates and confidence sets for the binary scan, for one
-    portfolio and for the difference between two; 'sharp_scan_mean_ci()'
-    does the same for the mean.
+    shadow_screen() asks whether a candidate variable can serve as a shadow
+    variable, reporting its relevance for the outcome and its violation of
+    the exclusion restriction on a common scale, the incremental McFadden
+    R-squared (Bücker, 2026, <doi:10.48550/arXiv.2610.14695>). sharp_scan()
+    asks how far the answer can move without a shadow variable: it returns
+    the sharp identified set under a bound on the ratio of response
+    propensities between outcome values, for the rate of a binary outcome,
+    for the mean of any outcome (sharp_scan_mean()) and for its distribution
+    function and quantiles (sharp_scan_cdf()). Debiased estimates and
+    confidence sets with cross-fitted inputs are provided for each
+    (sharp_scan_ci(), sharp_scan_mean_ci()) and for the difference between
+    two groups (sharp_scan_contrast(), sharp_scan_mean_contrast()). The two
+    tools answer different questions under different assumptions and are not
+    two halves of one procedure.
 URL: https://github.com/mchlbckr/nonignorable,
     https://buecker.ms/nonignorable/
 BugReports: https://github.com/mchlbckr/nonignorable/issues
 License: MIT + file LICENSE
 Encoding: UTF-8
+Language: en-GB
 Depends: R (>= 4.1.0)
 Imports: graphics, grDevices, MASS, nnet, stats
 Suggests: knitr, mgcv, quantreg, rmarkdown, speff2trial, testthat (>= 3.0.0)
