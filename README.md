@@ -34,10 +34,11 @@ remotes::install_github("mchlbckr/nonignorable")
 ## The scan
 
 The scan takes two numeric vectors evaluated at the rows of interest:
-η̂_obs(x) = P(Y = 1 | X = x, R = 1) and the *conditional* observation rate
-r̂(x) = P(R = 1 | X = x). Any learner can produce them. The set is
+$\hat\eta_{\mathrm{obs}}(x) = P(Y = 1 \mid X = x, R = 1)$ and the *conditional*
+observation rate $\hat r(x) = P(R = 1 \mid X = x)$. Any learner can produce
+them. The set is
 
-$$\mathcal H_\lambda(x) = \big[\max\{\mathrm{expit}(\ell-\lambda),\, r\eta_{\mathrm{obs}}\},\; \min\{\mathrm{expit}(\ell+\lambda),\, r\eta_{\mathrm{obs}} + 1 - r\}\big],\quad \ell = \mathrm{logit}\,\eta_{\mathrm{obs}},$$
+$$\mathcal H_\lambda(x) = \Big[\max\lbrace \mathrm{expit}(\ell-\lambda), \ r\eta_{\mathrm{obs}} \rbrace, \quad \min\lbrace \mathrm{expit}(\ell+\lambda), \ r\eta_{\mathrm{obs}} + 1 - r \rbrace\Big], \qquad \ell = \mathrm{logit} \ \eta_{\mathrm{obs}},$$
 
 the outer band intersected with the worst-case bounds.
 
@@ -222,7 +223,7 @@ pointwise in t. It offers no bands uniform in t. The screen takes a binary outco
 through an ordinal model on classes and a categorical one through an ordinal
 or multinomial model; it measures relevance and does not
 certify identification. Covariates, learners and sample size are
-unrestricted. The package fits neither η_obs nor r: `sharp_scan()` and
+unrestricted. The package fits neither $\eta_{\mathrm{obs}}$ nor $r$: `sharp_scan()` and
 `sharp_scan_mean()` treat them as known, and the `_ci` functions take
 cross-fitted predictions from your own learner. It ships no outside data:
 examples and tests run on `simulate_shadow()`.
