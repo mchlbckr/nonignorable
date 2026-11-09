@@ -1,0 +1,33 @@
+{
+  "title": "nonignorable: Shadow-Variable Screens and Sharp Sensitivity Scans for Nonignorable Missing Outcomes",
+  "upload_type": "software",
+  "description": "R package with two tools for an outcome that is missing not at random. shadow_screen() asks whether a candidate variable can serve as a shadow variable, reporting its relevance for the outcome and its violation of the exclusion restriction on a common scale. sharp_scan() and its relatives return the sharp identified set under a bound on the ratio of response propensities between outcome values, for a rate, a mean, a distribution function and the difference between two groups, with debiased estimates and confidence sets. Documentation: https://buecker.ms/nonignorable/",
+  "creators": [
+    {
+      "name": "Bücker, Michael",
+      "affiliation": "FH Münster University of Applied Sciences"
+    }
+  ],
+  "license": "MIT",
+  "keywords": [
+    "missing not at random",
+    "nonignorable missingness",
+    "shadow variable",
+    "sensitivity analysis",
+    "partial identification",
+    "reject inference",
+    "R"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "arXiv:2610.14695",
+      "relation": "isSupplementTo",
+      "scheme": "arxiv"
+    },
+    {
+      "identifier": "https://buecker.ms/nonignorable/",
+      "relation": "isDocumentedBy",
+      "scheme": "url"
+    }
+  ]
+}
