@@ -1,5 +1,7 @@
 # nonignorable
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24079954.svg)](https://doi.org/10.5281/zenodo.24079954)
+
 If a binary outcome is missing not at random, as defaults are for
 rejected credit applications, every model fitted on the observed rows
 silently asserts *one* value for how observability depends on the
