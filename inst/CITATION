@@ -4,10 +4,12 @@ bibentry(
   author = person("Michael", "Bücker"),
   year = "2026",
   note = paste("R package version", meta$Version),
+  doi = "10.5281/zenodo.24079954",
   url = "https://github.com/mchlbckr/nonignorable",
   textVersion = paste0("Bücker, M. (2026). nonignorable: Shadow-Variable Screens ",
                        "and Sharp Sensitivity Scans for Nonignorable Missing Outcomes. ",
-                       "R package version ", meta$Version, ".")
+                       "R package version ", meta$Version, ". ",
+                       "doi:10.5281/zenodo.24079954.")
 )
 
 bibentry(
