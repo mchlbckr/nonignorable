@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`inst/CITATION`](https://github.com/mchlbckr/nonignorable/blob/v0.2.0/inst/CITATION)
+[`inst/CITATION`](https://github.com/mchlbckr/nonignorable/blob/main/inst/CITATION)
 
 Bücker, M. (2026). nonignorable: Shadow-Variable Screens and Sharp
 Sensitivity Scans for Nonignorable Missing Outcomes. R package version
