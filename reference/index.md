@@ -8,6 +8,8 @@ Is a candidate fit to serve as a shadow variable?
   : Screen candidate shadow variables
 - [`plot(`*`<shadow_screen>`*`)`](https://buecker.ms/nonignorable/reference/plot.shadow_screen.md)
   : Relevance against exclusion violation
+- [`autoplot(`*`<shadow_screen>`*`)`](https://buecker.ms/nonignorable/reference/autoplot.shadow_screen.md)
+  : Relevance against exclusion violation, with ggplot2
 - [`screen_classes()`](https://buecker.ms/nonignorable/reference/screen_classes.md)
   : Classes for a numeric characteristic, cut only between distinct
   values
@@ -23,6 +25,8 @@ the ratio of response propensities, with known inputs.
   response propensities
 - [`plot(`*`<sharp_scan>`*`)`](https://buecker.ms/nonignorable/reference/plot.sharp_scan.md)
   : Sensitivity curve of a scan
+- [`autoplot(`*`<sharp_scan>`*`)`](https://buecker.ms/nonignorable/reference/autoplot.sharp_scan.md)
+  : Sensitivity curve of a scan, with ggplot2
 
 ## Scan of a mean
 
@@ -44,6 +48,8 @@ quantiles.
   [`quantile(`*`<sharp_scan_cdf>`*`)`](https://buecker.ms/nonignorable/reference/sharp_scan_cdf.md)
   [`plot(`*`<sharp_scan_cdf>`*`)`](https://buecker.ms/nonignorable/reference/sharp_scan_cdf.md)
   : Debiased scan for the distribution function and its quantiles
+- [`autoplot(`*`<sharp_scan_cdf>`*`)`](https://buecker.ms/nonignorable/reference/autoplot.sharp_scan_cdf.md)
+  : Distribution-function scan, with ggplot2
 - [`crossfit_cdf()`](https://buecker.ms/nonignorable/reference/crossfit_cdf.md)
   : Cross-fitted inputs for the distribution-function scan
 

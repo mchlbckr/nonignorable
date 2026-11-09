@@ -12,13 +12,13 @@ Source:
 
 Bücker, M. (2026). nonignorable: Shadow-Variable Screens and Sharp
 Sensitivity Scans for Nonignorable Missing Outcomes. R package version
-0.1.0. doi:10.5281/zenodo.24079954.
+0.2.0. doi:10.5281/zenodo.24079954.
 
     @Manual{,
       title = {nonignorable: Shadow-Variable Screens and Sharp Sensitivity Scans for Nonignorable Missing Outcomes},
       author = {Michael Bücker},
       year = {2026},
-      note = {R package version 0.1.0},
+      note = {R package version 0.2.0},
       doi = {10.5281/zenodo.24079954},
       url = {https://github.com/mchlbckr/nonignorable},
     }

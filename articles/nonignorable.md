@@ -378,6 +378,33 @@ are not a band. The quantile bounds come from inverting the two curves;
 on the grid they are widened outwards, so a coarse grid makes them
 wider, never narrower.
 
+## Plots with ggplot2
+
+Every [`plot()`](https://rdrr.io/r/graphics/plot.default.html) above is
+base graphics, so the package needs nothing beyond R itself to draw. If
+ggplot2 is installed,
+[`autoplot()`](https://ggplot2.tidyverse.org/reference/autoplot.html)
+draws the same plots as ggplot objects: the sets, the outer band, the
+confidence set, the point under MAR, the threshold with its flip, and,
+for the screen, the equality line, hollow points where the violation is
+at noise level and grey points for rejected candidates. The legend sits
+below the panel. Add to the result as to any ggplot.
+
+``` r
+
+library(ggplot2)
+autoplot(ci) + labs(title = "Rejected applications")
+```
+
+![](nonignorable_files/figure-html/autoplot-1.png)
+
+``` r
+
+autoplot(sc) + theme_bw()
+```
+
+![](nonignorable_files/figure-html/autoplot-screen-1.png)
+
 ## Further reading
 
 [`vignette("applications", package = "nonignorable")`](https://buecker.ms/nonignorable/articles/applications.md)
