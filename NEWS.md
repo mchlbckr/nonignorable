@@ -1,4 +1,6 @@
-# nonignorable (development version)
+# nonignorable 0.2.0
+
+First release on CRAN.
 
 * `autoplot()` methods for ggplot2 draw the screen, the scans (with their
   confidence sets and contrasts) and the distribution-function scan as ggplot
@@ -8,7 +10,7 @@
 
 # nonignorable 0.1.0
 
-First release.
+First release, on GitHub and Zenodo.
 
 ## Screen
 

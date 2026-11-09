@@ -1,6 +1,6 @@
 Package: nonignorable
 Title: Shadow-Variable Screens and Sharp Sensitivity Scans for Nonignorable Missing Outcomes
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
     person("Michael", "Bücker", email = "michael.buecker@fh-muenster.de",
            role = c("aut", "cre", "cph"))
@@ -27,7 +27,7 @@ Encoding: UTF-8
 Language: en-GB
 Depends: R (>= 4.1.0)
 Imports: graphics, grDevices, MASS, nnet, stats
-Suggests: ggplot2, knitr, mgcv, quantreg, rmarkdown, speff2trial, testthat (>= 3.0.0)
+Suggests: ggplot2 (>= 3.4.0), knitr, mgcv, quantreg, rmarkdown, speff2trial, testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
