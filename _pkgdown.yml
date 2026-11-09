@@ -31,6 +31,7 @@ reference:
   contents:
   - shadow_screen
   - plot.shadow_screen
+  - autoplot.shadow_screen
   - screen_classes
 - title: Scan of a rate
   desc: >
@@ -39,6 +40,7 @@ reference:
   contents:
   - sharp_scan
   - plot.sharp_scan
+  - autoplot.sharp_scan
 - title: Scan of a mean
   desc: The same for the mean of any outcome, from a grid of conditional quantiles.
   contents:
@@ -48,6 +50,7 @@ reference:
   desc: The scan at each value of a grid, pointwise in t, and bounds for quantiles.
   contents:
   - sharp_scan_cdf
+  - autoplot.sharp_scan_cdf
   - crossfit_cdf
 - title: Sampling error
   desc: Debiased estimates and confidence sets from cross-fitted inputs.

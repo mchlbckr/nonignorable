@@ -295,6 +295,25 @@ band. The quantile bounds come from inverting the two curves; on the grid
 they are widened outwards, so a coarse grid makes them wider, never
 narrower.
 
+## Plots with ggplot2
+
+Every `plot()` above is base graphics, so the package needs nothing beyond
+R itself to draw. If ggplot2 is installed, `autoplot()` draws the same
+plots as ggplot objects: the sets, the outer band, the confidence set, the
+point under MAR, the threshold with its flip, and, for the screen, the
+equality line, hollow points where the violation is at noise level and grey
+points for rejected candidates. The legend sits below the panel. Add to the
+result as to any ggplot.
+
+```{r autoplot, eval = requireNamespace("ggplot2", quietly = TRUE), fig.height = 5}
+library(ggplot2)
+autoplot(ci) + labs(title = "Rejected applications")
+```
+
+```{r autoplot-screen, eval = requireNamespace("ggplot2", quietly = TRUE), fig.height = 5, fig.width = 5, out.width = "70%"}
+autoplot(sc) + theme_bw()
+```
+
 ## Further reading
 
 `vignette("applications", package = "nonignorable")` applies the tools to two
