@@ -26,7 +26,7 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.1.0)
 Imports: graphics, grDevices, MASS, nnet, stats
-Suggests: knitr, mgcv, quantreg, rmarkdown, speff2trial, testthat (>= 3.0.0)
+Suggests: ggplot2, knitr, mgcv, quantreg, rmarkdown, speff2trial, testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)

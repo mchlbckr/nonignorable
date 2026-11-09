@@ -2,6 +2,9 @@
 
 S3method(as.data.frame,sharp_scan)
 S3method(as.data.frame,sharp_scan_mean)
+S3method(ggplot2::autoplot,shadow_screen)
+S3method(ggplot2::autoplot,sharp_scan)
+S3method(ggplot2::autoplot,sharp_scan_cdf)
 S3method(plot,shadow_screen)
 S3method(plot,sharp_scan)
 S3method(plot,sharp_scan_cdf)

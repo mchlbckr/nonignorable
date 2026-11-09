@@ -1,3 +1,11 @@
+# nonignorable (development version)
+
+* `autoplot()` methods for ggplot2 draw the screen, the scans (with their
+  confidence sets and contrasts) and the distribution-function scan as ggplot
+  objects, with the same content as the `plot()` methods. ggplot2 is only
+  suggested: the methods are registered when it is loaded, and the base
+  `plot()` methods are unchanged.
+
 # nonignorable 0.1.0
 
 First release.
