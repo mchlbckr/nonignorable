@@ -8,10 +8,16 @@ This is a new submission.
 
 * New submission.
 
+  The note also lists "Debiased", "Nonignorable" and "cker" as possibly
+  misspelled words in DESCRIPTION. The first two are technical terms;
+  "cker" is part of the author's surname, Bücker.
+
 ## Test environments
 
 * local: macOS, R release
-* win-builder: R-devel
+* win-builder: R-devel, R release
+* GitHub Actions: macOS and Windows (R release), Ubuntu (R oldrel-1,
+  release and devel)
 
 ## Notes for the reviewer
 
