@@ -235,6 +235,21 @@ rows by convention; `attr(screen_classes(x), "heaping")` reports how
 many. Call it yourself for known cut-offs or other class counts and pass
 factors.
 
+## Plots with ggplot2
+
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) uses base
+graphics, so drawing needs nothing beyond R. With ggplot2 installed,
+[`autoplot()`](https://ggplot2.tidyverse.org/reference/autoplot.html)
+draws the same plots for every scan and for the screen as ggplot
+objects, to which layers, scales, labels and themes can be added:
+
+``` r
+
+library(ggplot2)
+autoplot(ci) + labs(title = "Rejected applications")
+autoplot(sc) + theme_bw()
+```
+
 ## Vignettes
 
 - [`vignette("nonignorable")`](https://buecker.ms/nonignorable/articles/nonignorable.md):

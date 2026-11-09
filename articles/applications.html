@@ -532,6 +532,16 @@ the grid of steps of 25; they carry no confidence statement.</p>
 <p>Both the set and the dotted confidence set hold for each <span class="math inline">\(t\)</span> separately. No single law of the
 missing counts need reach the upper curve at every <span class="math inline">\(t\)</span>, so the curves are not a band for the
 whole distribution.</p>
+<p>With ggplot2 installed, <code><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot()</a></code> draws the same curves
+as a ggplot object, to which scales, labels and themes can be added.
+Here the clinical cut-off of 200 is marked:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">kc</span>, xlab <span class="op">=</span> <span class="st">"CD4 count at week 96"</span>,</span>
+<span>         ylab <span class="op">=</span> <span class="st">"Share at or below, patients without a count"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_vline</a></span><span class="op">(</span>xintercept <span class="op">=</span> <span class="fl">200</span>, linetype <span class="op">=</span> <span class="st">"dotted"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_x_continuous</a></span><span class="op">(</span>breaks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">600</span>, by <span class="op">=</span> <span class="fl">100</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="applications_files/figure-html/actg-cdf-autoplot-1.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level2">
 <h2 id="the-two-side-by-side">The two side by side<a class="anchor" aria-label="anchor" href="#the-two-side-by-side"></a>
@@ -617,7 +627,7 @@ a fair chance of being measured does not have that problem.</li>
 <code>rejected_2007_to_2018Q4.csv.gz</code>. The rejected file is
 restricted to 2014, and its <code>Risk_Score</code> column is used as
 FICO. The code below outlines the computation. It is not run here.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">splines</span><span class="op">)</span></span>
 <span><span class="co"># d: one row per 2014 application, granted (R = 1, Y known) or rejected</span></span>
 <span><span class="co"># (R = 0), with fico, dti, amt, emp, st, pur.</span></span>

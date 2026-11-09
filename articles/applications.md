@@ -491,6 +491,22 @@ separately. No single law of the missing counts need reach the upper
 curve at every \\t\\, so the curves are not a band for the whole
 distribution.
 
+With ggplot2 installed,
+[`autoplot()`](https://ggplot2.tidyverse.org/reference/autoplot.html)
+draws the same curves as a ggplot object, to which scales, labels and
+themes can be added. Here the clinical cut-off of 200 is marked:
+
+``` r
+
+library(ggplot2)
+autoplot(kc, xlab = "CD4 count at week 96",
+         ylab = "Share at or below, patients without a count") +
+  geom_vline(xintercept = 200, linetype = "dotted") +
+  scale_x_continuous(breaks = seq(100, 600, by = 100))
+```
+
+![](applications_files/figure-html/actg-cdf-autoplot-1.png)
+
 ## The two side by side
 
 |  | Lending Club 2014 | ACTG 175 |
