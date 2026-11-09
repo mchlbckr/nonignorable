@@ -193,6 +193,19 @@ as loan amounts on round numbers, and then assign those rows by convention;
 `attr(screen_classes(x), "heaping")` reports how many. Call it yourself for
 known cut-offs or other class counts and pass factors.
 
+## Plots with ggplot2
+
+`plot()` uses base graphics, so drawing needs nothing beyond R. With
+ggplot2 installed, `autoplot()` draws the same plots for every scan and for
+the screen as ggplot objects, to which layers, scales, labels and themes can
+be added:
+
+```r
+library(ggplot2)
+autoplot(ci) + labs(title = "Rejected applications")
+autoplot(sc) + theme_bw()
+```
+
 ## Vignettes
 
 - `vignette("nonignorable")`: the tools on simulated data with a known truth,
